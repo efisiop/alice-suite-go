@@ -1,0 +1,11 @@
+# Exclude from Docker build
+.git
+.gitignore
+.DS_Store
+*.md
+archive/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+bin/
+*.log
