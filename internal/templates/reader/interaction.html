@@ -1,0 +1,319 @@
+{{define "title"}}Reading Interface - Alice Suite{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/reader">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/reader/interaction">Reading</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/reader/statistics">Statistics</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Navigation</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label for="page-number" class="form-label">Go to Page</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="page-number" min="1" value="1">
+                        <button class="btn btn-primary" onclick="goToPage()">Go</button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="previousPage()">Previous Page</button>
+                </div>
+                <div class="mb-2">
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="nextPage()">Next Page</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Tools</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showDictionary()">Dictionary</button>
+                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showAIHelp()">AI Help</button>
+                <button class="btn btn-sm btn-outline-primary w-100" onclick="requestHelp()">Request Help</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Page <span id="current-page">1</span></h5>
+                <div>
+                    <span class="badge bg-secondary" id="book-title">Alice in Wonderland</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="page-content" class="reading-content">
+                    <p class="text-muted">Loading page content...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dictionary Modal -->
+<div class="modal fade" id="dictionaryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dictionary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="lookup-word" class="form-label">Look up word</label>
+                    <input type="text" class="form-control" id="lookup-word" placeholder="Enter word">
+                </div>
+                <button class="btn btn-primary" onclick="lookupWord()">Look Up</button>
+                <div id="dictionary-result" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+let currentPage = 1;
+const bookId = 'alice-in-wonderland'; // Default book ID
+
+function loadPage(pageNumber) {
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    document.getElementById('page-content').innerHTML = '<p class="text-muted">Loading...</p>';
+
+    fetch(`/rest/v1/rpc/get_sections_for_page`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            book_id: bookId,
+            page_number: pageNumber
+        })
+    })
+    .then(res => res.json())
+    .then(sections => {
+        if (sections.length === 0) {
+            document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
+            return;
+        }
+
+        let content = '';
+        sections.forEach(section => {
+            content += `<div class="mb-4">${formatTextWithWordHighlights(section.content)}</div>`;
+        });
+
+        document.getElementById('page-content').innerHTML = content;
+        document.getElementById('current-page').textContent = pageNumber;
+        currentPage = pageNumber;
+
+        // Track page navigation
+        trackActivity('PAGE_SYNC', { page_number: pageNumber });
+    })
+    .catch(err => {
+        document.getElementById('page-content').innerHTML = '<p class="text-danger">Error loading page content.</p>';
+    });
+}
+
+function formatTextWithWordHighlights(text) {
+    // Simple word highlighting - can be enhanced
+    return text.split(' ').map(word => {
+        const cleanWord = word.replace(/[.,!?;:]/g, '');
+        return `<span class="word-highlight" onclick="lookupWordFromText('${cleanWord}')">${word}</span>`;
+    }).join(' ');
+}
+
+function lookupWordFromText(word) {
+    lookupWord(word);
+    const modal = new bootstrap.Modal(document.getElementById('dictionaryModal'));
+    modal.show();
+    document.getElementById('lookup-word').value = word;
+}
+
+function lookupWord(word) {
+    const lookupWordInput = document.getElementById('lookup-word');
+    const wordToLookup = word || lookupWordInput.value;
+    
+    if (!wordToLookup) return;
+
+    const token = getAuthToken();
+    fetch('/rest/v1/rpc/get_definition_with_context', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            term: wordToLookup,
+            book_id: bookId
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const resultDiv = document.getElementById('dictionary-result');
+        if (data.definition) {
+            resultDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6>${data.term}</h6>
+                        <p>${data.definition}</p>
+                        ${data.example ? `<p class="text-muted"><em>${data.example}</em></p>` : ''}
+                    </div>
+                </div>
+            `;
+            // Track dictionary lookup
+            trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
+        } else {
+            resultDiv.innerHTML = '<p class="text-muted">Word not found in glossary.</p>';
+        }
+    })
+    .catch(err => {
+        document.getElementById('dictionary-result').innerHTML = '<p class="text-danger">Error looking up word.</p>';
+    });
+}
+
+function trackActivity(eventType, data) {
+    const token = getAuthToken();
+    if (!token) return;
+
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        return fetch('/api/activity/track', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                user_id: user.id,
+                event_type: eventType,
+                book_id: bookId,
+                context: data
+            })
+        });
+    })
+    .catch(err => console.error('Error tracking activity:', err));
+}
+
+function goToPage() {
+    const pageInput = document.getElementById('page-number');
+    const page = parseInt(pageInput.value);
+    if (page > 0) {
+        loadPage(page);
+    }
+}
+
+function previousPage() {
+    if (currentPage > 1) {
+        loadPage(currentPage - 1);
+    }
+}
+
+function nextPage() {
+    loadPage(currentPage + 1);
+}
+
+function showDictionary() {
+    const modal = new bootstrap.Modal(document.getElementById('dictionaryModal'));
+    modal.show();
+}
+
+function showAIHelp() {
+    alert('AI Help feature - to be implemented');
+}
+
+function requestHelp() {
+    const content = prompt('What do you need help with?');
+    if (content) {
+        const token = getAuthToken();
+        fetch('/auth/v1/user', {
+            headers: {'Authorization': 'Bearer ' + token}
+        })
+        .then(res => res.json())
+        .then(user => {
+            return fetch('/rest/v1/help_requests?select=*', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    book_id: bookId,
+                    content: content,
+                    status: 'pending'
+                })
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert('Help request submitted successfully!');
+            trackActivity('HELP_REQUEST', { help_request_id: data[0]?.id });
+        })
+        .catch(err => {
+            alert('Failed to submit help request');
+        });
+    }
+}
+
+// Load first page on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[interaction.html] DOMContentLoaded fired');
+    
+    // Attach logout handler (backup - app.js also handles this via event delegation)
+    const logoutLink = document.getElementById('logout-link-reader');
+    if (logoutLink) {
+        console.log('[interaction.html] Found logout link, attaching handler');
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('[interaction.html] Logout clicked');
+            if (window.logout) {
+                console.log('[interaction.html] Calling window.logout()');
+                window.logout();
+            } else {
+                console.error('[interaction.html] window.logout is not defined!');
+            }
+        });
+    } else {
+        console.warn('[interaction.html] Logout link not found');
+    }
+
+    // User info is loaded by app.js automatically
+    // But let's also try loading it here as a backup
+    setTimeout(function() {
+        if (typeof loadUserInfoInNavbar === 'function') {
+            console.log('[interaction.html] Calling loadUserInfoInNavbar() as backup');
+            loadUserInfoInNavbar();
+        }
+    }, 100);
+    
+    loadPage(1);
+});
+</script>
+{{end}}

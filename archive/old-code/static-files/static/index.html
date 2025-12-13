@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alice Suite - Physical Book Companion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .endpoint h3 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .endpoint code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .response {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .response pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 Alice Suite</h1>
+        <p class="subtitle">Physical Book Companion App - First 3 Chapters Test Ground</p>
+        
+        <div id="status" class="status info">Checking API status...</div>
+
+        <div class="endpoint">
+            <h3>1. Health Check</h3>
+            <p>Check if the API is running</p>
+            <code>GET /api/health</code>
+            <button onclick="checkHealth()">Test Health</button>
+            <div id="health-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3>2. Get Books</h3>
+            <p>Retrieve all available books</p>
+            <code>GET /api/books</code>
+            <button onclick="getBooks()">Get Books</button>
+            <div id="books-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3>3. Register User</h3>
+            <p>Create a new user account</p>
+            <code>POST /api/auth/register</code>
+            <div class="input-group">
+                <label>Email:</label>
+                <input type="email" id="reg-email" placeholder="test@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="reg-password" placeholder="password123">
+            </div>
+            <div class="input-group">
+                <label>First Name:</label>
+                <input type="text" id="reg-firstname" placeholder="Test">
+            </div>
+            <div class="input-group">
+                <label>Last Name:</label>
+                <input type="text" id="reg-lastname" placeholder="User">
+            </div>
+            <button onclick="register()">Register</button>
+            <div id="register-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3>4. Login</h3>
+            <p>Authenticate and get token</p>
+            <code>POST /api/auth/login</code>
+            <div class="input-group">
+                <label>Email:</label>
+                <input type="email" id="login-email" placeholder="test@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="login-password" placeholder="password123">
+            </div>
+            <button onclick="login()">Login</button>
+            <div id="login-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3>5. Get Chapters</h3>
+            <p>Get chapters for Alice in Wonderland</p>
+            <code>GET /api/chapters?book_id=alice-in-wonderland</code>
+            <button onclick="getChapters()">Get Chapters</button>
+            <div id="chapters-response" class="response" style="display:none;"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3>6. Lookup Word</h3>
+            <p>Look up a word in the glossary</p>
+            <code>POST /api/dictionary/lookup</code>
+            <div class="input-group">
+                <label>Word:</label>
+                <input type="text" id="lookup-word" placeholder="curiouser">
+            </div>
+            <button onclick="lookupWord()">Lookup</button>
+            <div id="lookup-response" class="response" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        let authToken = null;
+
+        // Check API health on load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkHealth();
+        });
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function showResponse(elementId, data) {
+            const el = document.getElementById(elementId);
+            el.style.display = 'block';
+            el.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                showResponse('health-response', data);
+                updateStatus('✅ API is running!', 'success');
+            } catch (error) {
+                updateStatus('❌ API is not responding. Make sure the server is running on port 8080.', 'error');
+                showResponse('health-response', { error: error.message });
+            }
+        }
+
+        async function getBooks() {
+            try {
+                const response = await fetch(`${API_BASE}/books`);
+                const data = await response.json();
+                showResponse('books-response', data);
+            } catch (error) {
+                showResponse('books-response', { error: error.message });
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const firstName = document.getElementById('reg-firstname').value;
+            const lastName = document.getElementById('reg-lastname').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, first_name: firstName, last_name: lastName })
+                });
+                const data = await response.json();
+                showResponse('register-response', data);
+            } catch (error) {
+                showResponse('register-response', { error: error.message });
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (data.token) {
+                    authToken = data.token;
+                    updateStatus('✅ Logged in successfully!', 'success');
+                }
+                showResponse('login-response', data);
+            } catch (error) {
+                showResponse('login-response', { error: error.message });
+            }
+        }
+
+        async function getChapters() {
+            try {
+                const response = await fetch(`${API_BASE}/chapters?book_id=alice-in-wonderland`);
+                const data = await response.json();
+                showResponse('chapters-response', data);
+            } catch (error) {
+                showResponse('chapters-response', { error: error.message });
+            }
+        }
+
+        async function lookupWord() {
+            const word = document.getElementById('lookup-word').value || 'curiouser';
+
+            try {
+                const response = await fetch(`${API_BASE}/dictionary/lookup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        book_id: 'alice-in-wonderland',
+                        word: word
+                    })
+                });
+                const data = await response.json();
+                showResponse('lookup-response', data);
+            } catch (error) {
+                showResponse('lookup-response', { error: error.message });
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+

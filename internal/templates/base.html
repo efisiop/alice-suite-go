@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>{{block "title" .}}Alice Suite{{end}}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/app.css?v=20241129">
+    {{block "head" .}}{{end}}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/" id="navbar-brand-link">
+                <span>Alice Suite</span>
+                <span id="user-name-brand" class="ms-2" style="font-size: 0.9rem; font-weight: normal; display: none;"></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item" id="user-info-nav" style="display: none;">
+                        <span class="nav-link" style="cursor: default; padding-top: 0.5rem; padding-bottom: 0.5rem;">
+                            <strong id="user-name-display" style="font-size: 1rem;">Loading...</strong>
+                        </span>
+                    </li>
+                    {{block "nav" .}}
+                    <li class="nav-item default-login-link" style="display: none;">
+                        <a class="nav-link" href="/reader/login">Login</a>
+                    </li>
+                    <li class="nav-item default-register-link" style="display: none;">
+                        <a class="nav-link" href="/reader/register">Register</a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer class="mt-5 py-4 bg-light">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Alice Suite. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+    // Safari-specific: Ensure page loads even if there are JavaScript errors
+    window.addEventListener('error', function(event) {
+        // Don't prevent default for critical errors that would block page load
+        const errorMsg = event.message || '';
+        if (errorMsg.includes('Script error') || errorMsg.includes('Failed to load')) {
+            console.warn('Non-critical script error (likely CORS or external script):', errorMsg);
+            // Don't block page load
+        }
+    }, true);
+    
+    // Safari-specific: Log when page is ready
+    if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
+        console.log('Safari: Page scripts loading...');
+        window.addEventListener('load', function() {
+            console.log('Safari: Page fully loaded');
+        });
+    }
+    </script>
+    <script>
+    // Suppress console errors from third-party libraries and browser extensions
+    (function() {
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        // Helper function to check if error should be suppressed
+        function shouldSuppressError(msg, stack) {
+            const lowerMsg = msg.toLowerCase();
+            const lowerStack = (stack || '').toLowerCase();
+            
+            // Check for known third-party library errors
+            return lowerMsg.includes('duplicate variable') || 
+                lowerMsg.includes('sandbox access violation') ||
+                lowerMsg.includes('_0x') ||
+                lowerMsg.includes('m=el_main') ||
+                lowerMsg.includes('element.js') ||
+                lowerMsg.includes('maximum call stack size exceeded') ||
+                lowerMsg.includes('rangeerror') && lowerStack.includes('element.js') ||
+                lowerStack.includes('element.js') ||
+                lowerStack.includes('m=el_main') ||
+                (lowerMsg.includes('syntaxerror') && (lowerMsg.includes('_0x') || lowerMsg.includes('duplicate'))) ||
+                lowerStack.includes('bootstrap') && lowerMsg.includes('stack');
+        }
+        
+        // Enhanced error suppression for third-party libraries
+        console.error = function(...args) {
+            // Filter out known harmless errors from third-party libraries
+            const errorMsg = args.join(' ');
+            const errorObj = args.find(arg => arg && typeof arg === 'object');
+            const errorStack = (errorObj && errorObj.stack) ? errorObj.stack : '';
+            
+            // Suppress errors from third-party libraries and browser extensions
+            if (shouldSuppressError(errorMsg, errorStack)) {
+                // Suppress these errors - they're from third-party libraries, browser extensions, or known issues
+                return;
+            }
+            // Log other errors normally
+            originalError.apply(console, args);
+        };
+        
+        // Also suppress warnings from third-party libraries
+        console.warn = function(...args) {
+            const warnMsg = args.join(' ');
+            if (shouldSuppressError(warnMsg, '')) {
+                return;
+            }
+            originalWarn.apply(console, args);
+        };
+        
+        // Global error handler to catch unhandled errors
+        window.addEventListener('error', function(event) {
+            const errorMsg = event.message || '';
+            const errorStack = event.error && event.error.stack ? event.error.stack : '';
+            if (shouldSuppressError(errorMsg, errorStack)) {
+                event.preventDefault();
+                return false;
+            }
+        }, true);
+        
+        // Global unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(event) {
+            const errorMsg = event.reason ? (event.reason.message || String(event.reason)) : '';
+            const errorStack = event.reason && event.reason.stack ? event.reason.stack : '';
+            if (shouldSuppressError(errorMsg, errorStack)) {
+                event.preventDefault();
+                return false;
+            }
+        });
+    })();
+    
+    // Force reload CSS to bypass cache (for Safari)
+    (function() {
+        const links = document.querySelectorAll('link[rel="stylesheet"]');
+        links.forEach(link => {
+            if (link.href.includes('app.css')) {
+                const href = link.href.split('?')[0];
+                link.href = href + '?v=' + Date.now();
+            }
+        });
+    })();
+    
+    // Make navbar brand link context-aware and set app theme
+    // Also hide Login/Register links for consultant and reader pages
+    (function() {
+        const brandLink = document.getElementById('navbar-brand-link');
+        const body = document.body;
+        const path = window.location.pathname;
+        
+        // Hide default Login/Register links for consultant and reader pages
+        const defaultLoginLinks = document.querySelectorAll('.default-login-link, .default-register-link');
+        
+        if (path.startsWith('/consultant')) {
+            brandLink.href = '/consultant';
+            body.classList.add('consultant-app');
+            body.setAttribute('data-app', 'consultant');
+            // Hide default login/register links for consultant pages
+            defaultLoginLinks.forEach(link => link.style.display = 'none');
+        } else if (path.startsWith('/reader') || path === '/login' || path === '/register' || path === '/verify') {
+            // Reader app pages including login/register/verify
+            if (path.startsWith('/reader')) {
+                brandLink.href = '/reader';
+            } else {
+                brandLink.href = '/';
+            }
+            body.classList.add('reader-app');
+            body.setAttribute('data-app', 'reader');
+            // Hide default login/register links for reader pages (they have their own nav)
+            defaultLoginLinks.forEach(link => link.style.display = 'none');
+        } else {
+            brandLink.href = '/';
+            // Show default login/register links only on landing/home pages
+            defaultLoginLinks.forEach(link => link.style.display = 'block');
+        }
+    })();
+    </script>
+    <script src="/static/js/app.js?v=20241206"></script>
+    {{block "scripts" .}}{{end}}
+    <script>
+    // Prevent duplicate script execution
+    if (window.scriptsLoaded) {
+        console.warn('Scripts already loaded, preventing duplicate execution');
+    } else {
+        window.scriptsLoaded = true;
+    }
+    
+    // Hostname normalization: Detect and handle localhost vs 127.0.0.1 mismatch
+    // IMPORTANT: Browsers treat localhost and 127.0.0.1 as DIFFERENT origins!
+    // Cookies and sessionStorage set on one are NOT accessible from the other.
+    (function() {
+        const currentHost = window.location.hostname;
+        const currentProtocol = window.location.protocol;
+        const currentPort = window.location.port;
+        
+        // Check if we have authentication data from a different origin
+        const hasCookie = document.cookie.includes('auth_token=');
+        const hasSessionStorage = !!sessionStorage.getItem('auth_token');
+        
+        // If accessing via localhost but have no sessionStorage (might have been set on 127.0.0.1)
+        if (currentHost === 'localhost' && !hasSessionStorage && hasCookie) {
+            console.warn('⚠️ Hostname mismatch detected!');
+            console.warn('You are accessing via "localhost" but your session was created on "127.0.0.1"');
+            console.warn('Browsers treat these as different origins - cookies/storage are NOT shared.');
+            console.warn('Solution: Use http://127.0.0.1:8080 consistently, or clear cookies and login again.');
+        }
+        
+        // If accessing via 127.0.0.1 but have no sessionStorage (might have been set on localhost)
+        if (currentHost === '127.0.0.1' && !hasSessionStorage && hasCookie) {
+            console.warn('⚠️ Hostname mismatch detected!');
+            console.warn('You are accessing via "127.0.0.1" but your session was created on "localhost"');
+            console.warn('Browsers treat these as different origins - cookies/storage are NOT shared.');
+            console.warn('Solution: Use http://127.0.0.1:8080 consistently, or clear cookies and login again.');
+        }
+        
+        // Note: We don't auto-redirect because:
+        // 1. User might prefer one over the other
+        // 2. Auto-redirect can cause redirect loops
+        // 3. Better to let user choose and be consistent
+    })();
+    </script>
+</body>
+</html>
+

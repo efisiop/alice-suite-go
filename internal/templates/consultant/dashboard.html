@@ -1,0 +1,1698 @@
+{{define "title"}}Consultant Dashboard - Alice Suite{{end}}
+
+{{define "head"}}
+<style>
+/* Reader window cards styling */
+.reader-card {
+    min-width: 300px;
+    max-width: 400px;
+    flex: 0 0 auto;
+    margin-bottom: 1rem;
+}
+
+.reader-card-header {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Hover color is handled via JavaScript for each individual card */
+
+.reader-card-header strong {
+    color: #000000 !important;
+    font-weight: 600;
+}
+
+.reader-card-header.collapsed .expand-icon {
+    transform: rotate(-90deg);
+    transition: transform 0.2s;
+}
+
+.reader-card-header .expand-icon {
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.reader-card-body {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.reader-activity-item {
+    border-left: 3px solid #007bff;
+    padding-left: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.reader-activity-item:last-child {
+    border-bottom: none;
+}
+
+/* Recent activities (within last 1 hour) - colored text, normal weight, same size as timestamp */
+.reader-activity-item.activity-recent .activity-type-label {
+    font-weight: normal;
+    font-size: 0.875rem; /* Match small tag size (Bootstrap's small is 0.875rem) */
+}
+
+.reader-activity-item.activity-recent[data-event-type="LOGIN"] .activity-type-label {
+    color: #8B0000; /* Dark red/burgundy */
+}
+
+.reader-activity-item.activity-recent[data-event-type="LOGOUT"] .activity-type-label {
+    color: #6B4423; /* Dark brown */
+}
+
+.reader-activity-item.activity-recent[data-event-type="PAGE_SYNC"] .activity-type-label {
+    color: #4B0082; /* Dark indigo */
+}
+
+.reader-activity-item.activity-recent[data-event-type="SECTION_SYNC"] .activity-type-label {
+    color: #4B0082; /* Dark indigo */
+}
+
+.reader-activity-item.activity-recent[data-event-type="DEFINITION_LOOKUP"] .activity-type-label {
+    color: #8B0000; /* Dark red/burgundy */
+}
+
+.reader-activity-item.activity-recent[data-event-type="AI_QUERY"] .activity-type-label {
+    color: #800080; /* Dark purple */
+}
+
+.reader-activity-item.activity-recent[data-event-type="HELP_REQUEST"] .activity-type-label {
+    color: #8B0000; /* Dark red/burgundy */
+}
+
+.reader-activity-item.activity-recent[data-event-type="FEEDBACK_SUBMISSION"] .activity-type-label {
+    color: #654321; /* Dark brown */
+}
+
+.reader-activity-item.activity-recent .activity-time {
+    font-weight: 600;
+    color: #495057; /* Dark gray */
+}
+
+.reader-activity-item.activity-recent .activity-what {
+    font-weight: bold;
+    /* Inherit color from parent or use dark gray - will be styled per event type if needed */
+    color: #495057;
+}
+
+.reader-activity-item .activity-header {
+    margin-bottom: 0.25rem;
+}
+
+.reader-activity-item .activity-details {
+    margin-left: 0;
+}
+
+.reader-activity-item .activity-icon {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+/* Older activities (beyond 1 hour) - light gray */
+.reader-activity-item.activity-history {
+    opacity: 0.5;
+    color: #6c757d;
+}
+
+.reader-activity-item.activity-history .activity-type-label {
+    color: #adb5bd !important;
+    font-weight: normal;
+    font-size: 0.875rem; /* Match small tag size */
+}
+
+.reader-activity-item.activity-history .activity-time {
+    color: #adb5bd !important;
+    font-weight: normal;
+}
+
+.reader-activity-item.activity-history .activity-what {
+    color: #adb5bd !important;
+    font-weight: normal;
+}
+
+.reader-activity-item.activity-history .activity-icon {
+    opacity: 0.4;
+}
+
+#readers-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+/* Badge for unread activities (like WhatsApp) */
+.activity-badge {
+    background-color: #dc3545; /* Red like WhatsApp */
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    display: inline-block;
+    margin-left: 8px;
+    line-height: 1.2;
+}
+
+/* "More" link styling */
+.more-activities-link {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0.5rem;
+    text-align: center;
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.more-activities-link:hover {
+    color: #0056b3;
+    text-decoration: none;
+}
+
+/* Hidden activities */
+.reader-activity-item.hidden-activity {
+    display: none;
+}
+</style>
+<script>
+// Set flag immediately to prevent app.js from auto-connecting SSE
+window.isConsultantDashboard = true;
+
+// Define logout function immediately in head so it's available for any onclick handlers
+// This must be defined before the body loads to handle any inline onclick handlers
+(function() {
+    // Store consultant logout function separately to prevent override
+    window.consultantLogout = function() {
+        console.log('[consultant-logout] Consultant logout called');
+        
+        // Hide user info immediately
+        const userInfoNav = document.getElementById('user-info-nav');
+        if (userInfoNav) {
+            userInfoNav.style.display = 'none';
+        }
+        
+        // Hide name in navbar brand as well
+        const userNameBrand = document.getElementById('user-name-brand');
+        if (userNameBrand) {
+            userNameBrand.style.display = 'none';
+            userNameBrand.textContent = '';
+        }
+        
+        sessionStorage.removeItem('auth_token');
+        // Clear auth cookie
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+        // Close SSE connection if exists
+        if (window.sseConnection) {
+            try {
+                window.sseConnection.close();
+            } catch(e) {}
+            window.sseConnection = null;
+        }
+        // Also close sseConnection from app.js if it exists
+        if (typeof sseConnection !== 'undefined' && sseConnection) {
+            try {
+                sseConnection.close();
+            } catch(e) {}
+            sseConnection = null;
+        }
+        // Always redirect to consultant login
+        window.location.href = '/consultant/login';
+    };
+    
+    // Override window.logout for consultant pages
+    window.logout = window.consultantLogout;
+    
+    // Also make it available as a global function (not just window.logout)
+    // Some browsers might not recognize window.logout in onclick handlers
+    if (typeof logout === 'undefined') {
+        logout = window.consultantLogout;
+    }
+})();
+</script>
+{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link active" href="/consultant">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Consultant Dashboard</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Logged In</h5>
+                        <h2 id="logged-in-readers">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Active Readers</h5>
+                        <h2 id="active-readers">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Today's Activity</h5>
+                        <h2 id="today-activity">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Active Readers</h5>
+                        <span class="badge bg-success" id="feed-status">Live</span>
+                    </div>
+                <!-- Reader windows container - displays readers side-by-side -->
+                <div id="readers-container" class="d-flex flex-wrap gap-3" style="min-height: 200px;">
+                    <p class="text-muted w-100">Loading active readers...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Recent Help Requests</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-requests">
+                            <p class="text-muted">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Online Readers</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="online-readers">
+                            <p class="text-muted">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+// Ensure getAuthToken is available (fallback if app.js hasn't loaded yet)
+// Using sessionStorage instead of localStorage to ensure each browser tab/window
+// has its own isolated token storage, preventing session mixing when multiple
+// users log in from the same IP address
+if (typeof getAuthToken === 'undefined') {
+    window.getAuthToken = function() {
+        return sessionStorage.getItem('auth_token');
+    };
+}
+
+// Cookie sync is handled by app.js, but we'll ensure it runs if app.js hasn't loaded yet
+// Use a guard to prevent duplicate execution
+if (typeof ensureCookieSync === 'undefined') {
+    let cookieSyncInProgress = false;
+    window.ensureCookieSync = function() {
+        if (cookieSyncInProgress) return;
+        cookieSyncInProgress = true;
+        try {
+            const token = sessionStorage.getItem('auth_token');
+            if (token) {
+                const cookies = document.cookie.split(';');
+                let cookieExists = false;
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'auth_token' && value === token) {
+                        cookieExists = true;
+                        break;
+                    }
+                }
+                if (!cookieExists) {
+                    const expires = new Date();
+                    expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000));
+                    document.cookie = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+                }
+            }
+        } finally {
+            setTimeout(() => { cookieSyncInProgress = false; }, 100);
+        }
+    };
+}
+
+// Run cookie sync once, but only if not already synced
+if (typeof ensureCookieSync !== 'undefined' && !window.cookieSyncDone) {
+    window.cookieSyncDone = true;
+    ensureCookieSync();
+}
+
+// Logout function is already defined in head block, but we'll keep it here as backup
+// and also attach event listener for the logout link
+let activityFeedLastUpdate = null;
+// SSE connection state variables
+let sseReconnectTimeout = null;
+let sseReconnectAttempts = 0;
+let sseIsConnected = false;
+// Note: sseConnection is declared in app.js (global scope), but we'll use our own for consultant dashboard
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach logout handler to logout link (using ID)
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            }
+        });
+    }
+    
+    // Also handle any elements with onclick="logout()" as fallback
+    const logoutLinksWithOnclick = document.querySelectorAll('a[onclick*="logout"]');
+    logoutLinksWithOnclick.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            }
+        });
+        // Remove the onclick attribute to prevent double execution
+        link.removeAttribute('onclick');
+    });
+    
+    const token = getAuthToken();
+    if (!token) {
+        console.error('No auth token found, redirecting to login');
+        window.location.href = '/consultant/login';
+        return;
+    }
+    
+    console.log('Token found, verifying user...');
+    
+    // Verify user is consultant
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        console.log('User verification response status:', res.status);
+        if (!res.ok) {
+            if (res.status === 401) {
+                console.error('Unauthorized - token invalid or expired');
+            }
+            window.location.href = '/consultant/login';
+            return null;
+        }
+        return res.json();
+    })
+    .then(user => {
+        if (!user) {
+            return; // Already handled redirect
+        }
+        
+        // Decode JWT to check role
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('JWT payload role:', payload.role);
+            if (payload.role !== 'consultant') {
+                console.log('User is not a consultant, redirecting to reader dashboard');
+                // Not a consultant, redirect to reader dashboard
+                window.location.href = '/reader';
+                return;
+            }
+            console.log('User is consultant, initializing dashboard');
+        } catch (e) {
+            console.error('Error decoding JWT:', e);
+            // If we can't decode, redirect to login for safety
+            window.location.href = '/consultant/login';
+            return;
+        }
+        
+        // User is consultant, proceed with loading dashboard
+        // Prevent app.js from auto-connecting SSE (we handle it ourselves)
+        window.isConsultantDashboard = true;
+        initializeDashboard();
+    })
+    .catch(err => {
+        console.error('Error verifying user:', err);
+        // Check if it's a network error
+        if (err.message && err.message.includes('Load failed')) {
+            console.error('Network error - check if server is running and accessible');
+        }
+        window.location.href = '/consultant/login';
+    });
+});
+
+function initializeDashboard() {
+    const token = getAuthToken();
+
+    // Load consultant user info in navbar (consultant-specific)
+    loadConsultantUserInfoInNavbar();
+    
+    // Load dashboard data
+    loadDashboardData();
+    
+    // Load reader activity feed
+    loadReaderActivityFeed();
+    
+    // Load logged-in readers count
+    loadLoggedInReaders();
+    
+    // Load online readers (active readers)
+    loadOnlineReaders();
+    
+    // Connect to SSE for real-time updates
+    connectConsultantSSE(token);
+    
+    // Smart polling: Use longer intervals when SSE is connected, shorter when disconnected
+    function smartPolling() {
+        if (sseIsConnected) {
+            // SSE is connected - use longer intervals (60s) as fallback
+            return 60000;
+        } else {
+            // SSE disconnected - use shorter intervals (5s) to catch up quickly
+            return 5000;
+        }
+    }
+    
+    // Refresh dashboard with adaptive interval
+    function refreshDashboard() {
+        loadDashboardData();
+        setTimeout(refreshDashboard, smartPolling());
+    }
+    setTimeout(refreshDashboard, smartPolling());
+    
+    // Refresh activity feed with adaptive interval (fallback if SSE fails)
+    function refreshActivityFeed() {
+        loadReaderActivityFeed();
+        setTimeout(refreshActivityFeed, smartPolling());
+    }
+    setTimeout(refreshActivityFeed, smartPolling());
+    
+    // Refresh logged-in readers with adaptive interval
+    function refreshLoggedInReaders() {
+        loadLoggedInReaders();
+        setTimeout(refreshLoggedInReaders, smartPolling());
+    }
+    setTimeout(refreshLoggedInReaders, smartPolling());
+    
+    // Refresh online readers with adaptive interval
+    function refreshOnlineReaders() {
+        loadOnlineReaders();
+        setTimeout(refreshOnlineReaders, smartPolling());
+    }
+    setTimeout(refreshOnlineReaders, smartPolling());
+}
+
+function connectConsultantSSE(token) {
+    // Connect to Server-Sent Events for real-time updates (consultant-specific)
+    // Close any existing connection first (both global and local)
+    if (window.sseConnection) {
+        window.sseConnection.close();
+        window.sseConnection = null;
+    }
+    if (typeof sseConnection !== 'undefined' && sseConnection) {
+        sseConnection.close();
+        sseConnection = null;
+    }
+    
+    // Clear any pending reconnection
+    if (sseReconnectTimeout) {
+        clearTimeout(sseReconnectTimeout);
+        sseReconnectTimeout = null;
+    }
+    
+    const eventSource = new EventSource(`/api/realtime/events?token=${encodeURIComponent(token)}`);
+    
+    eventSource.onopen = function() {
+        sseIsConnected = true;
+        sseReconnectAttempts = 0; // Reset on successful connection
+        document.getElementById('feed-status').textContent = 'Live';
+        document.getElementById('feed-status').className = 'badge bg-success';
+        console.log('[SSE] Connected successfully');
+    };
+    
+    eventSource.onerror = function(e) {
+        sseIsConnected = false;
+        const statusEl = document.getElementById('feed-status');
+        
+        // Check if connection is closed (readyState 2 = CLOSED)
+        if (eventSource.readyState === EventSource.CLOSED) {
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'badge bg-danger';
+            console.log('[SSE] Connection closed, attempting reconnect...');
+            
+            // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+            const delay = Math.min(1000 * Math.pow(2, sseReconnectAttempts), 30000);
+            sseReconnectAttempts++;
+            
+            sseReconnectTimeout = setTimeout(() => {
+                console.log(`[SSE] Reconnecting (attempt ${sseReconnectAttempts})...`);
+                connectConsultantSSE(token);
+            }, delay);
+        } else {
+            // Connection error but not closed (readyState 0 = CONNECTING, 1 = OPEN)
+            statusEl.textContent = 'Connecting...';
+            statusEl.className = 'badge bg-warning';
+            console.log('[SSE] Connection error, state:', eventSource.readyState);
+        }
+    };
+    
+    eventSource.addEventListener('activity', function(e) {
+        try {
+            const eventData = JSON.parse(e.data);
+            // The SSE event data structure: {type: "activity", data: {...}, timestamp: "..."}
+            // The actual activity object is in eventData.data
+            const activity = eventData.data || eventData;
+            
+            if (activity.id && activity.event_type) {
+                // Check if user info is present
+                if (!activity.first_name || !activity.last_name) {
+                    console.warn('Activity missing first_name or last_name:', {
+                        id: activity.id,
+                        user_id: activity.user_id,
+                        first_name: activity.first_name,
+                        last_name: activity.last_name,
+                        email: activity.email
+                    });
+                }
+                
+                // Immediately add to reader's card (no delay)
+                addActivityToReaderCard(activity);
+                
+                // Update stats immediately (debounced to avoid too many calls)
+                if (!window.dashboardUpdatePending) {
+                    window.dashboardUpdatePending = true;
+                    setTimeout(() => {
+                        loadDashboardData();
+                        loadOnlineReaders(); // Update active readers count
+                        window.dashboardUpdatePending = false;
+                    }, 500); // Small delay to batch multiple rapid updates
+                }
+            }
+        } catch (err) {
+            console.error('Error parsing activity event:', err, e.data);
+        }
+    });
+    
+    eventSource.addEventListener('login', function(e) {
+        try {
+            const eventData = JSON.parse(e.data);
+            const loginData = eventData.data || eventData;
+            console.log('Reader logged in:', loginData);
+            
+            // Update logged-in count IMMEDIATELY (increment)
+            const currentCount = parseInt(document.getElementById('logged-in-readers').textContent) || 0;
+            const newCount = currentCount + 1;
+            console.log('Updating logged-in count from', currentCount, 'to', newCount);
+            document.getElementById('logged-in-readers').textContent = newCount;
+            
+            // Create reader card IMMEDIATELY with LOGIN activity
+            // This makes the reader window appear in real-time
+            const userId = loginData.user_id || loginData.userId || loginData.id;
+            if (userId) {
+                const loginActivity = {
+                    id: 'login-' + Date.now(),
+                    user_id: userId,
+                    first_name: loginData.first_name || loginData.firstName,
+                    last_name: loginData.last_name || loginData.lastName,
+                    email: loginData.email,
+                    event_type: 'LOGIN',
+                    activity_type: 'LOGIN',
+                    created_at: new Date().toISOString()
+                };
+                console.log('Creating reader card immediately for logged-in user:', userId);
+                addActivityToReaderCard(loginActivity);
+            }
+            
+            // Then refresh dashboard stats to verify (with slight delay to allow server to process)
+            setTimeout(function() {
+                loadDashboardData();
+                loadLoggedInReaders();
+                loadOnlineReaders();
+            }, 300);
+        } catch (err) {
+            console.error('Error parsing login event:', err);
+        }
+    });
+    
+    eventSource.addEventListener('logout', function(e) {
+        try {
+            const eventData = JSON.parse(e.data);
+            console.log('Raw logout event data:', eventData);
+            
+            // Handle SSE event format: {type: "logout", data: {...}, timestamp: "..."}
+            const logoutData = eventData.data || eventData;
+            console.log('Logout data extracted:', logoutData);
+            
+            // Get user ID from various possible field names and locations
+            const userId = logoutData.user_id || logoutData.userId || logoutData.id || eventData.user_id;
+            console.log('Logout user ID extracted:', userId);
+            console.log('All readerCards keys:', Array.from(readerCards.keys()));
+            
+            if (!userId) {
+                console.error('No user ID found in logout event:', logoutData);
+                return;
+            }
+            
+            // Update logged-in count IMMEDIATELY (decrement) - regardless of whether card exists
+            const currentCount = parseInt(document.getElementById('logged-in-readers').textContent) || 0;
+            const newCount = Math.max(0, currentCount - 1);
+            console.log('Updating logged-in count from', currentCount, 'to', newCount);
+            document.getElementById('logged-in-readers').textContent = newCount;
+            
+            // Try multiple methods to find and remove the card
+            let cardRemoved = false;
+            
+            // Method 1: Find in readerCards map
+            const readerCard = readerCards.get(userId);
+            if (readerCard && readerCard.cardElement) {
+                console.log('✓ Found card in readerCards map, removing:', userId);
+                readerCard.cardElement.remove();
+                readerCards.delete(userId);
+                cardRemoved = true;
+            }
+            
+            // Method 2: Find by DOM data attribute
+            if (!cardRemoved) {
+                const cardByAttr = document.querySelector(`[data-user-id="${userId}"]`);
+                if (cardByAttr) {
+                    console.log('✓ Found card by data-user-id attribute, removing:', userId);
+                    cardByAttr.remove();
+                    // Also remove from map if it exists
+                    if (readerCards.has(userId)) {
+                        readerCards.delete(userId);
+                    }
+                    cardRemoved = true;
+                }
+            }
+            
+            // Method 3: Find by card ID
+            if (!cardRemoved) {
+                const cardById = document.getElementById(`reader-card-${userId}`);
+                if (cardById) {
+                    console.log('✓ Found card by ID, removing:', userId);
+                    cardById.remove();
+                    // Also remove from map if it exists
+                    if (readerCards.has(userId)) {
+                        readerCards.delete(userId);
+                    }
+                    cardRemoved = true;
+                }
+            }
+            
+            // Method 4: Search all reader cards and match by any ID field
+            if (!cardRemoved) {
+                readerCards.forEach((card, cardUserId) => {
+                    if (cardUserId === userId) {
+                        console.log('✓ Found card in map iteration, removing:', userId);
+                        card.cardElement.remove();
+                        readerCards.delete(cardUserId);
+                        cardRemoved = true;
+                    }
+                });
+            }
+            
+            if (cardRemoved) {
+                console.log('✅ Reader card successfully removed for user:', userId);
+            } else {
+                console.warn('⚠️ No reader card found to remove for user:', userId);
+                console.log('Available card IDs in DOM:', Array.from(document.querySelectorAll('[data-user-id]')).map(el => el.getAttribute('data-user-id')));
+            }
+            
+            // Refresh dashboard stats to verify (with slight delay to allow server to process)
+            // The count and card removal already happened immediately above
+            setTimeout(function() {
+                loadDashboardData();
+                loadLoggedInReaders();
+                loadOnlineReaders();
+            }, 300);
+        } catch (err) {
+            console.error('Error parsing logout event:', err, e.data);
+        }
+    });
+    
+    // Also listen to generic messages (fallback for events without type)
+    eventSource.onmessage = function(e) {
+        try {
+            const eventData = JSON.parse(e.data);
+            if (eventData.type === 'activity' || (eventData.event_type && eventData.id)) {
+                const activity = eventData.data || eventData;
+                console.log('Received activity via onmessage:', activity);
+                if (activity.id && activity.event_type) {
+                    addActivityToReaderCard(activity);
+                }
+            }
+        } catch (err) {
+            // Ignore parse errors for non-activity messages
+        }
+    };
+    
+    eventSource.addEventListener('help_request', function(e) {
+        const request = JSON.parse(e.data);
+        loadDashboardData(); // Refresh dashboard
+    });
+    
+    // Store connection in both places for compatibility
+    sseConnection = eventSource;
+    window.sseConnection = eventSource;
+}
+
+function loadReaderActivityFeed() {
+    const token = getAuthToken();
+    if (!token) {
+        console.error('No auth token found');
+        return;
+    }
+    
+    // First, get the list of active readers (logged in or active in last hour)
+    // Then filter activities to only show those from active readers
+    fetch('/api/consultant/logged-in-readers-count', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        const activeReaderIds = new Set((data.readers || []).map(r => r.id));
+        
+        // Now load activities
+        // Always load recent activities (last hour) to ensure we catch all updates
+        // On first load, get last 50 activities
+        // On subsequent loads, get activities since last update
+        let url;
+        if (!activityFeedLastUpdate) {
+            // First load - get last 50 activities
+            url = '/api/consultant/reader-activities?limit=50';
+        } else {
+            // Subsequent loads - get activities since last update
+            // Convert activityFeedLastUpdate to proper format if needed
+            let sinceTime = activityFeedLastUpdate;
+            // If it's in SQLite format, convert to ISO for the API
+            if (sinceTime.includes(' ')) {
+                sinceTime = sinceTime.replace(' ', 'T') + ':00Z';
+            }
+            url = `/api/consultant/reader-activities/stream?since=${encodeURIComponent(sinceTime)}`;
+        }
+        
+        console.log('Loading reader activities from:', url, 'Last update:', activityFeedLastUpdate);
+        
+        // Add timeout to fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        return fetch(url, {
+            headers: {'Authorization': 'Bearer ' + token},
+            signal: controller.signal
+        })
+        .then(res => {
+            clearTimeout(timeoutId);
+            console.log('Response status:', res.status);
+            if (!res.ok) {
+                return res.text().then(text => {
+                    console.error('API Error:', res.status, text);
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                });
+            }
+            return res.json();
+        })
+        .then(activities => {
+            console.log('Loaded activities from API:', activities ? activities.length : 0);
+            if (activities && Array.isArray(activities) && activities.length > 0) {
+                // Filter activities to only include those from active readers
+                const filteredActivities = activities.filter(activity => {
+                    return activity.user_id && activeReaderIds.has(activity.user_id);
+                });
+                
+                console.log('Filtered activities (active readers only):', filteredActivities.length);
+                
+                // Sort activities by timestamp (newest first) before processing
+                filteredActivities.sort((a, b) => {
+                    const timeA = new Date(a.created_at).getTime();
+                    const timeB = new Date(b.created_at).getTime();
+                    return timeB - timeA; // Newest first
+                });
+                
+                // Group activities by reader and add to their respective cards
+                let newActivitiesCount = 0;
+                filteredActivities.forEach(activity => {
+                    // Verify each activity has user_id
+                    if (!activity.user_id) {
+                        console.warn('Activity missing user_id:', activity);
+                        return;
+                    }
+                    // Check if this is a new activity (not already displayed)
+                    const existingItem = document.querySelector(`[data-activity-id="${activity.id}"]`);
+                    if (!existingItem) {
+                        addActivityToReaderCard(activity);
+                        newActivitiesCount++;
+                    }
+                });
+                
+                // Re-sort all reader cards to ensure activities are in correct order (newest first)
+                readerCards.forEach((readerCard, userId) => {
+                    sortReaderActivities(readerCard);
+                    // Reset visibleCount to 12 and apply pagination (show 12 initially)
+                    readerCard.visibleCount = 12;
+                    updateActivityVisibility(readerCard);
+                });
+                
+                // Update last update time to most recent activity (first in sorted array)
+                if (filteredActivities.length > 0) {
+                    activityFeedLastUpdate = filteredActivities[0].created_at;
+                    console.log(`Added ${newActivitiesCount} new activities. Last update time: ${activityFeedLastUpdate}`);
+                }
+            } else if (!activityFeedLastUpdate) {
+                // Show message if no activities on first load
+                const container = document.getElementById('readers-container');
+                if (container) {
+                    const loadingMsg = container.querySelector('.text-muted');
+                    if (loadingMsg && loadingMsg.textContent.includes('Loading')) {
+                        loadingMsg.textContent = 'No reader activities yet. Reader windows will appear here as readers become active.';
+                    }
+                }
+            }
+        });
+    })
+    .catch(err => {
+        console.error('Error loading reader activities:', err);
+        const container = document.getElementById('readers-container');
+        if (container) {
+            const loadingMsg = container.querySelector('.text-muted');
+            if (loadingMsg && loadingMsg.textContent.includes('Loading')) {
+                let errorMsg = 'Error loading activities';
+                if (err.name === 'AbortError') {
+                    errorMsg = 'Request timed out. Please check your connection.';
+                } else if (err.message) {
+                    errorMsg = 'Error: ' + err.message;
+                }
+                loadingMsg.className = 'text-danger w-100';
+                loadingMsg.textContent = errorMsg + '. Please check the browser console (F12) for details.';
+            }
+        }
+    });
+}
+
+// Store reader cards data
+const readerCards = new Map(); // Map<user_id, {cardElement, activities: []}>
+
+// Generate a consistent light background color for a reader based on their user_id
+function getReaderBackgroundColor(userId) {
+    // Predefined array of light, pleasant background colors
+    const lightColors = [
+        '#f0f4f8', // Very light blue-gray
+        '#f5f0f5', // Very light lavender
+        '#f0f5f0', // Very light green
+        '#fff5f0', // Very light peach
+        '#f5f5f0', // Very light beige
+        '#f0f0f5', // Very light periwinkle
+        '#f5f0f0', // Very light rose
+        '#f0f5f5', // Very light cyan
+        '#faf0f5', // Very light pink
+        '#f5faf0', // Very light lime
+        '#f0faf5', // Very light mint
+        '#faf5f0', // Very light cream
+    ];
+    
+    // Simple hash function to convert user_id to an index
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+        hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Use absolute value and modulo to get index
+    const index = Math.abs(hash) % lightColors.length;
+    return lightColors[index];
+}
+
+// Get hover color (slightly darker shade)
+function getReaderHoverColor(baseColor) {
+    // Convert hex to RGB, darken slightly, convert back
+    const hex = baseColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Darken by reducing each component by 15 (more noticeable)
+    const darkerR = Math.max(0, r - 15);
+    const darkerG = Math.max(0, g - 15);
+    const darkerB = Math.max(0, b - 15);
+    
+    // Convert back to hex
+    const toHex = (n) => {
+        const hex = n.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+    
+    return `#${toHex(darkerR)}${toHex(darkerG)}${toHex(darkerB)}`;
+}
+
+// Get or create reader card
+function getOrCreateReaderCard(activity) {
+    if (!activity.user_id) {
+        console.error('Activity missing user_id:', activity);
+        return null;
+    }
+    
+    const userId = activity.user_id;
+    let readerCard = readerCards.get(userId);
+    
+    if (!readerCard) {
+        // Create new reader card
+        const container = document.getElementById('readers-container');
+        if (!container) {
+            console.error('readers-container element not found');
+            return null;
+        }
+        
+        // Remove loading message
+        const loadingMsg = container.querySelector('.text-muted');
+        if (loadingMsg && loadingMsg.textContent.includes('Loading')) {
+            loadingMsg.remove();
+        }
+        
+        // Get reader name
+        let readerName = 'Unknown Reader';
+        if (activity.first_name && activity.last_name) {
+            readerName = `${activity.first_name} ${activity.last_name}`;
+        } else if (activity.first_name) {
+            readerName = activity.first_name;
+        } else if (activity.email) {
+            readerName = activity.email.split('@')[0];
+        } else {
+            readerName = `User ${userId.substring(0, 8)}`;
+        }
+        
+        // Create card element
+        const cardId = `reader-card-${userId}`;
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card reader-card';
+        cardElement.id = cardId;
+        cardElement.setAttribute('data-user-id', userId);
+        
+        // Generate unique light background color for this reader
+        const bgColor = getReaderBackgroundColor(userId);
+        const hoverColor = getReaderHoverColor(bgColor);
+        
+        // Use clean black text on light background with unique color per reader
+        // Cards start COLLAPSED by default for neat appearance
+        cardElement.innerHTML = `
+            <div class="card-header reader-card-header collapsed" style="background-color: ${bgColor} !important;" data-bg-color="${bgColor}" data-hover-color="${hoverColor}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${readerName}</strong>
+                        <small class="d-block text-muted">${activity.email || 'No email'}</small>
+                    </div>
+                    <span class="expand-icon text-muted">▼</span>
+                </div>
+            </div>
+            <div id="${cardId}-body" class="card-body reader-card-body" style="display: none;">
+                <div class="reader-activities-list">
+                    <!-- Activities will be inserted here -->
+                </div>
+            </div>
+        `;
+        
+        // Add click handler for expand/collapse (cards start COLLAPSED by default)
+        const header = cardElement.querySelector('.reader-card-header');
+        const body = cardElement.querySelector(`#${cardId}-body`);
+        const storedBgColor = header.getAttribute('data-bg-color');
+        const storedHoverColor = header.getAttribute('data-hover-color');
+        
+        // Set up hover effect using the unique hover color
+        header.addEventListener('mouseenter', function() {
+            if (storedHoverColor) {
+                header.style.backgroundColor = storedHoverColor;
+            }
+        });
+        
+        header.addEventListener('mouseleave', function() {
+            if (storedBgColor) {
+                header.style.backgroundColor = storedBgColor;
+            }
+        });
+        
+        header.addEventListener('click', function() {
+            // Toggle collapsed class
+            const isCollapsed = header.classList.contains('collapsed');
+            if (isCollapsed) {
+                // Expanding: clear unread count and update last expanded time
+                header.classList.remove('collapsed');
+                body.style.display = 'block';
+                readerCard.unreadCount = 0;
+                readerCard.lastExpandedAt = Date.now();
+                updateUnreadBadge(readerCard);
+                // Reset visibility to show 12 activities when expanding
+                readerCard.visibleCount = 12;
+                updateActivityVisibility(readerCard);
+            } else {
+                // Collapsing: record the time
+                header.classList.add('collapsed');
+                body.style.display = 'none';
+                readerCard.lastExpandedAt = Date.now();
+            }
+        });
+        
+        // Insert card at the beginning (newest readers first)
+        container.insertBefore(cardElement, container.firstChild);
+        
+        // Store in map
+        readerCard = {
+            cardElement: cardElement,
+            activities: [],
+            activitiesList: cardElement.querySelector('.reader-activities-list'),
+            unreadCount: 0, // Track unread activities when collapsed
+            lastExpandedAt: Date.now(), // Track when card was last expanded
+            visibleCount: 12, // Track how many activities are visible (12 initially)
+            showMoreLink: null // Reference to the "more" link element
+        };
+        readerCards.set(userId, readerCard);
+    }
+    
+    return readerCard;
+}
+
+// Add activity to reader's card
+function addActivityToReaderCard(activity) {
+    const readerCard = getOrCreateReaderCard(activity);
+    if (!readerCard) {
+        return;
+    }
+    
+    // Check if activity already exists
+    const existingItem = readerCard.activitiesList.querySelector(`[data-activity-id="${activity.id}"]`);
+    if (existingItem) {
+        console.log('Activity already exists:', activity.id);
+        return;
+    }
+    
+    // Format event type
+    const eventTypeLabel = formatEventType(activity.event_type);
+    const eventIcon = getEventIcon(activity.event_type);
+    
+    // Format time
+    const timeAgo = formatTimeAgo(activity.created_at);
+    
+    // Build "what" content (the actual subject/details of the activity)
+    let whatContent = '';
+    if (activity.parsed_context && activity.parsed_context.word) {
+        whatContent = activity.parsed_context.word;
+    } else if (activity.content) {
+        whatContent = activity.content.substring(0, 100);
+    } else if (activity.page_number) {
+        whatContent = `Page ${activity.page_number}`;
+    }
+    
+    // Create activity item (without reader name - it's in the card header)
+    const activityItem = document.createElement('div');
+    activityItem.className = 'reader-activity-item';
+    activityItem.setAttribute('data-activity-id', activity.id);
+    activityItem.setAttribute('data-event-type', activity.event_type || '');
+    
+    // Parse the activity timestamp for comparison
+    const activityTime = new Date(activity.created_at).getTime();
+    
+    // Layout: Top left timestamp, icon on right of timestamp, below: activity type: what
+    activityItem.innerHTML = `
+        <div class="activity-header d-flex justify-content-between align-items-center mb-1">
+            <small class="activity-time">${timeAgo}</small>
+            <span class="activity-icon">${eventIcon}</span>
+        </div>
+        <div class="activity-details">
+            <span class="activity-type-label">${eventTypeLabel}</span>${whatContent ? ': ' : ''}<span class="activity-what">${whatContent}</span>
+        </div>
+    `;
+    
+    // Find the correct position to insert (activities should be sorted newest first)
+    const existingItems = readerCard.activitiesList.querySelectorAll('.reader-activity-item');
+    let inserted = false;
+    
+    for (let i = 0; i < existingItems.length; i++) {
+        const item = existingItems[i];
+        const itemTimeStr = item.getAttribute('data-activity-time');
+        if (itemTimeStr) {
+            const itemTime = parseInt(itemTimeStr);
+            // If current activity is newer (larger timestamp), insert before this item
+            if (activityTime > itemTime) {
+                readerCard.activitiesList.insertBefore(activityItem, item);
+                inserted = true;
+                break;
+            }
+        }
+    }
+    
+    // If not inserted yet (newest or no existing items), insert at top
+    if (!inserted) {
+        readerCard.activitiesList.insertBefore(activityItem, readerCard.activitiesList.firstChild);
+    }
+    
+    // Store timestamp on the element for future sorting
+    activityItem.setAttribute('data-activity-time', activityTime.toString());
+    
+    // Store activity in array (sorted by timestamp)
+    readerCard.activities.push(activity);
+    readerCard.activities.sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeB - timeA; // Newest first
+    });
+    
+    // Limit to 50 activities per reader
+    const items = readerCard.activitiesList.querySelectorAll('.reader-activity-item');
+    if (items.length > 50) {
+        // Remove oldest items (at the bottom)
+        for (let i = items.length - 1; i >= 50; i--) {
+            items[i].remove();
+        }
+        // Also remove from activities array (keep newest 50)
+        readerCard.activities = readerCard.activities.slice(0, 50);
+    }
+    
+    // Check if card is collapsed - if so, increment unread count
+    const header = readerCard.cardElement.querySelector('.reader-card-header');
+    const cardBody = readerCard.cardElement.querySelector('.reader-card-body');
+    if (header.classList.contains('collapsed')) {
+        // Card is collapsed - increment unread count
+        readerCard.unreadCount++;
+        updateUnreadBadge(readerCard);
+    } else {
+        // Card is expanded - ensure visibleCount is initialized, then update pagination
+        if (typeof readerCard.visibleCount === 'undefined' || readerCard.visibleCount === null) {
+            readerCard.visibleCount = 12;
+        }
+        // Update visible activities and pagination
+        updateActivityVisibility(readerCard);
+    }
+    
+    // Update styling: activities within last 1 hour get colored text, older ones in light gray
+    updateActivityStyling(readerCard);
+    }
+    
+// Sort activities in a reader card by timestamp (newest first)
+function sortReaderActivities(readerCard) {
+    const activitiesList = readerCard.activitiesList;
+    const items = Array.from(activitiesList.querySelectorAll('.reader-activity-item'));
+    
+    if (items.length <= 1) {
+        return; // No need to sort
+    }
+    
+    // Sort items by timestamp (newest first)
+    items.sort((a, b) => {
+        const timeA = parseInt(a.getAttribute('data-activity-time') || '0');
+        const timeB = parseInt(b.getAttribute('data-activity-time') || '0');
+        return timeB - timeA; // Newest first
+    });
+    
+    // Re-insert items in sorted order
+    items.forEach(item => {
+        activitiesList.appendChild(item);
+    });
+    
+    // Update styling after sorting
+    updateActivityStyling(readerCard);
+}
+
+// Update activity styling: activities within last 1 hour get bold colored text, older ones in light gray
+function updateActivityStyling(readerCard) {
+    const items = readerCard.activitiesList.querySelectorAll('.reader-activity-item');
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000); // 1 hour in milliseconds
+    
+    items.forEach((item) => {
+        const activityTimeStr = item.getAttribute('data-activity-time');
+        if (!activityTimeStr) {
+            // If no timestamp, treat as old
+            item.classList.remove('activity-recent');
+            item.classList.add('activity-history');
+            return;
+        }
+        
+        const activityTime = parseInt(activityTimeStr);
+        
+        // Check if activity is within last 1 hour
+        if (activityTime >= oneHourAgo) {
+            // Recent activity - bold colored text
+            item.classList.remove('activity-history');
+            item.classList.add('activity-recent');
+    } else {
+            // Older activity - light gray
+            item.classList.remove('activity-recent');
+            item.classList.add('activity-history');
+        }
+    });
+}
+
+// Update unread badge on card header
+function updateUnreadBadge(readerCard) {
+    const header = readerCard.cardElement.querySelector('.reader-card-header');
+    let badge = header.querySelector('.activity-badge');
+    
+    if (readerCard.unreadCount > 0) {
+        if (!badge) {
+            // Create badge if it doesn't exist
+            badge = document.createElement('span');
+            badge.className = 'activity-badge';
+            header.querySelector('.d-flex').appendChild(badge);
+        }
+        badge.textContent = readerCard.unreadCount > 99 ? '99+' : readerCard.unreadCount.toString();
+        badge.style.display = 'inline-block';
+        } else {
+        // Hide badge if no unread count
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Update activity visibility based on pagination (show 12 initially, up to 50 with "more" link)
+function updateActivityVisibility(readerCard) {
+    // Ensure visibleCount is initialized
+    if (typeof readerCard.visibleCount === 'undefined' || readerCard.visibleCount === null) {
+        readerCard.visibleCount = 12;
+    }
+    
+    const items = Array.from(readerCard.activitiesList.querySelectorAll('.reader-activity-item'));
+    const totalCount = items.length;
+    
+    // Remove existing "more" link if present
+    if (readerCard.showMoreLink) {
+        readerCard.showMoreLink.remove();
+        readerCard.showMoreLink = null;
+    }
+    
+    if (totalCount <= 12) {
+        // Show all activities if 12 or fewer
+        items.forEach(item => {
+            item.classList.remove('hidden-activity');
+        });
+        readerCard.visibleCount = totalCount;
+        return;
+    }
+    
+    // Ensure we don't show more than 50 total
+    const maxVisible = Math.min(readerCard.visibleCount, 50);
+    
+    // Show activities up to visibleCount, hide the rest
+    items.forEach((item, index) => {
+        if (index < maxVisible) {
+            item.classList.remove('hidden-activity');
+        } else {
+            item.classList.add('hidden-activity');
+        }
+    });
+    
+    // Add "more" link if there are more activities to show
+    if (maxVisible < totalCount && maxVisible < 50) {
+        const moreLink = document.createElement('div');
+        moreLink.className = 'more-activities-link';
+        const remaining = Math.min(38, totalCount - maxVisible);
+        moreLink.textContent = `... more (${remaining} more)`;
+        moreLink.addEventListener('click', function() {
+            // Show 38 more activities (up to 50 total)
+            readerCard.visibleCount = Math.min(50, readerCard.visibleCount + 38);
+            updateActivityVisibility(readerCard);
+        });
+        readerCard.activitiesList.appendChild(moreLink);
+        readerCard.showMoreLink = moreLink;
+    }
+}
+
+function formatEventType(eventType) {
+    const labels = {
+        'LOGIN': 'Logged In',
+        'LOGOUT': 'Logged Out',
+        'PAGE_SYNC': 'Page Navigation',
+        'SECTION_SYNC': 'Section Navigation',
+        'DEFINITION_LOOKUP': 'Dictionary Lookup',
+        'AI_QUERY': 'AI Question',
+        'HELP_REQUEST': 'Help Request',
+        'FEEDBACK_SUBMISSION': 'Feedback'
+    };
+    return labels[eventType] || eventType;
+}
+
+function getEventIcon(eventType) {
+    const icons = {
+        'LOGIN': '🔓',
+        'LOGOUT': '🔒',
+        'PAGE_SYNC': '📄',
+        'SECTION_SYNC': '📑',
+        'DEFINITION_LOOKUP': '📖',
+        'AI_QUERY': '🤖',
+        'HELP_REQUEST': '🆘',
+        'FEEDBACK_SUBMISSION': '💬'
+    };
+    return icons[eventType] || '📝';
+}
+
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return time.toLocaleString();
+}
+
+function loadDashboardData() {
+    const token = getAuthToken();
+
+    // Load today's activity count using new API endpoint
+    fetch('/api/consultant/todays-activity-count', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        const count = data.count || 0;
+        document.getElementById('today-activity').textContent = count;
+    })
+    .catch(err => {
+        console.error('Error loading today\'s activity:', err);
+        document.getElementById('today-activity').textContent = '0';
+    });
+
+    // Load active readers count using new API endpoint
+    loadLoggedInReaders();
+    loadOnlineReaders();
+}
+
+function refreshHelpRequests() {
+    const token = getAuthToken();
+    fetch('/rest/v1/help_requests?status=eq.pending&order=created_at.desc&limit=5', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(requests => {
+        const recentDiv = document.getElementById('recent-requests');
+        if (requests.length === 0) {
+            recentDiv.innerHTML = '<p class="text-muted">No pending requests</p>';
+        } else {
+            let html = '<ul class="list-group">';
+            requests.forEach(req => {
+                html += `
+                    <li class="list-group-item">
+                        <a href="/consultant/help-requests?id=${req.id}">Request from user ${req.user_id}</a>
+                        <small class="text-muted d-block">${new Date(req.created_at).toLocaleString()}</small>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            recentDiv.innerHTML = html;
+        }
+    })
+    .catch(err => console.error('Error loading requests:', err));
+}
+
+function loadLoggedInReaders() {
+    const token = getAuthToken();
+    if (!token) {
+        console.error('No token available for loadLoggedInReaders');
+        return;
+    }
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    fetch('/api/consultant/logged-in-readers-count', {
+        headers: {'Authorization': 'Bearer ' + token},
+        signal: controller.signal
+    })
+    .then(res => {
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        const count = data.count || 0;
+        const activeReaderIds = (data.readers || []).map(r => r.id);
+        
+        // Update count display
+        document.getElementById('logged-in-readers').textContent = count;
+        
+        // Filter reader cards to only show active readers (active in last hour)
+        filterReaderCardsToActiveOnly(activeReaderIds);
+    })
+    .catch(err => {
+        clearTimeout(timeoutId);
+        console.error('Error loading logged-in readers:', err);
+        if (err.name === 'AbortError') {
+            console.error('Request timed out');
+        }
+        // On error, keep current count instead of resetting to 0
+        // This prevents the count from jumping to 0 on network hiccups
+        console.log('Keeping current logged-in count due to error');
+    });
+}
+
+// Filter reader cards to only show active readers (active in last hour)
+// Remove cards for readers who are not in the active list
+// Note: This function only manages cards, NOT the logged-in count (that comes from the API)
+function filterReaderCardsToActiveOnly(activeReaderIds) {
+    const activeIdsSet = new Set(activeReaderIds);
+    const container = document.getElementById('readers-container');
+    
+    // Remove cards for inactive readers
+    readerCards.forEach((readerCard, userId) => {
+        if (!activeIdsSet.has(userId)) {
+            // Reader is not active, remove their card
+            console.log('Removing inactive reader card:', userId);
+            readerCard.cardElement.remove();
+            readerCards.delete(userId);
+        }
+    });
+    
+    // Don't update logged-in count here - that should come from the API
+    // The count reflects all logged-in readers, not just those with activity cards
+    console.log('Active reader IDs from API:', activeReaderIds.length, 'Cards displayed:', readerCards.size);
+}
+
+
+function loadOnlineReaders() {
+    const token = getAuthToken();
+    // Use new API endpoint to get active readers count and list
+    fetch('/api/consultant/active-readers-count', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        const count = data.count || 0;
+        const readers = data.readers || [];
+        document.getElementById('active-readers').textContent = count;
+        // Update online users list
+        updateOnlineUsers(readers.map(r => r.id));
+    })
+    .catch(err => {
+        console.error('Error loading online readers:', err);
+        document.getElementById('active-readers').textContent = '0';
+    });
+}
+
+function updateOnlineUsers(userIds) {
+    const token = getAuthToken();
+    if (userIds.length === 0) {
+        document.getElementById('online-readers').innerHTML = '<p class="text-muted">No online readers</p>';
+        return;
+    }
+
+    // Load user information from users table
+    // Build query: id=in.(id1,id2,id3)
+    const userIdsStr = userIds.map(id => `"${id}"`).join(',');
+    fetch(`/rest/v1/users?id=in.(${userIdsStr})`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(users => {
+        if (!Array.isArray(users)) {
+            users = [];
+        }
+        let html = '<ul class="list-group">';
+        if (users.length === 0) {
+            html += '<li class="list-group-item text-muted">No user details found</li>';
+        } else {
+            users.forEach(user => {
+                const name = (user.first_name && user.last_name) 
+                    ? `${user.first_name} ${user.last_name}`
+                    : user.email || `User ${user.id.substring(0, 8)}`;
+                html += `
+                    <li class="list-group-item">
+                        <strong>${name}</strong>
+                        <small class="text-muted d-block">${user.email || ''}</small>
+                    </li>
+                `;
+            });
+        }
+        html += '</ul>';
+        document.getElementById('online-readers').innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading users:', err);
+        document.getElementById('online-readers').innerHTML = '<p class="text-muted">Error loading users</p>';
+    });
+}
+
+function updateActivityFeed(activityData) {
+    // Update activity feed if exists
+    const activityDiv = document.getElementById('activity-feed');
+    if (activityDiv) {
+        const activityItem = document.createElement('div');
+        activityItem.className = 'mb-2 p-2 border rounded';
+        activityItem.innerHTML = `
+            <strong>${activityData.event_type}</strong>
+            <small class="text-muted d-block">${new Date(activityData.timestamp).toLocaleString()}</small>
+        `;
+        activityDiv.insertBefore(activityItem, activityDiv.firstChild);
+    }
+}
+
+function updateOnlineUsersCount() {
+    loadOnlineReaders();
+}
+
+// Load and display consultant user info in navbar (consultant-specific)
+function loadConsultantUserInfoInNavbar() {
+    const userInfoNav = document.getElementById('user-info-nav');
+    const userNameDisplay = document.getElementById('user-name-display');
+    
+    // Always hide user info first (in case of logout)
+    if (userInfoNav) {
+        userInfoNav.style.display = 'none';
+    }
+    
+    // Hide name in navbar brand as well
+    const userNameBrand = document.getElementById('user-name-brand');
+    if (userNameBrand) {
+        userNameBrand.style.display = 'none';
+        userNameBrand.textContent = '';
+    }
+    
+    const token = getAuthToken();
+    if (!token) {
+        console.log('[loadConsultantUserInfoInNavbar] No auth token found, hiding user info');
+        return;
+    }
+    
+    if (!userInfoNav || !userNameDisplay) {
+        console.log('[loadConsultantUserInfoInNavbar] Required elements not found, skipping');
+        return;
+    }
+    
+    console.log('[loadConsultantUserInfoInNavbar] Fetching consultant info from /auth/v1/user');
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        console.log('[loadConsultantUserInfoInNavbar] Response status:', res.status);
+        if (!res.ok) {
+            throw new Error('Failed to fetch consultant info: ' + res.status);
+        }
+        return res.json();
+    })
+    .then(user => {
+        console.log('[loadConsultantUserInfoInNavbar] Consultant data received:', user);
+        
+        // Get first_name and last_name from user_metadata or directly
+        let firstName = '';
+        let lastName = '';
+        
+        if (user.user_metadata) {
+            firstName = user.user_metadata.first_name || '';
+            lastName = user.user_metadata.last_name || '';
+        } else if (user.first_name) {
+            firstName = user.first_name;
+            lastName = user.last_name || '';
+        }
+        
+        console.log('[loadConsultantUserInfoInNavbar] Extracted name:', { firstName, lastName });
+        
+        // Build display name for consultant
+        let displayName = '';
+        if (firstName && lastName) {
+            displayName = `${firstName} ${lastName}`;
+        } else if (firstName) {
+            displayName = firstName;
+        } else if (user.email) {
+            // Fallback to email if no name
+            displayName = user.email.split('@')[0];
+        } else {
+            displayName = 'Consultant';
+        }
+        
+        console.log('[loadConsultantUserInfoInNavbar] Setting display name:', displayName);
+        userNameDisplay.textContent = displayName;
+        userInfoNav.style.display = 'block';
+        
+        // Also update the name in the navbar brand (left side, after "Alice Suite")
+        const userNameBrand = document.getElementById('user-name-brand');
+        if (userNameBrand) {
+            userNameBrand.textContent = displayName;
+            userNameBrand.style.display = 'inline';
+        }
+        
+        console.log('[loadConsultantUserInfoInNavbar] Consultant info displayed successfully');
+    })
+    .catch(err => {
+        console.error('[loadConsultantUserInfoInNavbar] Error loading consultant info:', err);
+    });
+}
+</script>
+{{end}}

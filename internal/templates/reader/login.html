@@ -1,0 +1,146 @@
+{{define "title"}}Login - Alice Suite Reader{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/">Home</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/register">Register</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">Login</h2>
+                
+                <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+                <div id="success-message" class="alert success d-none" role="alert"></div>
+                <noscript>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>JavaScript is disabled.</strong> Please enable JavaScript to use the login form.
+                    </div>
+                </noscript>
+
+                <form hx-post="/auth/v1/token" 
+                      hx-target="#login-result" 
+                      hx-swap="innerHTML"
+                      hx-headers='{"Content-Type": "application/json"}'
+                      hx-on::after-request="handleLoginResponse(event)">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+
+                <div id="login-result"></div>
+
+                <div class="mt-3 text-center">
+                    <a href="/register">Don't have an account? Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function handleLoginResponse(event) {
+    if (event.detail.xhr.status === 200) {
+        const response = JSON.parse(event.detail.xhr.responseText);
+        if (response.access_token) {
+            const token = response.access_token;
+            
+            // Store token in sessionStorage (per-tab isolation)
+            try {
+                sessionStorage.setItem('auth_token', token);
+                console.log('Token stored in sessionStorage');
+            } catch (e) {
+                console.error('Failed to store token in sessionStorage:', e);
+            }
+            
+            // Sync to cookie for server-side page navigation
+            // Safari-compatible cookie setting
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+            
+            // Method 1: Standard cookie with encoding
+            document.cookie = `auth_token=${encodeURIComponent(token)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+            
+            // Method 2: Also try without encoding (Safari sometimes prefers this)
+            if (/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
+                document.cookie = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+            }
+            
+            // Verify cookie was set
+            const cookies = document.cookie.split(';');
+            let cookieSet = false;
+            for (let cookie of cookies) {
+                const [name] = cookie.trim().split('=');
+                if (name === 'auth_token') {
+                    cookieSet = true;
+                    break;
+                }
+            }
+            
+            console.log('Cookie set:', cookieSet);
+            
+            // Small delay to ensure cookie is set before redirect (especially for Safari)
+            setTimeout(() => {
+            window.location.href = '/reader';
+            }, 300);
+        }
+    } else {
+        document.getElementById('error-message').textContent = 'Invalid email or password';
+        document.getElementById('error-message').classList.remove('d-none');
+    }
+}
+
+// Convert form data to JSON for HTMX
+document.querySelector('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password')
+    };
+    
+    fetch('/auth/v1/token', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.access_token) {
+            // Store token in sessionStorage (per-tab isolation)
+            sessionStorage.setItem('auth_token', data.access_token);
+            // Sync to cookie for server-side page navigation
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+            document.cookie = `auth_token=${encodeURIComponent(data.access_token)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+            // Redirect to reader dashboard
+            window.location.href = '/reader';
+        } else {
+            document.getElementById('error-message').textContent = 'Invalid email or password';
+            document.getElementById('error-message').classList.remove('d-none');
+        }
+    })
+    .catch(err => {
+        console.error('Login error:', err);
+        document.getElementById('error-message').textContent = 'Login failed. Please try again.';
+        document.getElementById('error-message').classList.remove('d-none');
+    });
+});
+</script>
+{{end}}

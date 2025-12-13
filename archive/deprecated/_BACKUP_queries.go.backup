@@ -1,0 +1,54 @@
+// ... existing code ...
+
+// GetPageByNumber retrieves a page with all its sections
+func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
+	// Get page
+	page := &models.Page{}
+	var chapterID, chapterTitle sql.NullString
+	query := `SELECT id, book_id, page_number, chapter_id, chapter_title, content, word_count
+	          FROM pages WHERE book_id = ? AND page_number = ?`
+	
+	err := DB.QueryRow(query, bookID, pageNumber).Scan(
+		&page.ID, &page.BookID, &page.PageNumber, &chapterID, &chapterTitle,
+		&page.Content, &page.WordCount,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if chapterID.Valid {
+		page.ChapterID = &chapterID.String
+	}
+	if chapterTitle.Valid {
+		page.ChapterTitle = &chapterTitle.String
+	}
+	
+	// Get sections for this page
+	sectionsQuery := `SELECT id, page_id, page_number, section_number, content, word_count
+	                  FROM sections WHERE page_id = ? ORDER BY section_number`
+	rows, err := DB.Query(sectionsQuery, page.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	page.Sections = []models.Section{}
+	for rows.Next() {
+		var section models.Section
+		err := rows.Scan(
+			&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
+			&section.Content, &section.WordCount,
+		)
+		if err != nil {
+			return nil, err
+		}
+		page.Sections = append(page.Sections, section)
+	}
+	
+	return page, rows.Err()
+}
+
+// ... existing code ...

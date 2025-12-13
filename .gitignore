@@ -1,0 +1,44 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+alice-suite-server
+server
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+*.local
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+/tmp/
+
+# Test
+coverage/
+*.test
+*.out
+
+# Go
+go.work

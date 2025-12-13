@@ -1,0 +1,139 @@
+{{define "title"}}Reading Statistics - Alice Suite{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/reader">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/reader/interaction">Reading</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/reader/statistics">Statistics</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Reading Statistics</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Pages Read</h5>
+                        <h2 id="pages-read">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Reading Time</h5>
+                        <h2 id="reading-time">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Words Looked Up</h5>
+                        <h2 id="words-looked-up">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Reading Progress</h5>
+            </div>
+            <div class="card-body">
+                <div id="progress-chart">
+                    <p class="text-muted">Loading progress data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[statistics.html] DOMContentLoaded fired');
+    
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Attach logout handler (backup - app.js also handles this via event delegation)
+    const logoutLink = document.getElementById('logout-link-reader');
+    if (logoutLink) {
+        console.log('[statistics.html] Found logout link, attaching handler');
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('[statistics.html] Logout clicked');
+            if (window.logout) {
+                console.log('[statistics.html] Calling window.logout()');
+                window.logout();
+            } else {
+                console.error('[statistics.html] window.logout is not defined!');
+            }
+        });
+    } else {
+        console.warn('[statistics.html] Logout link not found');
+    }
+
+    // User info is loaded by app.js automatically
+    // But let's also try loading it here as a backup
+    setTimeout(function() {
+        if (typeof loadUserInfoInNavbar === 'function') {
+            console.log('[statistics.html] Calling loadUserInfoInNavbar() as backup');
+            loadUserInfoInNavbar();
+        }
+    }, 100);
+
+    // Load statistics
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        // Load reading stats
+        return fetch(`/rest/v1/reading_stats?user_id=eq.${user.id}`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+    })
+    .then(res => res.json())
+    .then(stats => {
+        if (stats.length > 0) {
+            const stat = stats[0];
+            document.getElementById('pages-read').textContent = stat.pages_read || 0;
+            document.getElementById('reading-time').textContent = formatTime(stat.total_reading_time || 0);
+        } else {
+            document.getElementById('pages-read').textContent = '0';
+            document.getElementById('reading-time').textContent = '0 min';
+        }
+    })
+    .catch(err => {
+        console.error('Error loading statistics:', err);
+    });
+});
+
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+}
+</script>
+{{end}}
+

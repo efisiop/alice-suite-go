@@ -1,0 +1,88 @@
+{{define "title"}}Register - Alice Suite Reader{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/">Home</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/login">Login</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">Create Account</h2>
+                
+                <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="register-form">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                </form>
+
+                <div class="mt-3 text-center">
+                    <a href="/login">Already have an account? Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+document.getElementById('register-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name')
+    };
+    
+    fetch('/auth/v1/signup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.user) {
+            // Redirect to verification page
+            window.location.href = '/verify';
+        } else {
+            document.getElementById('error-message').textContent = 'Registration failed. Please try again.';
+            document.getElementById('error-message').classList.remove('d-none');
+        }
+    })
+    .catch(err => {
+        document.getElementById('error-message').textContent = 'Registration failed. Please try again.';
+        document.getElementById('error-message').classList.remove('d-none');
+    });
+});
+</script>
+{{end}}
+

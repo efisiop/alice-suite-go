@@ -1,0 +1,308 @@
+/* Alice Suite Reader - Main Styles */
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    
+    /* Reader app colors - Dark Green */
+    --reader-primary: #155724;
+    --reader-primary-light: #1e7e34;
+    --reader-primary-dark: #0d4e1a;
+    
+    /* Consultant app colors - Burgundy */
+    --consultant-primary: #800020;
+    --consultant-primary-light: #a00030;
+    --consultant-primary-dark: #600015;
+}
+
+/* Reader app theme - Dark Green */
+body.reader-app,
+body[data-app="reader"] {
+    --primary-color: var(--reader-primary);
+}
+
+body.reader-app .btn-primary,
+body[data-app="reader"] .btn-primary {
+    background-color: var(--reader-primary);
+    border-color: var(--reader-primary);
+}
+
+body.reader-app .btn-primary:hover,
+body[data-app="reader"] .btn-primary:hover {
+    background-color: var(--reader-primary-dark);
+    border-color: var(--reader-primary-dark);
+}
+
+body.reader-app .btn-outline-primary,
+body[data-app="reader"] .btn-outline-primary {
+    color: var(--reader-primary);
+    border-color: var(--reader-primary);
+}
+
+body.reader-app .btn-outline-primary:hover,
+body[data-app="reader"] .btn-outline-primary:hover {
+    background-color: var(--reader-primary);
+    border-color: var(--reader-primary);
+    color: white;
+}
+
+body.reader-app .navbar-light,
+body[data-app="reader"] .navbar-light {
+    background-color: var(--reader-primary) !important;
+}
+
+body.reader-app .navbar-light .navbar-brand,
+body.reader-app .navbar-light .nav-link,
+body[data-app="reader"] .navbar-light .navbar-brand,
+body[data-app="reader"] .navbar-light .nav-link {
+    color: white !important;
+}
+
+body.reader-app .navbar-light #user-name-brand,
+body[data-app="reader"] .navbar-light #user-name-brand {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.reader-app .text-primary,
+body[data-app="reader"] .text-primary {
+    color: var(--reader-primary) !important;
+}
+
+body.reader-app #user-name-display,
+body[data-app="reader"] #user-name-display {
+    color: white !important;
+}
+
+body.reader-app #user-info-nav .nav-link,
+body[data-app="reader"] #user-info-nav .nav-link {
+    color: white !important;
+}
+
+body.reader-app .card-header,
+body[data-app="reader"] .card-header {
+    background-color: var(--reader-primary);
+    color: white;
+}
+
+body.reader-app .card-header h5,
+body.reader-app .card-header .card-title,
+body[data-app="reader"] .card-header h5,
+body[data-app="reader"] .card-header .card-title {
+    color: white;
+}
+
+body.reader-app .badge.bg-secondary,
+body[data-app="reader"] .badge.bg-secondary {
+    background-color: var(--reader-primary-light) !important;
+}
+
+body.reader-app .bg-primary,
+body[data-app="reader"] .bg-primary {
+    background-color: var(--reader-primary) !important;
+}
+
+body.reader-app .border-primary,
+body[data-app="reader"] .border-primary {
+    border-color: var(--reader-primary) !important;
+}
+
+/* Consultant app theme - Red */
+body.consultant-app,
+body[data-app="consultant"] {
+    --primary-color: var(--consultant-primary);
+}
+
+body.consultant-app .btn-primary,
+body[data-app="consultant"] .btn-primary {
+    background-color: var(--consultant-primary);
+    border-color: var(--consultant-primary);
+}
+
+body.consultant-app .btn-primary:hover,
+body[data-app="consultant"] .btn-primary:hover {
+    background-color: var(--consultant-primary-dark);
+    border-color: var(--consultant-primary-dark);
+}
+
+body.consultant-app .btn-outline-primary,
+body[data-app="consultant"] .btn-outline-primary {
+    color: var(--consultant-primary);
+    border-color: var(--consultant-primary);
+}
+
+body.consultant-app .btn-outline-primary:hover,
+body[data-app="consultant"] .btn-outline-primary:hover {
+    background-color: var(--consultant-primary);
+    border-color: var(--consultant-primary);
+    color: white;
+}
+
+body.consultant-app .navbar-light,
+body[data-app="consultant"] .navbar-light {
+    background-color: var(--consultant-primary) !important;
+}
+
+body.consultant-app .navbar-light .navbar-brand,
+body.consultant-app .navbar-light .nav-link,
+body[data-app="consultant"] .navbar-light .navbar-brand,
+body[data-app="consultant"] .navbar-light .nav-link {
+    color: white !important;
+}
+
+body.consultant-app .navbar-light #user-name-brand,
+body[data-app="consultant"] .navbar-light #user-name-brand {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.consultant-app .text-primary,
+body[data-app="consultant"] .text-primary {
+    color: var(--consultant-primary) !important;
+}
+
+body.consultant-app #user-name-display,
+body[data-app="consultant"] #user-name-display {
+    color: white !important;
+}
+
+body.consultant-app #user-info-nav .nav-link,
+body[data-app="consultant"] #user-info-nav .nav-link {
+    color: white !important;
+}
+
+body.consultant-app .card-header,
+body[data-app="consultant"] .card-header {
+    background-color: var(--consultant-primary);
+    color: white;
+}
+
+body.consultant-app .card-header h5,
+body.consultant-app .card-header .card-title,
+body[data-app="consultant"] .card-header h5,
+body[data-app="consultant"] .card-header .card-title {
+    color: white;
+}
+
+body.consultant-app .badge.bg-secondary,
+body[data-app="consultant"] .badge.bg-secondary {
+    background-color: var(--consultant-primary-light) !important;
+}
+
+body.consultant-app .bg-primary,
+body[data-app="consultant"] .bg-primary {
+    background-color: var(--consultant-primary) !important;
+}
+
+body.consultant-app .border-primary,
+body[data-app="consultant"] .border-primary {
+    border-color: var(--consultant-primary) !important;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+/* User name in navbar brand - visible even in narrow windows */
+#user-name-brand {
+    font-weight: normal;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Ensure navbar brand flex container doesn't break in narrow windows */
+.navbar-brand.d-flex {
+    min-width: 0; /* Allow flex items to shrink */
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 576px) {
+    #user-name-brand {
+        max-width: 120px;
+        font-size: 0.85rem;
+    }
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.btn {
+    border-radius: 4px;
+    padding: 0.5rem 1.5rem;
+}
+
+.form-control {
+    border-radius: 4px;
+}
+
+/* Reader specific styles */
+.reading-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.word-highlight {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+.word-highlight:hover {
+    background-color: #fff3cd;
+}
+
+/* Dictionary popup */
+.dictionary-popup {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-width: 300px;
+}
+
+/* Loading spinner */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .reading-content {
+        font-size: 1rem;
+        padding: 0 1rem;
+    }
+}
+

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alice Book Viewer - Database Inspection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .sidebar {
+            float: left;
+            width: 250px;
+            margin-right: 30px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .content {
+            margin-left: 280px;
+        }
+        .chapter-list {
+            list-style: none;
+        }
+        .chapter-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .chapter-item:hover {
+            background: #e0e0e0;
+        }
+        .chapter-item.active {
+            background: #667eea;
+            color: white;
+        }
+        .section-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .section-item {
+            padding: 8px;
+            margin-bottom: 3px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+        .section-item:hover {
+            background: #e0e0e0;
+        }
+        .section-item.active {
+            background: #764ba2;
+            color: white;
+        }
+        .book-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            min-height: 400px;
+        }
+        .section-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .section-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .section-text {
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .stats {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        .stats strong {
+            color: #667eea;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                float: none;
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+            .content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 Alice Book Viewer</h1>
+        <p class="subtitle">Inspect the book content stored in the database</p>
+        
+        <div class="stats" id="stats">
+            Loading statistics...
+        </div>
+
+        <div class="sidebar">
+            <h3>Chapters</h3>
+            <ul class="chapter-list" id="chapterList">
+                <li class="loading">Loading chapters...</li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="book-content" id="bookContent">
+                <div class="loading">Select a section to view content</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let chapters = [];
+        let sections = {};
+
+        // Load book and chapters
+        async function loadBook() {
+            try {
+                // Get book
+                const bookRes = await fetch(`${API_BASE}/books`);
+                const books = await bookRes.json();
+                if (!books || books.length === 0) {
+                    throw new Error('No books found');
+                }
+                const book = books[0];
+
+                // Get chapters
+                const chaptersRes = await fetch(`${API_BASE}/chapters?book_id=${book.id}`);
+                chapters = await chaptersRes.json();
+                
+                // Update stats
+                document.getElementById('stats').innerHTML = `
+                    <strong>Book:</strong> ${book.title}<br>
+                    <strong>Author:</strong> ${book.author}<br>
+                    <strong>Chapters:</strong> ${chapters.length}<br>
+                    <strong>Total Pages:</strong> ${book.total_pages}
+                `;
+
+                // Render chapters
+                renderChapters();
+            } catch (error) {
+                document.getElementById('chapterList').innerHTML = 
+                    `<li class="error">Error: ${error.message}</li>`;
+            }
+        }
+
+        // Render chapter list
+        function renderChapters() {
+            const list = document.getElementById('chapterList');
+            list.innerHTML = chapters.map(chapter => `
+                <li class="chapter-item" data-chapter-id="${chapter.id}">
+                    ${chapter.title}
+                    <ul class="section-list" id="sections-${chapter.id}" style="display:none;"></ul>
+                </li>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.chapter-item').forEach(item => {
+                item.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const chapterId = item.dataset.chapterId;
+                    
+                    // Toggle active
+                    document.querySelectorAll('.chapter-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Load sections if not loaded
+                    if (!sections[chapterId]) {
+                        await loadSections(chapterId);
+                    }
+                    
+                    // Toggle section list
+                    const sectionList = document.getElementById(`sections-${chapterId}`);
+                    sectionList.style.display = sectionList.style.display === 'none' ? 'block' : 'none';
+                });
+            });
+        }
+
+        // Load sections for a chapter
+        async function loadSections(chapterId) {
+            try {
+                const res = await fetch(`${API_BASE}/sections?chapter_id=${chapterId}`);
+                const chapterSections = await res.json();
+                sections[chapterId] = chapterSections;
+
+                // Render sections
+                const sectionList = document.getElementById(`sections-${chapterId}`);
+                sectionList.innerHTML = chapterSections.map(section => `
+                    <li class="section-item" data-section-id="${section.id}">
+                        ${section.title} (Pages ${section.start_page}-${section.end_page})
+                    </li>
+                `).join('');
+
+                // Add click handlers
+                sectionList.querySelectorAll('.section-item').forEach(item => {
+                    item.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const sectionId = item.dataset.sectionId;
+                        
+                        // Toggle active
+                        document.querySelectorAll('.section-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+
+                        // Load section content
+                        await loadSectionContent(sectionId);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading sections:', error);
+            }
+        }
+
+        // Load section content
+        async function loadSectionContent(sectionId) {
+            const contentDiv = document.getElementById('bookContent');
+            contentDiv.innerHTML = '<div class="loading">Loading content...</div>';
+
+            try {
+                // Find section in loaded data
+                let section = null;
+                for (const chapterId in sections) {
+                    section = sections[chapterId].find(s => s.id === sectionId);
+                    if (section) break;
+                }
+
+                if (!section) {
+                    throw new Error('Section not found');
+                }
+
+                // Render content
+                contentDiv.innerHTML = `
+                    <div class="section-header">
+                        <div class="section-title">${section.title}</div>
+                        <div class="section-meta">
+                            Pages ${section.start_page} - ${section.end_page} | 
+                            Section ${section.number}
+                        </div>
+                    </div>
+                    <div class="section-text">${escapeHtml(section.content)}</div>
+                `;
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadBook();
+    </script>
+</body>
+</html>
+
+

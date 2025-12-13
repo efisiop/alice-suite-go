@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alice Suite - Reader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .page-selector {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .page-selector h2 {
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.2em;
+        }
+        .page-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .page-input-group input {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 16px;
+            width: 100px;
+        }
+        .page-input-group button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .page-input-group button:hover {
+            background: #5568d3;
+        }
+        .page-input-group button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .chapter-title {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .sections-list {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .section-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .section-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+        .section-card.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .section-number {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        .section-word-count {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .section-content {
+            color: #333;
+            font-size: 1.05em;
+            line-height: 1.8;
+            margin-top: 15px;
+        }
+        .glossary-term {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            border-bottom: 2px dotted #ffc107;
+            position: relative;
+        }
+        .glossary-term:hover {
+            background: #ffc107;
+            color: #000;
+        }
+        .glossary-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 300px;
+            font-size: 0.9em;
+            z-index: 1000;
+            margin-bottom: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .glossary-term:hover .glossary-tooltip {
+            display: block;
+        }
+        .glossary-tooltip strong {
+            color: #ffc107;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .word-definition-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .word-definition-modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            color: #333;
+        }
+        .close-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .definition-content {
+            color: #555;
+            line-height: 1.8;
+        }
+        .definition-content strong {
+            color: #667eea;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .glossary-list {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+        .glossary-list-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .glossary-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .glossary-item-term {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .glossary-item-def {
+            color: #555;
+            font-size: 0.95em;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .nav-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .nav-btn:hover {
+            background: #5a6268;
+        }
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 Alice Suite - Reader</h1>
+        
+        <div class="page-selector">
+            <h2>Which page are you reading?</h2>
+            <div class="page-input-group">
+                <input type="number" id="pageNumber" min="1" max="17" placeholder="Page #" value="">
+                <button onclick="loadPage()">Go to Page</button>
+            </div>
+        </div>
+
+        <div id="content-area">
+            <div class="loading">Select a page number to begin reading</div>
+        </div>
+    </div>
+
+    <div class="word-definition-modal" id="wordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalWord">Word</h3>
+                <button class="close-btn" onclick="closeWordModal()">✕</button>
+            </div>
+            <div class="definition-content" id="modalDefinition">
+                Loading definition...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        const BOOK_ID = 'alice-in-wonderland';
+        let currentPage = null;
+        let currentSection = null;
+        let glossaryTermsMap = {}; // Map of section_id -> glossary terms
+
+        // Load last page from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const lastPage = localStorage.getItem('lastPage');
+            if (lastPage) {
+                document.getElementById('pageNumber').value = lastPage;
+                loadPage();
+            }
+        });
+
+        async function loadPage() {
+            const pageNumber = parseInt(document.getElementById('pageNumber').value);
+            if (!pageNumber || pageNumber < 1 || pageNumber > 17) {
+                showError('Please enter a valid page number (1-17)');
+                return;
+            }
+
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = '<div class="loading">Loading page...</div>';
+
+            try {
+                const url = `${API_BASE}/pages?book_id=${BOOK_ID}&page_number=${pageNumber}`;
+                console.log('Fetching:', url);
+                const response = await fetch(url);
+                console.log('Response status:', response.status, response.statusText);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`Page not found: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+                const page = await response.json();
+                console.log('Page loaded:', page);
+                currentPage = page;
+
+                // Save to localStorage
+                localStorage.setItem('lastPage', pageNumber.toString());
+                localStorage.setItem('lastSection', '');
+
+                // Load glossary terms for all sections
+                await loadGlossaryTerms(page);
+
+                // Render page
+                renderPage(page);
+            } catch (error) {
+                contentArea.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadGlossaryTerms(page) {
+            glossaryTermsMap = {};
+            for (const section of page.sections) {
+                try {
+                    const response = await fetch(`${API_BASE}/dictionary/section/${section.id}/terms`);
+                    if (response.ok) {
+                        const terms = await response.json();
+                        glossaryTermsMap[section.id] = terms;
+                    }
+                } catch (error) {
+                    console.error(`Error loading glossary for section ${section.id}:`, error);
+                }
+            }
+        }
+
+        function renderPage(page) {
+            const contentArea = document.getElementById('content-area');
+            let html = '';
+
+            // Chapter title (if present)
+            if (page.chapter_title) {
+                html += `<div class="chapter-title">${escapeHtml(page.chapter_title)}</div>`;
+            }
+
+            // Sections list
+            html += '<div class="sections-list">';
+            page.sections.forEach((section, index) => {
+                const isActive = currentSection && currentSection.id === section.id;
+                html += `
+                    <div class="section-card ${isActive ? 'active' : ''}" onclick="selectSection('${section.id}')" data-section-id="${section.id}">
+                        <div class="section-header">
+                            <span class="section-number">Section ${section.section_number}</span>
+                            <span class="section-word-count">${section.word_count} words</span>
+                        </div>
+                        <div class="section-content" id="section-content-${section.id}">
+                            ${highlightGlossaryTerms(section.content, section.id)}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            // Navigation buttons
+            html += '<div class="nav-buttons">';
+            if (page.page_number > 1) {
+                html += `<button class="nav-btn" onclick="goToPage(${page.page_number - 1})">← Previous Page</button>`;
+            }
+            if (page.page_number < 17) {
+                html += `<button class="nav-btn" onclick="goToPage(${page.page_number + 1})">Next Page →</button>`;
+            }
+            html += '</div>';
+
+            contentArea.innerHTML = html;
+
+            // If there's a last section, select it
+            const lastSection = localStorage.getItem('lastSection');
+            if (lastSection && page.sections.find(s => s.id === lastSection)) {
+                selectSection(lastSection);
+            }
+        }
+
+        function highlightGlossaryTerms(content, sectionId) {
+            const terms = glossaryTermsMap[sectionId] || [];
+            if (terms.length === 0) {
+                return escapeHtml(content);
+            }
+
+            let highlighted = escapeHtml(content);
+            terms.forEach(term => {
+                // Create regex to match the term (case-insensitive, word boundaries)
+                const regex = new RegExp('\\b' + escapeRegex(term.term) + '\\b', 'gi');
+                highlighted = highlighted.replace(regex, (match) => {
+                    return `<span class="glossary-term" onclick="lookupWord('${escapeHtml(term.term)}', '${escapeHtml(term.definition)}', event)">
+                        ${match}
+                        <span class="glossary-tooltip">
+                            <strong>${escapeHtml(term.term)}</strong>
+                            ${escapeHtml(term.definition)}
+                        </span>
+                    </span>`;
+                });
+            });
+
+            return highlighted;
+        }
+
+        function selectSection(sectionId) {
+            currentSection = currentPage.sections.find(s => s.id === sectionId);
+            if (!currentSection) return;
+
+            // Save to localStorage
+            localStorage.setItem('lastSection', sectionId);
+
+            // Update active state
+            document.querySelectorAll('.section-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.sectionId === sectionId) {
+                    card.classList.add('active');
+                }
+            });
+        }
+
+        function lookupWord(word, definition, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            // Show modal
+            document.getElementById('modalWord').textContent = word;
+            document.getElementById('modalDefinition').innerHTML = `
+                <strong>Definition:</strong><br>
+                ${escapeHtml(definition)}
+            `;
+            document.getElementById('wordModal').classList.add('active');
+
+            // Record lookup (if user is logged in)
+            // TODO: Add user_id when authentication is implemented
+        }
+
+        function closeWordModal() {
+            document.getElementById('wordModal').classList.remove('active');
+        }
+
+        function goToPage(pageNumber) {
+            document.getElementById('pageNumber').value = pageNumber;
+            loadPage();
+        }
+
+        function showError(message) {
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeRegex(text) {
+            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Close modal on outside click
+        document.getElementById('wordModal').addEventListener('click', (e) => {
+            if (e.target.id === 'wordModal') {
+                closeWordModal();
+            }
+        });
+
+        // Enter key support for page input
+        document.getElementById('pageNumber').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadPage();
+            }
+        });
+    </script>
+</body>
+</html>
+

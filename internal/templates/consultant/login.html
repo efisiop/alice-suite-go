@@ -1,0 +1,138 @@
+{{define "title"}}Consultant Login - Alice Suite{{end}}
+
+{{define "nav"}}
+{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">Consultant Login</h2>
+                
+                <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="login-form">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+document.getElementById('login-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password')
+    };
+    
+    const errorEl = document.getElementById('error-message');
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    // Disable submit button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging in...';
+    errorEl.classList.add('d-none');
+    
+    console.log('Attempting login for:', data.email);
+    
+    fetch('/auth/v1/token', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => {
+        if (!res.ok) {
+            // Try to get error message from response
+            return res.text().then(text => {
+                let errorMsg = 'Login failed';
+                try {
+                    const errorData = JSON.parse(text);
+                    errorMsg = errorData.error || errorData.message || 'Invalid email or password';
+                } catch (e) {
+                    if (res.status === 401) {
+                        errorMsg = 'Invalid email or password';
+                    } else if (res.status === 500) {
+                        errorMsg = 'Server error. Please try again later.';
+                    }
+                }
+                throw new Error(errorMsg);
+            });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.access_token) {
+            const token = data.access_token;
+            
+            // Store token in sessionStorage for JavaScript API calls
+            // Using sessionStorage instead of localStorage ensures each browser tab/window
+            // has its own isolated token storage, preventing session mixing when multiple
+            // users log in from the same IP address
+            sessionStorage.setItem('auth_token', token);
+            
+            // Note: Cookie is set by the server in the login response
+            // No need to set it client-side to avoid encoding conflicts
+            
+            // Decode JWT to get role
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                console.log('Login successful, role:', payload.role);
+                
+                if (payload.role === 'consultant') {
+                    // Verify cookie was set before redirect
+                    const cookieSet = document.cookie.includes('auth_token=');
+                    console.log('Cookie set:', cookieSet);
+                    
+                    // Small delay to ensure cookie is set before redirect
+                    setTimeout(() => {
+                        console.log('Redirecting to consultant dashboard...');
+                        window.location.href = '/consultant';
+                    }, 200);
+                } else {
+                    // Not a consultant, redirect to reader dashboard
+                    errorEl.textContent = 'This account is not a consultant account. Redirecting to reader dashboard...';
+                    errorEl.classList.remove('d-none');
+                    setTimeout(() => {
+                        window.location.href = '/reader';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Error decoding token:', err);
+                // Fallback: try to redirect anyway
+                setTimeout(() => {
+                    window.location.href = '/consultant';
+                }, 200);
+            }
+        } else {
+            errorEl.textContent = 'Invalid response from server. Please try again.';
+            errorEl.classList.remove('d-none');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
+        }
+    })
+    .catch(err => {
+        console.error('Login error:', err);
+        errorEl.textContent = err.message || 'Login failed. Please check your credentials and try again.';
+        errorEl.classList.remove('d-none');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login';
+    });
+});
+</script>
+{{end}}

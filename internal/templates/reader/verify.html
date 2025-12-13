@@ -1,0 +1,73 @@
+{{define "title"}}Verify Book Code - Alice Suite Reader{{end}}
+
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">Verify Book Code</h2>
+                <p class="text-center text-muted mb-4">Enter your book verification code to get started reading.</p>
+                
+                <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+                <div id="success-message" class="alert alert-success d-none" role="alert"></div>
+
+                <form id="verify-form">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Verification Code</label>
+                        <input type="text" class="form-control" id="code" name="code" placeholder="Enter code" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Verify</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+document.getElementById('verify-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const code = document.getElementById('code').value;
+    const token = localStorage.getItem('auth_token');
+    
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Get user ID from token (simplified - in production, decode JWT)
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        return fetch('/rest/v1/rpc/verify-book-code', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({code: code, user_id: user.id})
+        });
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.valid) {
+            document.getElementById('success-message').textContent = 'Book verified successfully!';
+            document.getElementById('success-message').classList.remove('d-none');
+            setTimeout(() => {
+                window.location.href = '/reader';
+            }, 1500);
+        } else {
+            document.getElementById('error-message').textContent = 'Invalid verification code';
+            document.getElementById('error-message').classList.remove('d-none');
+        }
+    })
+    .catch(err => {
+        document.getElementById('error-message').textContent = 'Verification failed. Please try again.';
+        document.getElementById('error-message').classList.remove('d-none');
+    });
+});
+</script>
+{{end}}
+
