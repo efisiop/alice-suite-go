@@ -1,5 +1,8 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# Build stage - Use latest Go version that supports toolchains
+FROM golang:1.23-alpine AS builder
+
+# Enable toolchain support
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
 
