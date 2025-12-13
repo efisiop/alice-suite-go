@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: alice-suite-go
+    runtime: go
+    buildCommand: go build -o bin/server ./cmd/server && go run ./cmd/migrate && go run ./cmd/init-users
+    startCommand: ./bin/server
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /data/alice-suite.db
+    disk:
+      name: alice-data
+      mountPath: /data
+      sizeGB: 1
