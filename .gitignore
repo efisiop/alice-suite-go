@@ -5,7 +5,8 @@ bin/
 *.so
 *.dylib
 alice-suite-server
-server
+/server
+/server.exe
 
 # Database
 data/*.db
