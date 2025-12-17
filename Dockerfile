@@ -16,10 +16,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the server
-RUN CGO_ENABLED=1 GOOS=linux go build -o bin/server ./cmd/server
-RUN CGO_ENABLED=1 GOOS=linux go build -o bin/migrate ./cmd/migrate
-RUN CGO_ENABLED=1 GOOS=linux go build -o bin/init-users ./cmd/init-users
+# Build the server (with musl compatibility flags for SQLite)
+RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/server ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/migrate ./cmd/migrate
+RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/init-users ./cmd/init-users
 
 # Production stage
 FROM alpine:latest
