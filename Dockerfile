@@ -1,13 +1,17 @@
-# Build stage - Use latest Go version that supports toolchains
-FROM golang:1.23-alpine AS builder
+# Build stage - Use Debian-based image for better SQLite compatibility
+FROM golang:1.23 AS builder
 
 # Enable toolchain support
 ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev sqlite-dev
+# Install build dependencies (Debian/Ubuntu packages)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc6-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -16,18 +20,21 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the server (with musl compatibility flags for SQLite)
-RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/server ./cmd/server
-RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/migrate ./cmd/migrate
-RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o bin/init-users ./cmd/init-users
+# Build the server
+RUN CGO_ENABLED=1 GOOS=linux go build -o bin/server ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux go build -o bin/migrate ./cmd/migrate
+RUN CGO_ENABLED=1 GOOS=linux go build -o bin/init-users ./cmd/init-users
 
-# Production stage
-FROM alpine:latest
+# Production stage - Use Debian slim for smaller size
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache sqlite-libs ca-certificates
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy binaries from builder
 COPY --from=builder /app/bin/server ./bin/server
