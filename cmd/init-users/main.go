@@ -104,8 +104,38 @@ func main() {
 		fmt.Printf("✅ Verification code created: %s\n", verificationCode)
 	}
 
+	// Create efisio user
+	efisioEmail := "efisio@efisio.com"
+	efisioPassword := "efisio123"
+	efisioID := uuid.New().String()
+
+	// Hash password
+	hashedPassword, err = bcrypt.GenerateFromPassword([]byte(efisioPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("Failed to hash password: %v", err)
+	}
+
+	// Check if efisio already exists
+	err = db.QueryRow("SELECT id FROM users WHERE email = ?", efisioEmail).Scan(&existingID)
+	if err == nil {
+		fmt.Printf("✅ Efisio user already exists: %s (ID: %s)\n", efisioEmail, existingID)
+	} else if err == sql.ErrNoRows {
+		// Insert efisio user
+		_, err = db.Exec(`
+			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+		`, efisioID, efisioEmail, string(hashedPassword), "Efisio", "Pittau", "reader", 1)
+		if err != nil {
+			log.Fatalf("Failed to create efisio user: %v", err)
+		}
+		fmt.Printf("✅ Created efisio user: %s (Password: %s)\n", efisioEmail, efisioPassword)
+	} else {
+		log.Fatalf("Error checking for existing efisio user: %v", err)
+	}
+
 	fmt.Println("\n📋 Test Users Created:")
 	fmt.Println("Reader: reader@example.com / reader123")
+	fmt.Println("Efisio: efisio@efisio.com / efisio123")
 	fmt.Println("Consultant: consultant@example.com / consultant123")
 	fmt.Println("Verification Code: ALICE2024")
 	fmt.Println("\n✅ Test users initialized successfully!")
