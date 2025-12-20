@@ -6,8 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/internal/services"
 )
+
+// bookService is shared from api.go - initialized there
+// We reference it here to use the same instance
 
 // HandleRPC handles POST /rest/v1/rpc/:function
 func HandleRPC(w http.ResponseWriter, r *http.Request) {
