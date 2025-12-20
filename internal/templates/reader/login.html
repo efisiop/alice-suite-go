@@ -24,11 +24,7 @@
                     </div>
                 </noscript>
 
-                <form hx-post="/auth/v1/token" 
-                      hx-target="#login-result" 
-                      hx-swap="innerHTML"
-                      hx-headers='{"Content-Type": "application/json"}'
-                      hx-on::after-request="handleLoginResponse(event)">
+                <form id="login-form">
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email" required>
@@ -106,7 +102,7 @@ function handleLoginResponse(event) {
     }
 }
 
-// Convert form data to JSON for HTMX
+// Handle form submission with proper error handling
 document.querySelector('form').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
@@ -115,14 +111,30 @@ document.querySelector('form').addEventListener('submit', function(e) {
         password: formData.get('password')
     };
     
+    const errorEl = document.getElementById('error-message');
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging in...';
+    errorEl.classList.add('d-none');
+    
     fetch('/auth/v1/token', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     })
-    .then(res => res.json())
-    .then(data => {
-        if (data.access_token) {
+    .then(async res => {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return res.json().then(json => ({ ok: res.ok, status: res.status, data: json }));
+        } else {
+            const text = await res.text();
+            return { ok: res.ok, status: res.status, data: { error: text || 'Login failed' } };
+        }
+    })
+    .then(({ ok, status, data }) => {
+        if (ok && data.access_token) {
             // Store token in sessionStorage (per-tab isolation)
             sessionStorage.setItem('auth_token', data.access_token);
             // Sync to cookie for server-side page navigation
@@ -132,14 +144,19 @@ document.querySelector('form').addEventListener('submit', function(e) {
             // Redirect to reader dashboard
             window.location.href = '/reader';
         } else {
-            document.getElementById('error-message').textContent = 'Invalid email or password';
-            document.getElementById('error-message').classList.remove('d-none');
+            const errorMsg = data.error || data.message || 'Invalid email or password';
+            errorEl.textContent = errorMsg;
+            errorEl.classList.remove('d-none');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
         }
     })
     .catch(err => {
         console.error('Login error:', err);
-        document.getElementById('error-message').textContent = 'Login failed. Please try again.';
-        document.getElementById('error-message').classList.remove('d-none');
+        errorEl.textContent = 'Login failed. Please try again.';
+        errorEl.classList.remove('d-none');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login';
     });
 });
 </script>
