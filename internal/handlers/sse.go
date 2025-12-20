@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -102,20 +103,24 @@ func sendSSEEvent(w http.ResponseWriter, event realtime.Event) error {
 	// Format: "event: {type}\ndata: {json}\n\n"
 	eventJSON, err := event.ToJSON()
 	if err != nil {
-		return err
+		// Log error but don't send malformed event
+		return fmt.Errorf("failed to serialize event to JSON: %w", err)
 	}
 
-	// Convert to string and ensure it's valid JSON
-	jsonStr := string(eventJSON)
-	
+	// Validate JSON is valid by attempting to parse it
+	var testJSON interface{}
+	if err := json.Unmarshal(eventJSON, &testJSON); err != nil {
+		// Log error but don't send malformed JSON
+		return fmt.Errorf("generated JSON is invalid: %w", err)
+	}
+
 	// Write event type line
 	if _, err := fmt.Fprintf(w, "event: %s\n", event.Type); err != nil {
 		return err
 	}
 	
-	// Write data line - according to SSE spec, each line of data must be prefixed with "data: "
-	// Since json.Marshal produces a single line (newlines are escaped as \n), we can write it as one line
-	if _, err := fmt.Fprintf(w, "data: %s\n", jsonStr); err != nil {
+	// Write data line - json.Marshal produces a single line (newlines are escaped as \n)
+	if _, err := fmt.Fprintf(w, "data: %s\n", string(eventJSON)); err != nil {
 		return err
 	}
 	
