@@ -43,10 +43,16 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := auth.Login(req.Email, req.Password)
 	if err != nil {
 		if err == auth.ErrInvalidCredentials {
-			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid email or password"})
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// Log the actual error for debugging
+		log.Printf("Login error for %s: %v", req.Email, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 		return
 	}
 
