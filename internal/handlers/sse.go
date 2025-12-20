@@ -105,7 +105,22 @@ func sendSSEEvent(w http.ResponseWriter, event realtime.Event) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, eventJSON)
+	// Convert to string and ensure it's valid JSON
+	jsonStr := string(eventJSON)
+	
+	// Write event type line
+	if _, err := fmt.Fprintf(w, "event: %s\n", event.Type); err != nil {
+		return err
+	}
+	
+	// Write data line - according to SSE spec, each line of data must be prefixed with "data: "
+	// Since json.Marshal produces a single line (newlines are escaped as \n), we can write it as one line
+	if _, err := fmt.Fprintf(w, "data: %s\n", jsonStr); err != nil {
+		return err
+	}
+	
+	// End event with blank line (required by SSE spec)
+	_, err = fmt.Fprintf(w, "\n")
 	return err
 }
 

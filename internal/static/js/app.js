@@ -316,8 +316,18 @@ function connectSSE() {
     const eventSource = new EventSource(`/api/realtime/events?token=${encodeURIComponent(token)}`);
     
     eventSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        handleSSEEvent(data);
+        try {
+            if (!event.data || event.data.trim() === '') {
+                console.warn('[SSE] Received empty event data');
+                return;
+            }
+            const data = JSON.parse(event.data);
+            handleSSEEvent(data);
+        } catch (error) {
+            console.error('[SSE] Error parsing event data:', error);
+            console.error('[SSE] Event data that failed to parse:', event.data);
+            // Don't throw - continue processing other events
+        }
     };
 
     eventSource.onerror = function(error) {
