@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/services"
 )
 
 // HandleRPC handles POST /rest/v1/rpc/:function
@@ -93,37 +93,20 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		return
 	}
 
-	// Query sections for the page
-	query := `SELECT id, page_id, page_number, section_number, content, word_count 
-	          FROM sections WHERE page_id IN (
-	              SELECT id FROM pages WHERE book_id = ? AND page_number = ?
-	          ) ORDER BY section_number`
-	rows, err := database.DB.Query(query, bookID, int(pageNumber))
+	// Use the book service to get the page with sections
+	page, err := bookService.GetPage(bookID, int(pageNumber))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error fetching page: %v", err), http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
-	sections := []map[string]interface{}{}
-	for rows.Next() {
-		var id, pageID, content string
-		var pageNum, sectionNum, wordCount int
-		if err := rows.Scan(&id, &pageID, &pageNum, &sectionNum, &content, &wordCount); err != nil {
-			continue
-		}
-		sections = append(sections, map[string]interface{}{
-			"id":             id,
-			"page_id":        pageID,
-			"page_number":    pageNum,
-			"section_number": sectionNum,
-			"content":        content,
-			"word_count":     wordCount,
-		})
+	if page == nil {
+		http.Error(w, "Page not found", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sections)
+	json.NewEncoder(w).Encode(page)
 }
 
 // handleCheckTableExists handles check_table_exists RPC
