@@ -6,14 +6,22 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const dbPath = "data/alice-suite.db"
+func getDBPath() string {
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/alice-suite.db"
+	}
+	return dbPath
+}
 
 func main() {
+	dbPath := getDBPath()
+	
 	// Check if database exists
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		log.Fatalf("Database not found at %s. Please run migrations first.", dbPath)
@@ -140,4 +148,3 @@ func main() {
 	fmt.Println("Verification Code: ALICE2024")
 	fmt.Println("\n✅ Test users initialized successfully!")
 }
-

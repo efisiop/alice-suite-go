@@ -12,10 +12,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const (
-	dbPath = "data/alice-suite.db"
+var (
 	migrationsDir = "migrations"
 )
+
+func getDBPath() string {
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/alice-suite.db"
+	}
+	return dbPath
+}
 
 // splitSQLStatements splits SQL by semicolons, but respects quoted strings
 func splitSQLStatements(sql string) []string {
@@ -64,8 +71,11 @@ func splitSQLStatements(sql string) []string {
 }
 
 func main() {
+	dbPath := getDBPath()
+	
 	// Create data directory if it doesn't exist
-	if err := os.MkdirAll("data", 0755); err != nil {
+	dbDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		log.Fatalf("Failed to create data directory: %v", err)
 	}
 
