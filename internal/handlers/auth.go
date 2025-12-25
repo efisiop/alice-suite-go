@@ -85,6 +85,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Expires:  expiresAt,
 		SameSite: http.SameSiteLaxMode,
 		HttpOnly: false, // Set to false so JavaScript can also read it if needed
+		Secure:   false, // Set to false for HTTP (Render uses HTTPS but we want it to work in both)
 	}
 	http.SetCookie(w, cookie)
 
