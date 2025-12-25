@@ -114,15 +114,22 @@ function loadPage(pageNumber) {
             page_number: pageNumber
         })
     })
-    .then(res => res.json())
-    .then(sections => {
-        if (sections.length === 0) {
+    .then(async res => {
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        return res.json();
+    })
+    .then(page => {
+        // Handle Page object with sections array
+        if (!page || !page.sections || page.sections.length === 0) {
             document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
             return;
         }
 
         let content = '';
-        sections.forEach(section => {
+        page.sections.forEach(section => {
             content += `<div class="mb-4">${formatTextWithWordHighlights(section.content)}</div>`;
         });
 
@@ -134,7 +141,8 @@ function loadPage(pageNumber) {
         trackActivity('PAGE_SYNC', { page_number: pageNumber });
     })
     .catch(err => {
-        document.getElementById('page-content').innerHTML = '<p class="text-danger">Error loading page content.</p>';
+        console.error('Error loading page:', err);
+        document.getElementById('page-content').innerHTML = '<p class="text-danger">Error loading page content: ' + err.message + '</p>';
     });
 }
 
