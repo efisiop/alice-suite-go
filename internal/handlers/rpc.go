@@ -118,38 +118,25 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		log.Printf("Page %d found but has no sections, trying fallback", pageNum)
 	}
 
-	// Fallback: Query old sections structure (sections with start_page/end_page)
-	// This handles databases that haven't been migrated to the new page-based structure
-	log.Printf("Page %d not found in pages table, trying fallback to old sections structure", pageNum)
+	// Fallback: Query sections directly (handle both old and new structures)
+	log.Printf("Page %d not found in pages table, trying direct sections query", pageNum)
 	
-	// Check if old sections structure exists (has start_page column)
-	var tableInfo string
-	checkQuery := `SELECT sql FROM sqlite_master WHERE type='table' AND name='sections'`
-	err = database.DB.QueryRow(checkQuery).Scan(&tableInfo)
-	if err != nil || tableInfo == "" {
-		log.Printf("Sections table not found or error checking structure: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Page not found - database structure not available",
-		})
-		return
-	}
-
-	// Try querying old structure (with start_page/end_page)
+	// Try querying old structure first (with start_page/end_page)
 	query := `SELECT id, content FROM sections 
 	          WHERE start_page <= ? AND end_page >= ?
 	          ORDER BY number`
 	rows, err := database.DB.Query(query, pageNum, pageNum)
+	
+	var foundSections []models.Section
 	if err != nil {
-		// If that fails, might be new structure - try querying by page_number
-		log.Printf("Old structure query failed, trying new structure: %v", err)
+		// Old structure query failed - try new structure (with page_number)
+		log.Printf("Old structure query failed: %v, trying new structure", err)
 		query = `SELECT id, content, page_number, section_number FROM sections 
 		         WHERE page_number = ?
 		         ORDER BY section_number`
 		rows, err = database.DB.Query(query, pageNum)
 		if err != nil {
-			log.Printf("Error querying sections: %v", err)
+			log.Printf("Both structure queries failed: %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{
@@ -160,11 +147,11 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		defer rows.Close()
 
 		// Build sections from new structure
-		foundSections := []models.Section{}
 		for rows.Next() {
 			var id, content string
 			var pageNum2, sectionNum int
 			if err := rows.Scan(&id, &content, &pageNum2, &sectionNum); err != nil {
+				log.Printf("Error scanning section: %v", err)
 				continue
 			}
 			foundSections = append(foundSections, models.Section{
@@ -175,44 +162,24 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 				Content:       content,
 			})
 		}
-
-		if len(foundSections) == 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error": "Page not found",
+	} else {
+		defer rows.Close()
+		// Build sections from old structure
+		for rows.Next() {
+			var id, content string
+			if err := rows.Scan(&id, &content); err != nil {
+				log.Printf("Error scanning section: %v", err)
+				continue
+			}
+			// Create a minimal section object
+			foundSections = append(foundSections, models.Section{
+				ID:            id,
+				PageID:        fmt.Sprintf("page-%d", pageNum), // Synthetic page ID
+				PageNumber:    pageNum,
+				SectionNumber: len(foundSections) + 1,
+				Content:       content,
 			})
-			return
 		}
-
-		pageObj := &models.Page{
-			ID:         fmt.Sprintf("page-%d", pageNum),
-			BookID:     bookID,
-			PageNumber: pageNum,
-			Sections:   foundSections,
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(pageObj)
-		return
-	}
-	defer rows.Close()
-
-	// Build a page object from old sections structure
-	foundSections := []models.Section{}
-	for rows.Next() {
-		var id, content string
-		if err := rows.Scan(&id, &content); err != nil {
-			continue
-		}
-		// Create a minimal section object
-		foundSections = append(foundSections, models.Section{
-			ID:            id,
-			PageID:        fmt.Sprintf("page-%d", pageNum), // Synthetic page ID
-			PageNumber:    pageNum,
-			SectionNumber: len(foundSections) + 1,
-			Content:       content,
-		})
 	}
 
 	if len(foundSections) == 0 {
