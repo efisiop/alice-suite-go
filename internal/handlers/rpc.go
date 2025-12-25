@@ -101,36 +101,104 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	pageNum := int(pageNumber)
 
 	// First try to use the book service to get the page with sections
+	// But handle database structure mismatch gracefully
 	page, err := bookService.GetPage(bookID, pageNum)
 	if err != nil {
-		log.Printf("Error fetching page %d for book %s: %v", pageNum, bookID, err)
-		// Fall through to fallback
-	} else if page != nil {
+		log.Printf("Error fetching page %d for book %s (likely structure mismatch): %v", pageNum, bookID, err)
+		// Fall through to fallback - don't return error yet
+	} else if page != nil && len(page.Sections) > 0 {
 		// Success - return the page
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(page)
 		return
 	}
+	
+	// If page was nil or had no sections, try fallback
+	if page != nil && len(page.Sections) == 0 {
+		log.Printf("Page %d found but has no sections, trying fallback", pageNum)
+	}
 
 	// Fallback: Query old sections structure (sections with start_page/end_page)
 	// This handles databases that haven't been migrated to the new page-based structure
 	log.Printf("Page %d not found in pages table, trying fallback to old sections structure", pageNum)
+	
+	// Check if old sections structure exists (has start_page column)
+	var tableInfo string
+	checkQuery := `SELECT sql FROM sqlite_master WHERE type='table' AND name='sections'`
+	err = database.DB.QueryRow(checkQuery).Scan(&tableInfo)
+	if err != nil || tableInfo == "" {
+		log.Printf("Sections table not found or error checking structure: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Page not found - database structure not available",
+		})
+		return
+	}
+
+	// Try querying old structure (with start_page/end_page)
 	query := `SELECT id, content FROM sections 
 	          WHERE start_page <= ? AND end_page >= ?
 	          ORDER BY number`
 	rows, err := database.DB.Query(query, pageNum, pageNum)
 	if err != nil {
-		log.Printf("Error querying sections: %v", err)
+		// If that fails, might be new structure - try querying by page_number
+		log.Printf("Old structure query failed, trying new structure: %v", err)
+		query = `SELECT id, content, page_number, section_number FROM sections 
+		         WHERE page_number = ?
+		         ORDER BY section_number`
+		rows, err = database.DB.Query(query, pageNum)
+		if err != nil {
+			log.Printf("Error querying sections: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": fmt.Sprintf("Error fetching page: %v", err),
+			})
+			return
+		}
+		defer rows.Close()
+
+		// Build sections from new structure
+		foundSections := []models.Section{}
+		for rows.Next() {
+			var id, content string
+			var pageNum2, sectionNum int
+			if err := rows.Scan(&id, &content, &pageNum2, &sectionNum); err != nil {
+				continue
+			}
+			foundSections = append(foundSections, models.Section{
+				ID:            id,
+				PageID:        fmt.Sprintf("page-%d", pageNum2),
+				PageNumber:    pageNum2,
+				SectionNumber: sectionNum,
+				Content:       content,
+			})
+		}
+
+		if len(foundSections) == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Page not found",
+			})
+			return
+		}
+
+		pageObj := &models.Page{
+			ID:         fmt.Sprintf("page-%d", pageNum),
+			BookID:     bookID,
+			PageNumber: pageNum,
+			Sections:   foundSections,
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": fmt.Sprintf("Error fetching page: %v", err),
-		})
+		json.NewEncoder(w).Encode(pageObj)
 		return
 	}
 	defer rows.Close()
 
-	// Build a page object from sections
+	// Build a page object from old sections structure
 	foundSections := []models.Section{}
 	for rows.Next() {
 		var id, content string
