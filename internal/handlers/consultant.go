@@ -46,55 +46,16 @@ func HandleConsultantLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleConsultantDashboard handles GET /consultant
+// Note: Authentication is already handled by RequireConsultant middleware,
+// so we just need to serve the template
 func HandleConsultantDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Extract token from Authorization header or cookie
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		// Check for token in cookie as fallback
-		cookie, err := r.Cookie("auth_token")
-		if err != nil || cookie == nil || cookie.Value == "" {
-			// No valid token, redirect to login
-			http.Redirect(w, r, "/consultant/login", http.StatusFound)
-			return
-		}
-		// Safari may URL-encode cookie values, so decode if needed
-		tokenValue := cookie.Value
-		// Try URL decoding (Safari sometimes encodes cookies)
-		if decoded, err := url.QueryUnescape(tokenValue); err == nil && decoded != tokenValue {
-			tokenValue = decoded
-		}
-		authHeader = "Bearer " + tokenValue
-	}
-
-	// Extract and validate token
-	token, err := auth.ExtractTokenFromHeader(authHeader)
-	if err != nil {
-		// Invalid token format, redirect to login
-		http.Redirect(w, r, "/consultant/login", http.StatusFound)
-		return
-	}
-
-	// Validate token and get claims
-	claims, err := auth.ValidateJWT(token)
-	if err != nil {
-		// Invalid or expired token, redirect to login
-		http.Redirect(w, r, "/consultant/login", http.StatusFound)
-		return
-	}
-
-	// Check if user has consultant role
-	if claims.Role != "consultant" {
-		// Not a consultant, show forbidden message or redirect
-		http.Error(w, "Access denied: Consultant privileges required", http.StatusForbidden)
-		return
-	}
-
-	// Token is valid and user is a consultant, serve the dashboard
+	// Authentication is already verified by RequireConsultant middleware
+	// Just serve the dashboard template
 	tmpl, err := template.ParseFiles(
 		filepath.Join("internal", "templates", "base.html"),
 		filepath.Join("internal", "templates", "consultant", "dashboard.html"),
