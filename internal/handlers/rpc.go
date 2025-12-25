@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/models"
 )
 
 // bookService is shared from api.go - initialized there
@@ -97,10 +98,29 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		return
 	}
 
-	// Use the book service to get the page with sections
-	page, err := bookService.GetPage(bookID, int(pageNumber))
+	pageNum := int(pageNumber)
+
+	// First try to use the book service to get the page with sections
+	page, err := bookService.GetPage(bookID, pageNum)
 	if err != nil {
-		log.Printf("Error fetching page %d for book %s: %v", int(pageNumber), bookID, err)
+		log.Printf("Error fetching page %d for book %s: %v", pageNum, bookID, err)
+		// Fall through to fallback
+	} else if page != nil {
+		// Success - return the page
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(page)
+		return
+	}
+
+	// Fallback: Query old sections structure (sections with start_page/end_page)
+	// This handles databases that haven't been migrated to the new page-based structure
+	log.Printf("Page %d not found in pages table, trying fallback to old sections structure", pageNum)
+	query := `SELECT id, content FROM sections 
+	          WHERE start_page <= ? AND end_page >= ?
+	          ORDER BY number`
+	rows, err := database.DB.Query(query, pageNum, pageNum)
+	if err != nil {
+		log.Printf("Error querying sections: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -108,9 +128,26 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		})
 		return
 	}
+	defer rows.Close()
 
-	if page == nil {
-		log.Printf("Page %d not found for book %s", int(pageNumber), bookID)
+	// Build a page object from sections
+	foundSections := []models.Section{}
+	for rows.Next() {
+		var id, content string
+		if err := rows.Scan(&id, &content); err != nil {
+			continue
+		}
+		// Create a minimal section object
+		foundSections = append(foundSections, models.Section{
+			ID:            id,
+			PageID:        fmt.Sprintf("page-%d", pageNum), // Synthetic page ID
+			PageNumber:    pageNum,
+			SectionNumber: len(foundSections) + 1,
+			Content:       content,
+		})
+	}
+
+	if len(foundSections) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -119,8 +156,16 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		return
 	}
 
+	// Return a page object with the found sections
+	pageObj := &models.Page{
+		ID:         fmt.Sprintf("page-%d", pageNum),
+		BookID:     bookID,
+		PageNumber: pageNum,
+		Sections:   foundSections,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(page)
+	json.NewEncoder(w).Encode(pageObj)
 }
 
 // handleCheckTableExists handles check_table_exists RPC
