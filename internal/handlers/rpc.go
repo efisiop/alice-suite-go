@@ -3,11 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
-	"github.com/efisiopittau/alice-suite-go/internal/services"
 )
 
 // bookService is shared from api.go - initialized there
@@ -100,12 +100,22 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	// Use the book service to get the page with sections
 	page, err := bookService.GetPage(bookID, int(pageNumber))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching page: %v", err), http.StatusInternalServerError)
+		log.Printf("Error fetching page %d for book %s: %v", int(pageNumber), bookID, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": fmt.Sprintf("Error fetching page: %v", err),
+		})
 		return
 	}
 
 	if page == nil {
-		http.Error(w, "Page not found", http.StatusNotFound)
+		log.Printf("Page %d not found for book %s", int(pageNumber), bookID)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Page not found",
+		})
 		return
 	}
 
@@ -132,4 +142,3 @@ func handleCheckTableExists(w http.ResponseWriter, r *http.Request, params map[s
 		"exists": exists,
 	})
 }
-
