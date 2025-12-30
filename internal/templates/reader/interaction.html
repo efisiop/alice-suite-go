@@ -282,7 +282,11 @@ function requestHelp() {
         .then(res => res.json())
         .then(data => {
             alert('Help request submitted successfully!');
-            trackActivity('HELP_REQUEST', { help_request_id: data[0]?.id });
+            // Track activity with both help_request_id and content for better retrieval
+            trackActivity('HELP_REQUEST', { 
+                help_request_id: data[0]?.id,
+                content: content
+            });
         })
         .catch(err => {
             alert('Failed to submit help request');

@@ -182,6 +182,99 @@
 .reader-activity-item.hidden-activity {
     display: none;
 }
+
+/* Help request clickable styling */
+.reader-activity-item[data-event-type="HELP_REQUEST"] {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.reader-activity-item[data-event-type="HELP_REQUEST"]:hover {
+    background-color: #f8f9fa;
+}
+
+/* Help request placeholder styling */
+.help-request-placeholder {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Modal styles */
+.help-request-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.help-request-modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-request-modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.help-request-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.help-request-modal-close {
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: #6c757d;
+    border: none;
+    background: none;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-request-modal-close:hover {
+    color: #000;
+}
+
+.help-request-modal-body {
+    margin-bottom: 1rem;
+}
+
+.help-request-message {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-bottom: 1rem;
+}
+
+.help-request-meta {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
 </style>
 <script>
 // Set flag immediately to prevent app.js from auto-connecting SSE
@@ -299,31 +392,30 @@ window.isConsultantDashboard = true;
                 </div>
             </div>
         </div>
+                    </div>
+                        </div>
 
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Recent Help Requests</h5>
+<!-- Help Request Modal -->
+<div id="help-request-modal" class="help-request-modal">
+    <div class="help-request-modal-content">
+        <div class="help-request-modal-header">
+            <h5>Help Request Message</h5>
+            <button class="help-request-modal-close" onclick="closeHelpRequestModal()">&times;</button>
                     </div>
-                    <div class="card-body">
-                        <div id="recent-requests">
-                            <p class="text-muted">Loading...</p>
-                        </div>
-                    </div>
+        <div class="help-request-modal-body">
+            <div id="help-request-loading" style="text-align: center; padding: 2rem;">
+                <p>Loading message...</p>
                 </div>
+            <div id="help-request-content" style="display: none;">
+                <div class="help-request-message" id="help-request-message"></div>
+                <div class="help-request-meta">
+                    <div><strong>From:</strong> <span id="help-request-user"></span></div>
+                    <div><strong>Time:</strong> <span id="help-request-time"></span></div>
+                    <div id="help-request-status-info" style="margin-top: 0.5rem;"></div>
             </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Online Readers</h5>
                     </div>
-                    <div class="card-body">
-                        <div id="online-readers">
-                            <p class="text-muted">Loading...</p>
-                        </div>
-                    </div>
-                </div>
+            <div id="help-request-error" style="display: none; color: #dc3545; padding: 1rem;">
+                <p>Error loading help request message.</p>
             </div>
         </div>
     </div>
@@ -490,9 +582,6 @@ function initializeDashboard() {
     // Load logged-in readers count
     loadLoggedInReaders();
     
-    // Load online readers (active readers)
-    loadOnlineReaders();
-    
     // Connect to SSE for real-time updates
     connectConsultantSSE(token);
     
@@ -527,13 +616,6 @@ function initializeDashboard() {
         setTimeout(refreshLoggedInReaders, smartPolling());
     }
     setTimeout(refreshLoggedInReaders, smartPolling());
-    
-    // Refresh online readers with adaptive interval
-    function refreshOnlineReaders() {
-        loadOnlineReaders();
-        setTimeout(refreshOnlineReaders, smartPolling());
-    }
-    setTimeout(refreshOnlineReaders, smartPolling());
 }
 
 function connectConsultantSSE(token) {
@@ -617,7 +699,6 @@ function connectConsultantSSE(token) {
                     window.dashboardUpdatePending = true;
                     setTimeout(() => {
                         loadDashboardData();
-                        loadOnlineReaders(); // Update active readers count
                         window.dashboardUpdatePending = false;
                     }, 500); // Small delay to batch multiple rapid updates
                 }
@@ -661,7 +742,6 @@ function connectConsultantSSE(token) {
             setTimeout(function() {
                 loadDashboardData();
                 loadLoggedInReaders();
-                loadOnlineReaders();
             }, 300);
         } catch (err) {
             console.error('Error parsing login event:', err);
@@ -757,7 +837,6 @@ function connectConsultantSSE(token) {
             setTimeout(function() {
                 loadDashboardData();
                 loadLoggedInReaders();
-                loadOnlineReaders();
             }, 300);
         } catch (err) {
             console.error('Error parsing logout event:', err, e.data);
@@ -1131,7 +1210,16 @@ function addActivityToReaderCard(activity) {
     
     // Build "what" content (the actual subject/details of the activity)
     let whatContent = '';
-    if (activity.parsed_context && activity.parsed_context.word) {
+    let helpRequestId = null;
+    
+    if (activity.event_type === 'HELP_REQUEST') {
+        // For help requests, try to get help_request_id from parsed_context
+        if (activity.parsed_context && activity.parsed_context.help_request_id) {
+            helpRequestId = activity.parsed_context.help_request_id;
+        }
+        // Always show the same text for help requests - don't preview the message
+        whatContent = '<span class="help-request-placeholder">Click to see the message</span>';
+    } else if (activity.parsed_context && activity.parsed_context.word) {
         whatContent = activity.parsed_context.word;
     } else if (activity.content) {
         whatContent = activity.content.substring(0, 100);
@@ -1144,6 +1232,17 @@ function addActivityToReaderCard(activity) {
     activityItem.className = 'reader-activity-item';
     activityItem.setAttribute('data-activity-id', activity.id);
     activityItem.setAttribute('data-event-type', activity.event_type || '');
+    
+    // Store help_request_id if available (for HELP_REQUEST activities)
+    if (helpRequestId) {
+        activityItem.setAttribute('data-help-request-id', helpRequestId);
+    }
+    
+    // Store user_id and created_at for finding help request if ID not available
+    if (activity.event_type === 'HELP_REQUEST') {
+        activityItem.setAttribute('data-user-id', activity.user_id || '');
+        activityItem.setAttribute('data-created-at', activity.created_at || '');
+    }
     
     // Parse the activity timestamp for comparison
     const activityTime = new Date(activity.created_at).getTime();
@@ -1184,6 +1283,17 @@ function addActivityToReaderCard(activity) {
     
     // Store timestamp on the element for future sorting
     activityItem.setAttribute('data-activity-time', activityTime.toString());
+    
+    // Store full activity data on element for easy access (especially for help requests)
+    activityItem.activityData = activity;
+    
+    // Make HELP_REQUEST activities clickable
+    if (activity.event_type === 'HELP_REQUEST') {
+        activityItem.style.cursor = 'pointer';
+        activityItem.addEventListener('click', function() {
+            showHelpRequestModal(activityItem);
+        });
+    }
     
     // Store activity in array (sorted by timestamp)
     readerCard.activities.push(activity);
@@ -1421,34 +1531,6 @@ function loadDashboardData() {
 
     // Load active readers count using new API endpoint
     loadLoggedInReaders();
-    loadOnlineReaders();
-}
-
-function refreshHelpRequests() {
-    const token = getAuthToken();
-    fetch('/rest/v1/help_requests?status=eq.pending&order=created_at.desc&limit=5', {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => res.json())
-    .then(requests => {
-        const recentDiv = document.getElementById('recent-requests');
-        if (requests.length === 0) {
-            recentDiv.innerHTML = '<p class="text-muted">No pending requests</p>';
-        } else {
-            let html = '<ul class="list-group">';
-            requests.forEach(req => {
-                html += `
-                    <li class="list-group-item">
-                        <a href="/consultant/help-requests?id=${req.id}">Request from user ${req.user_id}</a>
-                        <small class="text-muted d-block">${new Date(req.created_at).toLocaleString()}</small>
-                    </li>
-                `;
-            });
-            html += '</ul>';
-            recentDiv.innerHTML = html;
-        }
-    })
-    .catch(err => console.error('Error loading requests:', err));
 }
 
 function loadLoggedInReaders() {
@@ -1517,79 +1599,6 @@ function filterReaderCardsToActiveOnly(activeReaderIds) {
 }
 
 
-function loadOnlineReaders() {
-    const token = getAuthToken();
-    // Use new API endpoint to get active readers count and list
-    fetch('/api/consultant/active-readers-count', {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        return res.json();
-    })
-    .then(data => {
-        const count = data.count || 0;
-        const readers = data.readers || [];
-        document.getElementById('active-readers').textContent = count;
-        // Update online users list
-        updateOnlineUsers(readers.map(r => r.id));
-    })
-    .catch(err => {
-        console.error('Error loading online readers:', err);
-        document.getElementById('active-readers').textContent = '0';
-    });
-}
-
-function updateOnlineUsers(userIds) {
-    const token = getAuthToken();
-    if (userIds.length === 0) {
-        document.getElementById('online-readers').innerHTML = '<p class="text-muted">No online readers</p>';
-        return;
-    }
-
-    // Load user information from users table
-    // Build query: id=in.(id1,id2,id3)
-    const userIdsStr = userIds.map(id => `"${id}"`).join(',');
-    fetch(`/rest/v1/users?id=in.(${userIdsStr})`, {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        return res.json();
-    })
-    .then(users => {
-        if (!Array.isArray(users)) {
-            users = [];
-        }
-        let html = '<ul class="list-group">';
-        if (users.length === 0) {
-            html += '<li class="list-group-item text-muted">No user details found</li>';
-        } else {
-            users.forEach(user => {
-                const name = (user.first_name && user.last_name) 
-                    ? `${user.first_name} ${user.last_name}`
-                    : user.email || `User ${user.id.substring(0, 8)}`;
-                html += `
-                    <li class="list-group-item">
-                        <strong>${name}</strong>
-                        <small class="text-muted d-block">${user.email || ''}</small>
-                    </li>
-                `;
-            });
-        }
-        html += '</ul>';
-        document.getElementById('online-readers').innerHTML = html;
-    })
-    .catch(err => {
-        console.error('Error loading users:', err);
-        document.getElementById('online-readers').innerHTML = '<p class="text-muted">Error loading users</p>';
-    });
-}
-
 function updateActivityFeed(activityData) {
     // Update activity feed if exists
     const activityDiv = document.getElementById('activity-feed');
@@ -1602,10 +1611,6 @@ function updateActivityFeed(activityData) {
         `;
         activityDiv.insertBefore(activityItem, activityDiv.firstChild);
     }
-}
-
-function updateOnlineUsersCount() {
-    loadOnlineReaders();
 }
 
 // Load and display consultant user info in navbar (consultant-specific)
@@ -1694,5 +1699,263 @@ function loadConsultantUserInfoInNavbar() {
         console.error('[loadConsultantUserInfoInNavbar] Error loading consultant info:', err);
     });
 }
+
+// Show help request modal and fetch message
+function showHelpRequestModal(activityItem) {
+    const modal = document.getElementById('help-request-modal');
+    const loadingDiv = document.getElementById('help-request-loading');
+    const contentDiv = document.getElementById('help-request-content');
+    const errorDiv = document.getElementById('help-request-error');
+    
+    // Reset modal state
+    loadingDiv.style.display = 'block';
+    contentDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    
+    // Show modal
+    modal.classList.add('show');
+    
+    // Get activity data - first try from element, then from stored activities
+    let activity = activityItem.activityData || null;
+    
+    if (!activity) {
+        const activityId = activityItem.getAttribute('data-activity-id');
+        // Find the activity in readerCards
+        readerCards.forEach((readerCard) => {
+            const foundActivity = readerCard.activities.find(a => a.id === activityId);
+            if (foundActivity) {
+                activity = foundActivity;
+            }
+        });
+    }
+    
+    // First, check if we have content directly in the activity
+    if (activity && activity.content) {
+        displayHelpRequestFromActivity(activity);
+        return;
+    }
+    
+    // Get help_request_id from activity item
+    let helpRequestId = activityItem.getAttribute('data-help-request-id');
+    
+    // If not found, try to get it from parsed_context
+    if (!helpRequestId && activity && activity.parsed_context && activity.parsed_context.help_request_id) {
+        helpRequestId = activity.parsed_context.help_request_id;
+    }
+    
+    // If still not found, try to find it by matching user_id and created_at
+    if (!helpRequestId) {
+        const userId = activityItem.getAttribute('data-user-id') || (activity ? activity.user_id : null);
+        const createdAt = activityItem.getAttribute('data-created-at') || (activity ? activity.created_at : null);
+        
+        if (userId && createdAt) {
+            // Try to find help request by querying recent requests
+            findHelpRequestByActivity(userId, createdAt).then(id => {
+                if (id) {
+                    fetchHelpRequest(id);
+                } else {
+                    // Fallback: show content from activity if available
+                    if (activity && activity.content) {
+                        displayHelpRequestFromActivity(activity);
+                    } else {
+                        showHelpRequestError('Help request not found. The message may have been deleted or not properly tracked.');
+                    }
+                }
+            }).catch(err => {
+                console.error('Error finding help request:', err);
+                // Fallback: show content from activity if available
+                if (activity && activity.content) {
+                    displayHelpRequestFromActivity(activity);
+                } else {
+                    showHelpRequestError('Error loading help request message.');
+                }
+            });
+        } else {
+            // Fallback: show content from activity if available
+            if (activity && activity.content) {
+                displayHelpRequestFromActivity(activity);
+            } else {
+                showHelpRequestError('Help request not found. The message may have been deleted or not properly tracked.');
+            }
+        }
+    } else {
+        fetchHelpRequest(helpRequestId);
+    }
+}
+
+// Display help request directly from activity data (fallback)
+function displayHelpRequestFromActivity(activity) {
+    const loadingDiv = document.getElementById('help-request-loading');
+    const contentDiv = document.getElementById('help-request-content');
+    const errorDiv = document.getElementById('help-request-error');
+    
+    // Hide loading, show content
+    loadingDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    contentDiv.style.display = 'block';
+    
+    // Display message
+    document.getElementById('help-request-message').textContent = activity.content || 'No message content available.';
+    
+    // Display user info
+    const userName = activity.first_name && activity.last_name 
+        ? `${activity.first_name} ${activity.last_name}`
+        : (activity.first_name || activity.email || `User ${activity.user_id ? activity.user_id.substring(0, 8) : 'Unknown'}`);
+    document.getElementById('help-request-user').textContent = userName;
+    
+    // Display time
+    const requestTime = new Date(activity.created_at);
+    document.getElementById('help-request-time').textContent = requestTime.toLocaleString();
+    
+    // Display status (unknown since we don't have full help request data)
+    const statusInfo = document.getElementById('help-request-status-info');
+    statusInfo.innerHTML = '<span class="badge bg-secondary">Status unknown</span>';
+}
+
+// Find help request ID by matching user_id and created_at
+async function findHelpRequestByActivity(userId, createdAt) {
+    const token = getAuthToken();
+    if (!token || !userId || !createdAt) {
+        return null;
+    }
+    
+    try {
+        // Get recent help requests and try to match
+        // Use a wider time range (last hour) to catch help requests
+        const oneHourAgo = new Date();
+        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+        const oneHourAgoStr = oneHourAgo.toISOString().replace('T', ' ').substring(0, 19);
+        
+        const response = await fetch(`/rest/v1/help_requests?user_id=eq.${userId}&created_at=gte.${oneHourAgoStr}&order=created_at.desc&limit=20`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        
+        if (!response.ok) {
+            console.log('Failed to fetch help requests:', response.status);
+            return null;
+        }
+        
+        const requests = await response.json();
+        if (!Array.isArray(requests) || requests.length === 0) {
+            console.log('No help requests found for user:', userId);
+            return null;
+        }
+        
+        // Try to match by created_at (within 30 seconds for better matching)
+        const activityTime = new Date(createdAt).getTime();
+        let bestMatch = null;
+        let bestTimeDiff = Infinity;
+        
+        for (const request of requests) {
+            const requestTime = new Date(request.created_at).getTime();
+            const timeDiff = Math.abs(activityTime - requestTime);
+            // Match if within 30 seconds, keep track of best match
+            if (timeDiff < 30000 && timeDiff < bestTimeDiff) {
+                bestMatch = request.id;
+                bestTimeDiff = timeDiff;
+            }
+        }
+        
+        if (bestMatch) {
+            console.log('Found help request match:', bestMatch, 'time diff:', bestTimeDiff, 'ms');
+        } else {
+            console.log('No matching help request found for activity time:', createdAt);
+        }
+        
+        return bestMatch;
+    } catch (err) {
+        console.error('Error finding help request:', err);
+        return null;
+    }
+}
+
+// Fetch help request details
+function fetchHelpRequest(helpRequestId) {
+    const token = getAuthToken();
+    const loadingDiv = document.getElementById('help-request-loading');
+    const contentDiv = document.getElementById('help-request-content');
+    const errorDiv = document.getElementById('help-request-error');
+    
+    fetch(`/api/consultant/help-requests/${helpRequestId}`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(helpRequest => {
+        // Hide loading, show content
+        loadingDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+        contentDiv.style.display = 'block';
+        
+        // Display message
+        document.getElementById('help-request-message').textContent = helpRequest.content || 'No message content available.';
+        
+        // Display user info
+        const userName = helpRequest.user_id ? `User ${helpRequest.user_id.substring(0, 8)}` : 'Unknown';
+        document.getElementById('help-request-user').textContent = userName;
+        
+        // Display time
+        const requestTime = new Date(helpRequest.created_at);
+        document.getElementById('help-request-time').textContent = requestTime.toLocaleString();
+        
+        // Display status
+        const statusInfo = document.getElementById('help-request-status-info');
+        let statusText = '';
+        const status = helpRequest.status || 'pending';
+        if (status === 'pending') {
+            statusText = '<span class="badge bg-warning">Pending</span>';
+        } else if (status === 'assigned') {
+            statusText = '<span class="badge bg-info">Assigned</span>';
+        } else if (status === 'resolved') {
+            statusText = '<span class="badge bg-success">Resolved</span>';
+        }
+        statusInfo.innerHTML = `<strong>Status:</strong> ${statusText}`;
+    })
+    .catch(err => {
+        console.error('Error fetching help request:', err);
+        showHelpRequestError('Error loading help request message.');
+    });
+}
+
+// Show error in modal
+function showHelpRequestError(message) {
+    const loadingDiv = document.getElementById('help-request-loading');
+    const contentDiv = document.getElementById('help-request-content');
+    const errorDiv = document.getElementById('help-request-error');
+    
+    loadingDiv.style.display = 'none';
+    contentDiv.style.display = 'none';
+    errorDiv.style.display = 'block';
+    errorDiv.querySelector('p').textContent = message;
+}
+
+// Close help request modal
+function closeHelpRequestModal() {
+    const modal = document.getElementById('help-request-modal');
+    modal.classList.remove('show');
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('help-request-modal');
+    if (event.target === modal) {
+        closeHelpRequestModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modal = document.getElementById('help-request-modal');
+        if (modal.classList.contains('show')) {
+            closeHelpRequestModal();
+        }
+    }
+});
 </script>
 {{end}}
+

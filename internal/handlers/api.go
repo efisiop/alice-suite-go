@@ -14,10 +14,10 @@ import (
 
 // Service instances
 var (
-	bookService      = services.NewBookService()
+	bookService       = services.NewBookService()
 	dictionaryService = services.NewDictionaryService()
-	helpService      = services.NewHelpService()
-	aiService        = services.NewAIService()
+	helpService       = services.NewHelpService()
+	aiService         = services.NewAIService()
 )
 
 // SetupAPIRoutes sets up REST API routes (Supabase-compatible)
@@ -66,6 +66,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 
 	// Help requests API
 	mux.HandleFunc("/rest/v1/help_requests", HandleHelpRequests)
+	mux.Handle("/api/consultant/help-requests/", middleware.RequireConsultant(http.HandlerFunc(HandleGetHelpRequestByID)))
 
 	// Interactions API
 	mux.HandleFunc("/rest/v1/interactions", HandleInteractions)
@@ -382,8 +383,8 @@ func HandleGetSectionsForPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		BookID    string `json:"book_id"`
-		PageNumber int   `json:"page_number"`
+		BookID     string `json:"book_id"`
+		PageNumber int    `json:"page_number"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -402,12 +403,14 @@ func HandleGetSectionsForPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleHelpRequests handles GET/POST /rest/v1/help_requests
+// PATCH, PUT, DELETE are forwarded to the generic REST handler
 func HandleHelpRequests(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		// TODO: Implement help request retrieval
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]interface{}{})
+		// For GET requests, use the generic REST handler to support query parameters
+		// This allows filtering like ?user_id=eq.{id}&order=created_at.desc
+		HandleRESTTable(w, r)
+		return
 
 	case http.MethodPost:
 		// Extract and validate token to get user_id (SECURITY: Never trust user_id from request body)
@@ -460,9 +463,53 @@ func HandleHelpRequests(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(request)
 
+	case http.MethodPatch, http.MethodPut, http.MethodDelete:
+		// Forward PATCH, PUT, DELETE to generic REST handler
+		HandleRESTTable(w, r)
+		return
+
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// HandleGetHelpRequestByID handles GET /api/consultant/help-requests/:id
+// Returns a single help request by ID (consultant-only)
+func HandleGetHelpRequestByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from URL path
+	// Path will be /api/consultant/help-requests/:id
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid request path", http.StatusBadRequest)
+		return
+	}
+	requestID := pathParts[3]
+
+	if requestID == "" {
+		http.Error(w, "Help request ID required", http.StatusBadRequest)
+		return
+	}
+
+	// Get help request from database
+	request, err := helpService.GetHelpRequestByID(requestID)
+	if err != nil {
+		log.Printf("Error fetching help request %s: %v", requestID, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if request == nil {
+		http.Error(w, "Help request not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(request)
 }
 
 // HandleInteractions handles GET/POST /rest/v1/interactions
@@ -719,4 +766,3 @@ func HandleGetSectionGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(terms)
 }
-

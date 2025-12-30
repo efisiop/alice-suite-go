@@ -50,6 +50,11 @@ func (s *HelpService) GetHelpRequestsByConsultant(consultantID string) ([]*model
 	return database.GetHelpRequestsByConsultant(consultantID)
 }
 
+// GetHelpRequestByID retrieves a help request by ID
+func (s *HelpService) GetHelpRequestByID(requestID string) (*models.HelpRequest, error) {
+	return database.GetHelpRequestByID(requestID)
+}
+
 // AssignHelpRequest assigns a help request to a consultant
 func (s *HelpService) AssignHelpRequest(requestID, consultantID string) (*models.HelpRequest, error) {
 	// Get request

@@ -1,0 +1,581 @@
+{{define "title"}}Readers - Consultant Dashboard - Alice Suite{{end}}
+
+{{define "head"}}
+<style>
+.readers-table {
+    font-size: 0.85rem;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.readers-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    padding: 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.readers-table td {
+    padding: 0.5rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.readers-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Compact columns - left side takes ~35% */
+.col-name { width: 8%; }
+.col-lastname { width: 8%; }
+.col-email { width: 12%; overflow: hidden; text-overflow: ellipsis; }
+.col-purchased { width: 7%; }
+.col-activated { width: 7%; }
+/* Calendar takes ~58% */
+.col-calendar { width: 58%; }
+
+.reader-name {
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.compact-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.8rem;
+}
+
+/* Calendar container with navigation */
+.calendar-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.calendar-nav-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #495057;
+    flex-shrink: 0;
+    transition: background-color 0.15s;
+}
+
+.calendar-nav-btn:hover {
+    background: #e9ecef;
+}
+
+.calendar-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.calendar-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.activity-calendar {
+    display: flex;
+    gap: 2px;
+    flex-wrap: nowrap;
+    align-items: center;
+    transition: transform 0.3s ease;
+}
+
+.activity-day {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background-color: #e9ecef;
+    cursor: pointer;
+    transition: transform 0.1s;
+    flex-shrink: 0;
+}
+
+.activity-day:hover {
+    transform: scale(1.4);
+    z-index: 5;
+}
+
+.activity-day.active-high {
+    background-color: #28a745;
+}
+
+.activity-day.active-medium {
+    background-color: #17a2b8;
+}
+
+.activity-day.active-low {
+    background-color: #6c757d;
+}
+
+.calendar-date-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    white-space: nowrap;
+    min-width: 70px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.empty-calendar {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+}
+
+.activity-legend {
+    font-size: 0.7rem;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 3px;
+}
+</style>
+{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/consultant">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">All Readers</h1>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h5 class="mb-0">Reader Accounts</h5>
+                    <small class="text-muted">Sorted by most recently created account</small>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="activity-legend">
+                        <span class="legend-item"><span class="legend-dot" style="background-color: #28a745;"></span>High</span>
+                        <span class="legend-item"><span class="legend-dot" style="background-color: #17a2b8;"></span>Med</span>
+                        <span class="legend-item"><span class="legend-dot" style="background-color: #6c757d;"></span>Low</span>
+                        <span class="legend-item"><span class="legend-dot" style="background-color: #e9ecef;"></span>None</span>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="loadReaders()">Refresh</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Loading State -->
+                <div id="loading-state" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading readers...</p>
+                </div>
+                
+                <!-- Empty State -->
+                <div id="empty-state" class="text-center p-4" style="display: none;">
+                    <p class="text-muted">No readers found.</p>
+                </div>
+                
+                <!-- Readers Table -->
+                <div id="readers-table-container" style="display: none;">
+                    <table class="table table-hover readers-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="col-name">Name</th>
+                                <th class="col-lastname">Last Name</th>
+                                <th class="col-email">Email</th>
+                                <th class="col-purchased">Purchased</th>
+                                <th class="col-activated">Activated</th>
+                                <th class="col-calendar">Activity Calendar (use arrows to scroll through time)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="readers-table-body">
+                            <!-- Rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+// Store activity data globally for calendar navigation
+const readerActivityData = {};
+
+// Ensure getAuthToken is available
+if (typeof getAuthToken === 'undefined') {
+    window.getAuthToken = function() {
+        return sessionStorage.getItem('auth_token');
+    };
+}
+
+// Logout handler
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            } else if (window.consultantLogout) {
+                window.consultantLogout();
+            }
+        });
+    }
+    
+    loadConsultantUserInfo();
+    loadReaders();
+});
+
+// Load consultant user info
+function loadConsultantUserInfo() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        const userNameDisplay = document.getElementById('user-name-display');
+        const userNameBrand = document.getElementById('user-name-brand');
+        const userInfoNav = document.getElementById('user-info-nav');
+        
+        if (userInfoNav) userInfoNav.style.display = 'block';
+        
+        let displayName = '';
+        if (user.user_metadata) {
+            const firstName = user.user_metadata.first_name || '';
+            const lastName = user.user_metadata.last_name || '';
+            displayName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || user.email?.split('@')[0] || 'Consultant');
+        } else if (user.first_name) {
+            displayName = user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
+        } else if (user.email) {
+            displayName = user.email.split('@')[0];
+        } else {
+            displayName = 'Consultant';
+        }
+        
+        if (userNameDisplay) userNameDisplay.textContent = displayName;
+        if (userNameBrand) {
+            userNameBrand.textContent = displayName;
+            userNameBrand.style.display = 'inline';
+        }
+    })
+    .catch(err => console.error('Error loading user info:', err));
+}
+
+// Load all readers
+function loadReaders() {
+    const token = getAuthToken();
+    if (!token) {
+        console.error('No auth token found');
+        return;
+    }
+    
+    document.getElementById('loading-state').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('readers-table-container').style.display = 'none';
+    
+    fetch('/rest/v1/users?role=eq.reader&is_verified=eq.1&order=created_at.desc', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(readers => {
+        document.getElementById('loading-state').style.display = 'none';
+        
+        if (!Array.isArray(readers) || readers.length === 0) {
+            document.getElementById('empty-state').style.display = 'block';
+            return;
+        }
+        
+        const validReaders = readers.filter(r => 
+            (r.first_name || r.last_name || r.email) && 
+            (r.first_name || r.last_name)
+        );
+        
+        if (validReaders.length === 0) {
+            document.getElementById('empty-state').style.display = 'block';
+            return;
+        }
+        
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('readers-table-container').style.display = 'block';
+        
+        loadReadersWithActivities(validReaders, token);
+    })
+    .catch(err => {
+        console.error('Error loading readers:', err);
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'block';
+        document.getElementById('empty-state').innerHTML = '<p class="text-danger">Error loading readers. Please try refreshing.</p>';
+    });
+}
+
+// Load readers with their activity calendar data
+async function loadReadersWithActivities(readers, token) {
+    const tbody = document.getElementById('readers-table-body');
+    tbody.innerHTML = '';
+    
+    for (const reader of readers) {
+        const activityData = await loadReaderActivity(reader.id, token);
+        readerActivityData[reader.id] = {
+            data: activityData,
+            accountCreatedAt: reader.created_at,
+            offset: 0  // Current scroll position (0 = most recent)
+        };
+        
+        const row = createReaderRow(reader, activityData);
+        tbody.appendChild(row);
+    }
+}
+
+// Load activity data for a specific reader
+async function loadReaderActivity(userId, token) {
+    try {
+        const activitiesByDate = {};
+        
+        // Try interactions table
+        try {
+            const interactionsResponse = await fetch(`/rest/v1/interactions?user_id=eq.${userId}&order=created_at.desc&limit=1000`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            
+            if (interactionsResponse.ok) {
+                const interactions = await interactionsResponse.json();
+                if (Array.isArray(interactions)) {
+                    interactions.forEach(activity => {
+                        if (activity.created_at) {
+                            const date = new Date(activity.created_at);
+                            const dateKey = date.toISOString().split('T')[0];
+                            if (!activitiesByDate[dateKey]) activitiesByDate[dateKey] = [];
+                            activitiesByDate[dateKey].push(activity);
+                        }
+                    });
+                }
+            }
+        } catch (err) {
+            console.warn(`Failed to load interactions for user ${userId}:`, err);
+        }
+        
+        // Try activity_logs table
+        try {
+            const activityLogsResponse = await fetch(`/rest/v1/activity_logs?user_id=eq.${userId}&order=created_at.desc&limit=1000`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            });
+            
+            if (activityLogsResponse.ok) {
+                const activityLogs = await activityLogsResponse.json();
+                if (Array.isArray(activityLogs)) {
+                    activityLogs.forEach(activity => {
+                        if (activity.created_at) {
+                            const date = new Date(activity.created_at);
+                            const dateKey = date.toISOString().split('T')[0];
+                            if (!activitiesByDate[dateKey]) activitiesByDate[dateKey] = [];
+                            activitiesByDate[dateKey].push(activity);
+                        }
+                    });
+                }
+            }
+        } catch (err) {
+            console.warn(`Failed to load activity_logs for user ${userId}:`, err);
+        }
+        
+        return Object.keys(activitiesByDate).length > 0 ? activitiesByDate : null;
+    } catch (err) {
+        console.error(`Error loading activity for user ${userId}:`, err);
+        return null;
+    }
+}
+
+// Create a table row for a reader
+function createReaderRow(reader, activityData) {
+    const row = document.createElement('tr');
+    row.id = `reader-row-${reader.id}`;
+    
+    const firstName = reader.first_name || '';
+    const lastName = reader.last_name || '';
+    const email = reader.email || '';
+    
+    let accountActivated = 'N/A';
+    if (reader.created_at) {
+        const createdDate = new Date(reader.created_at);
+        accountActivated = createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+    }
+    
+    const bookPurchaseDate = '-';
+    
+    row.innerHTML = `
+        <td class="reader-name" title="${escapeHtml(firstName)}">${escapeHtml(firstName)}</td>
+        <td class="reader-name" title="${escapeHtml(lastName)}">${escapeHtml(lastName)}</td>
+        <td class="compact-cell" title="${escapeHtml(email)}">${escapeHtml(email)}</td>
+        <td class="compact-cell">${bookPurchaseDate}</td>
+        <td class="compact-cell">${accountActivated}</td>
+        <td class="calendar-cell" id="calendar-${reader.id}"></td>
+    `;
+    
+    // Render calendar after row is created
+    setTimeout(() => {
+        renderCalendar(reader.id);
+    }, 0);
+    
+    return row;
+}
+
+// Render calendar with navigation
+function renderCalendar(readerId) {
+    const container = document.getElementById(`calendar-${readerId}`);
+    if (!container) return;
+    
+    const readerData = readerActivityData[readerId];
+    if (!readerData) {
+        container.innerHTML = '<span class="empty-calendar">No data</span>';
+        return;
+    }
+    
+    const activityData = readerData.data;
+    const offset = readerData.offset || 0;
+    
+    if (!activityData || Object.keys(activityData).length === 0) {
+        container.innerHTML = '<span class="empty-calendar">No activity yet</span>';
+        return;
+    }
+    
+    // Calculate visible days (show 30 days at a time for better visibility)
+    const DAYS_VISIBLE = 30;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate the end date based on offset (offset 0 = today, offset 30 = 30 days ago, etc.)
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() - offset);
+    
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - DAYS_VISIBLE + 1);
+    
+    // Check if we can go back further (max 365 days)
+    const canGoBack = offset + DAYS_VISIBLE < 365;
+    const canGoForward = offset > 0;
+    
+    // Build calendar HTML
+    let calendarHtml = `
+        <div class="calendar-container">
+            <button class="calendar-nav-btn" onclick="navigateCalendar('${readerId}', -${DAYS_VISIBLE})" ${!canGoBack ? 'disabled' : ''} title="Go back ${DAYS_VISIBLE} days">◀</button>
+            <span class="calendar-date-label">${formatDateShort(startDate)}</span>
+            <div class="calendar-viewport">
+                <div class="activity-calendar">
+    `;
+    
+    // Generate days
+    for (let i = 0; i < DAYS_VISIBLE; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const dateKey = date.toISOString().split('T')[0];
+        
+        const dayActivities = activityData[dateKey] || [];
+        const activityCount = dayActivities.length;
+        
+        let dayClass = 'activity-day';
+        let title = formatDateShort(date) + ': No activity';
+        
+        if (activityCount > 0) {
+            if (activityCount >= 10) {
+                dayClass += ' active-high';
+                title = formatDateShort(date) + ': ' + activityCount + ' activities';
+            } else if (activityCount >= 5) {
+                dayClass += ' active-medium';
+                title = formatDateShort(date) + ': ' + activityCount + ' activities';
+            } else {
+                dayClass += ' active-low';
+                title = formatDateShort(date) + ': ' + activityCount + ' activities';
+            }
+        }
+        
+        calendarHtml += `<div class="${dayClass}" title="${title}"></div>`;
+    }
+    
+    calendarHtml += `
+                </div>
+            </div>
+            <span class="calendar-date-label">${formatDateShort(endDate)}</span>
+            <button class="calendar-nav-btn" onclick="navigateCalendar('${readerId}', ${DAYS_VISIBLE})" ${!canGoForward ? 'disabled' : ''} title="Go forward ${DAYS_VISIBLE} days">▶</button>
+        </div>
+    `;
+    
+    container.innerHTML = calendarHtml;
+}
+
+// Navigate calendar (move offset)
+function navigateCalendar(readerId, delta) {
+    if (!readerActivityData[readerId]) return;
+    
+    // delta negative = go back in time (increase offset)
+    // delta positive = go forward in time (decrease offset)
+    const newOffset = readerActivityData[readerId].offset - delta;
+    readerActivityData[readerId].offset = Math.max(0, Math.min(365, newOffset));
+    
+    renderCalendar(readerId);
+}
+
+// Format date as short string
+function formatDateShort(date) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{{end}}
+

@@ -3,7 +3,6 @@ package handlers
 import (
 	"html/template"
 	"net/http"
-	"net/url"
 	"path/filepath"
 
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
@@ -125,7 +124,10 @@ func HandleConsultantHelpRequests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "help-requests.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "help-requests.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -159,7 +161,10 @@ func HandleConsultantReaders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "readers.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "readers.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -219,4 +224,3 @@ func HandleConsultantAssignReaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl.Execute(w, nil)
 }
-

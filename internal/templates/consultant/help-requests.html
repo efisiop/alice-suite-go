@@ -1,0 +1,648 @@
+{{define "title"}}Help Requests - Consultant Dashboard - Alice Suite{{end}}
+
+{{define "head"}}
+<style>
+.help-request-card {
+    border-left: 4px solid #007bff;
+    margin-bottom: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.help-request-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.help-request-card.pending {
+    border-left-color: #ffc107;
+}
+
+.help-request-card.assigned {
+    border-left-color: #17a2b8;
+}
+
+.help-request-card.resolved {
+    border-left-color: #28a745;
+    opacity: 0.8;
+}
+
+.help-request-message {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.help-request-meta {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.timeline-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.filter-buttons {
+    margin-bottom: 2rem;
+}
+
+.filter-buttons .btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.user-info {
+    font-weight: 600;
+    color: #495057;
+}
+
+.status-badge {
+    font-size: 0.875rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+}
+</style>
+{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/consultant">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Help Requests Administration</h1>
+        
+        <!-- Filter Buttons -->
+        <div class="filter-buttons">
+            <button class="btn btn-outline-primary active" data-filter="all" onclick="filterRequests('all')">
+                All Requests
+            </button>
+            <button class="btn btn-outline-warning" data-filter="pending" onclick="filterRequests('pending')">
+                Pending
+            </button>
+            <button class="btn btn-outline-info" data-filter="assigned" onclick="filterRequests('assigned')">
+                Assigned
+            </button>
+            <button class="btn btn-outline-success" data-filter="resolved" onclick="filterRequests('resolved')">
+                Resolved
+            </button>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading help requests...</p>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <h5>No help requests found</h5>
+            <p>Help requests from readers will appear here.</p>
+        </div>
+        
+        <!-- Timeline Container -->
+        <div id="timeline-container" class="timeline-container" style="display: none;">
+            <!-- Help requests will be inserted here -->
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+// Ensure getAuthToken is available
+if (typeof getAuthToken === 'undefined') {
+    window.getAuthToken = function() {
+        return sessionStorage.getItem('auth_token');
+    };
+}
+
+// Logout handler
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            } else if (window.consultantLogout) {
+                window.consultantLogout();
+            }
+        });
+    }
+    
+    // Load consultant user info in navbar
+    loadConsultantUserInfo();
+    
+    // Load help requests
+    loadHelpRequests();
+    
+    // Set up auto-refresh every 30 seconds
+    setInterval(loadHelpRequests, 30000);
+});
+
+// Load consultant user info
+function loadConsultantUserInfo() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        const userNameDisplay = document.getElementById('user-name-display');
+        const userNameBrand = document.getElementById('user-name-brand');
+        const userInfoNav = document.getElementById('user-info-nav');
+        
+        if (userInfoNav) userInfoNav.style.display = 'block';
+        
+        let displayName = '';
+        if (user.user_metadata) {
+            const firstName = user.user_metadata.first_name || '';
+            const lastName = user.user_metadata.last_name || '';
+            displayName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || user.email?.split('@')[0] || 'Consultant');
+        } else if (user.first_name) {
+            displayName = user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
+        } else if (user.email) {
+            displayName = user.email.split('@')[0];
+        } else {
+            displayName = 'Consultant';
+        }
+        
+        if (userNameDisplay) userNameDisplay.textContent = displayName;
+        if (userNameBrand) {
+            userNameBrand.textContent = displayName;
+            userNameBrand.style.display = 'inline';
+        }
+    })
+    .catch(err => console.error('Error loading user info:', err));
+}
+
+// Current filter
+let currentFilter = 'all';
+
+// Load all help requests
+function loadHelpRequests() {
+    const token = getAuthToken();
+    if (!token) {
+        console.error('No auth token found');
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('loading-state').style.display = 'block';
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('timeline-container').style.display = 'none';
+    
+    // Fetch all help requests ordered by creation date (newest first)
+    fetch('/rest/v1/help_requests?order=created_at.desc&limit=100', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(async requests => {
+        document.getElementById('loading-state').style.display = 'none';
+        
+        if (!Array.isArray(requests) || requests.length === 0) {
+            document.getElementById('empty-state').style.display = 'block';
+            return;
+        }
+        
+        // Enrich requests with user information
+        await enrichRequestsWithUserInfo(requests, token);
+    })
+    .catch(err => {
+        console.error('Error loading help requests:', err);
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'block';
+        document.getElementById('empty-state').innerHTML = '<h5>Error loading help requests</h5><p>Please try refreshing the page.</p>';
+    });
+}
+
+// Enrich help requests with user information
+async function enrichRequestsWithUserInfo(requests, token) {
+    // Get unique user IDs
+    const userIds = [...new Set(requests.map(r => r.user_id).filter(id => id))];
+    
+    if (userIds.length === 0) {
+        displayRequests(requests);
+        return;
+    }
+    
+    // Fetch users individually (more reliable than batch with in.() operator)
+    const userMap = await fetchUsersIndividually(userIds, token);
+    
+    // Enrich requests with user data
+    requests.forEach(request => {
+        request.userInfo = userMap[request.user_id] || null;
+    });
+    
+    displayRequests(requests);
+}
+
+// Fetch users individually (more reliable approach)
+async function fetchUsersIndividually(userIds, token) {
+    const userMap = {};
+    
+    // Fetch users one by one - this is more reliable than batch queries
+    const promises = userIds.map(userId => {
+        return fetch(`/rest/v1/users?id=eq.${userId}`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        })
+        .then(res => {
+            if (!res.ok) {
+                console.warn(`Failed to fetch user ${userId}: HTTP ${res.status}`);
+                return null;
+            }
+            return res.json();
+        })
+        .then(users => {
+            if (Array.isArray(users) && users.length > 0) {
+                const user = users[0];
+                userMap[user.id] = user;
+                console.log(`Loaded user: ${user.first_name} ${user.last_name} (${user.email})`);
+            }
+        })
+        .catch(err => {
+            console.error(`Error fetching user ${userId}:`, err);
+        });
+    });
+    
+    await Promise.all(promises);
+    console.log(`Successfully loaded ${Object.keys(userMap).length} out of ${userIds.length} users`);
+    
+    return userMap;
+}
+
+// Display help requests in timeline
+function displayRequests(requests) {
+    const container = document.getElementById('timeline-container');
+    container.innerHTML = '';
+    
+    // Filter requests based on current filter
+    let filteredRequests = requests;
+    if (currentFilter !== 'all') {
+        filteredRequests = requests.filter(r => r.status === currentFilter);
+    }
+    
+    if (filteredRequests.length === 0) {
+        document.getElementById('empty-state').style.display = 'block';
+        document.getElementById('empty-state').innerHTML = `<h5>No ${currentFilter === 'all' ? '' : currentFilter} help requests found</h5>`;
+        return;
+    }
+    
+    document.getElementById('empty-state').style.display = 'none';
+    container.style.display = 'block';
+    
+    filteredRequests.forEach(request => {
+        const card = createHelpRequestCard(request);
+        container.appendChild(card);
+    });
+}
+
+// Create a help request card
+function createHelpRequestCard(request) {
+    const card = document.createElement('div');
+    card.className = `card help-request-card ${request.status}`;
+    card.setAttribute('data-request-id', request.id);
+    card.setAttribute('data-status', request.status);
+    
+    // Get user display name - prioritize full name
+    let userName = 'Unknown User';
+    let userEmail = '';
+    
+    if (request.userInfo) {
+        // First try first_name + last_name
+        const firstName = request.userInfo.first_name || '';
+        const lastName = request.userInfo.last_name || '';
+        
+        if (firstName && lastName) {
+            userName = `${firstName} ${lastName}`;
+        } else if (firstName) {
+            userName = firstName;
+        } else if (lastName) {
+            userName = lastName;
+        } else if (request.userInfo.email) {
+            // Fallback to email username
+            userName = request.userInfo.email.split('@')[0];
+        }
+        
+        userEmail = request.userInfo.email || '';
+    } else {
+        // If no userInfo, show ID as fallback (this should rarely happen)
+        userName = `User ${request.user_id ? request.user_id.substring(0, 8) : 'Unknown'}`;
+        console.warn(`No userInfo for request ${request.id}, user_id: ${request.user_id}`);
+    }
+    
+    // Status badge
+    let statusBadge = '';
+    if (request.status === 'pending') {
+        statusBadge = '<span class="badge bg-warning status-badge">Pending</span>';
+    } else if (request.status === 'assigned') {
+        statusBadge = '<span class="badge bg-info status-badge">Assigned</span>';
+    } else if (request.status === 'resolved') {
+        statusBadge = '<span class="badge bg-success status-badge">Resolved</span>';
+    }
+    
+    // Format dates
+    const createdAt = new Date(request.created_at);
+    const createdStr = createdAt.toLocaleString();
+    
+    // Assigned info
+    let assignedInfo = '';
+    if (request.assigned_to && request.status !== 'pending') {
+        assignedInfo = `<div class="help-request-meta mt-2"><strong>Assigned to:</strong> Consultant ${request.assigned_to.substring(0, 8)}</div>`;
+    }
+    
+    // Response info
+    let responseInfo = '';
+    if (request.response && request.status === 'resolved') {
+        responseInfo = `
+            <div class="mt-3">
+                <strong>Response:</strong>
+                <div class="help-request-message">${escapeHtml(request.response)}</div>
+            </div>
+        `;
+    }
+    
+    // Resolved date
+    let resolvedInfo = '';
+    if (request.resolved_at) {
+        const resolvedAt = new Date(request.resolved_at);
+        resolvedInfo = `<div class="help-request-meta mt-2"><strong>Resolved:</strong> ${resolvedAt.toLocaleString()}</div>`;
+    }
+    
+    card.innerHTML = `
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h5 class="mb-1 user-info">${escapeHtml(userName)}</h5>
+                    ${userEmail ? `<small class="text-muted d-block">${escapeHtml(userEmail)}</small>` : ''}
+                </div>
+                ${statusBadge}
+            </div>
+            
+            <div class="help-request-meta mb-2">
+                <strong>Requested:</strong> ${createdStr}
+            </div>
+            
+            ${assignedInfo}
+            ${resolvedInfo}
+            
+            <div class="mt-2">
+                <strong>Message:</strong>
+                <div class="help-request-message">${escapeHtml(request.content || 'No message provided')}</div>
+            </div>
+            
+            ${responseInfo}
+            
+            ${request.status !== 'resolved' ? `
+                <div class="mt-3">
+                    ${request.status === 'pending' ? `
+                        <button class="btn btn-sm btn-info" id="assign-btn-${request.id}" onclick="assignRequest('${request.id}')">Assign to Me</button>
+                    ` : ''}
+                    ${request.status === 'assigned' ? `
+                        <button class="btn btn-sm btn-success" id="resolve-btn-${request.id}" onclick="resolveRequest('${request.id}')">Resolve</button>
+                    ` : ''}
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    return card;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Filter requests by status
+function filterRequests(status) {
+    currentFilter = status;
+    
+    // Update button states
+    document.querySelectorAll('.filter-buttons .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-filter="${status}"]`).classList.add('active');
+    
+    // Reload and display with filter - we need to reload the full list since we store it
+    const token = getAuthToken();
+    fetch('/rest/v1/help_requests?order=created_at.desc&limit=100', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(async requests => {
+        await enrichRequestsWithUserInfo(requests, token);
+    })
+    .catch(err => {
+        console.error('Error filtering requests:', err);
+    });
+}
+
+// Assign help request to current consultant
+function assignRequest(requestId) {
+    const button = document.getElementById(`assign-btn-${requestId}`);
+    const originalText = button ? button.textContent : 'Assign to Me';
+    
+    // Disable button and show loading
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Assigning...';
+    }
+    
+    const token = getAuthToken();
+    if (!token) {
+        alert('No authentication token found. Please log in again.');
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+        return;
+    }
+    
+    // Get current consultant ID
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`Failed to get user info: HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(user => {
+        if (!user || !user.id) {
+            throw new Error('Invalid user data received');
+        }
+        
+        console.log('Assigning request', requestId, 'to consultant', user.id);
+        
+        // Update help request status and assign
+        return fetch(`/rest/v1/help_requests?id=eq.${requestId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                status: 'assigned',
+                assigned_to: user.id
+            })
+        });
+    })
+    .then(res => {
+        return res.text().then(text => {
+            console.log('Response status:', res.status);
+            console.log('Response text:', text);
+            
+            if (res.ok) {
+                try {
+                    const data = JSON.parse(text);
+                    console.log('Assignment successful:', data);
+                    loadHelpRequests(); // Reload
+                } catch (e) {
+                    // Even if JSON parse fails, if status is OK, it's probably successful
+                    console.log('Assignment successful (non-JSON response)');
+                    loadHelpRequests(); // Reload
+                }
+            } else {
+                let errorMsg = `Failed to assign help request (HTTP ${res.status})`;
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData.error || errorData.message) {
+                        errorMsg += ': ' + (errorData.error || errorData.message);
+                    }
+                } catch (e) {
+                    errorMsg += ': ' + text.substring(0, 100);
+                }
+                console.error('Assignment failed:', errorMsg);
+                alert(errorMsg);
+            }
+        });
+    })
+    .catch(err => {
+        console.error('Error assigning request:', err);
+        alert('Error assigning help request: ' + err.message);
+    })
+    .finally(() => {
+        // Re-enable button
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+}
+
+// Resolve help request
+function resolveRequest(requestId) {
+    const response = prompt('Enter your response to the reader:');
+    if (!response) return;
+    
+    const button = document.getElementById(`resolve-btn-${requestId}`);
+    const originalText = button ? button.textContent : 'Resolve';
+    
+    // Disable button and show loading
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Resolving...';
+    }
+    
+    const token = getAuthToken();
+    if (!token) {
+        alert('No authentication token found. Please log in again.');
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+        return;
+    }
+    
+    console.log('Resolving request', requestId);
+    
+    fetch(`/rest/v1/help_requests?id=eq.${requestId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            status: 'resolved',
+            response: response,
+            resolved_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        })
+    })
+    .then(res => {
+        return res.text().then(text => {
+            console.log('Response status:', res.status);
+            console.log('Response text:', text);
+            
+            if (res.ok) {
+                console.log('Resolution successful');
+                loadHelpRequests(); // Reload
+            } else {
+                let errorMsg = `Failed to resolve help request (HTTP ${res.status})`;
+                try {
+                    const errorData = JSON.parse(text);
+                    if (errorData.error || errorData.message) {
+                        errorMsg += ': ' + (errorData.error || errorData.message);
+                    }
+                } catch (e) {
+                    errorMsg += ': ' + text.substring(0, 100);
+                }
+                console.error('Resolution failed:', errorMsg);
+                alert(errorMsg);
+            }
+        });
+    })
+    .catch(err => {
+        console.error('Error resolving request:', err);
+        alert('Error resolving help request: ' + err.message);
+    })
+    .finally(() => {
+        // Re-enable button
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+}
+</script>
+{{end}}
+
