@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
@@ -172,6 +173,40 @@ func HandleConsultantReaders(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl.Execute(w, nil)
+}
+
+// HandleConsultantReaderInspector handles GET /consultant/readers/:id
+func HandleConsultantReaderInspector(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract reader ID from URL path: /consultant/readers/:id
+	path := r.URL.Path
+	pathParts := strings.Split(path, "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Reader ID required", http.StatusBadRequest)
+		return
+	}
+	readerID := pathParts[3]
+
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "reader-inspector.html"),
+	)
+	if err != nil {
+		http.Error(w, "Template not found", http.StatusInternalServerError)
+		return
+	}
+
+	// Pass reader ID to template
+	data := map[string]interface{}{
+		"ReaderID": readerID,
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl.Execute(w, data)
 }
 
 // HandleConsultantReports handles GET /consultant/reports

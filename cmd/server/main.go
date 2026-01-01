@@ -71,6 +71,12 @@ func main() {
 		// Extract the path after /consultant
 		path := strings.TrimPrefix(r.URL.Path, "/consultant")
 
+		// Check if path matches /readers/:id pattern before other cases
+		if strings.HasPrefix(path, "/readers/") {
+			handlers.HandleConsultantReaderInspector(w, r)
+			return
+		}
+		
 		switch path {
 		case "", "/":
 			handlers.HandleConsultantDashboard(w, r)

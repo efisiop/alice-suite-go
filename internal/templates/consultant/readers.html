@@ -29,6 +29,11 @@
     background-color: #f8f9fa;
 }
 
+.readers-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
 /* Compact columns - left side takes ~35% */
 .col-name { width: 8%; }
 .col-lastname { width: 8%; }
@@ -164,6 +169,7 @@
     border-radius: 2px;
     margin-right: 3px;
 }
+
 </style>
 {{end}}
 
@@ -439,6 +445,23 @@ async function loadReaderActivity(userId, token) {
 function createReaderRow(reader, activityData) {
     const row = document.createElement('tr');
     row.id = `reader-row-${reader.id}`;
+    
+    // Store reader data on row for inspector access
+    row.readerData = reader;
+    
+    // Make row clickable (but exclude calendar cell clicks)
+    row.addEventListener('click', function(e) {
+        // Don't trigger if clicking on calendar navigation buttons
+        if (e.target.closest('.calendar-nav-btn')) {
+            return;
+        }
+        // Don't trigger if clicking on calendar viewport
+        if (e.target.closest('.calendar-viewport')) {
+            return;
+        }
+        // Navigate to reader inspector page
+        window.location.href = `/consultant/readers/${reader.id}`;
+    });
     
     const firstName = reader.first_name || '';
     const lastName = reader.last_name || '';

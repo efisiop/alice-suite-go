@@ -1,0 +1,447 @@
+{{define "title"}}Reader Inspector - Consultant Dashboard - Alice Suite{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/consultant">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="#" id="reader-inspector-link">Reader Inspector</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link">Logout</a>
+</li>
+{{end}}
+
+{{define "head"}}
+<style>
+.stat-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+    transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.stat-value-small {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.activity-timeline {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: #ffffff;
+}
+
+.activity-item {
+    border-left: 3px solid #007bff;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.activity-item:hover {
+    background-color: #e9ecef;
+}
+
+.activity-item .activity-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.activity-item .activity-detail {
+    font-size: 0.875rem;
+    color: #495057;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 3rem;
+}
+
+.back-button {
+    margin-bottom: 1.5rem;
+}
+</style>
+{{end}}
+
+{{define "content"}}
+<div class="container-fluid">
+    <div class="back-button">
+        <a href="/consultant/readers" class="btn btn-outline-secondary">
+            ← Back to Readers
+        </a>
+    </div>
+    
+    <div id="loadingState" class="loading-state">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading reader details...</p>
+    </div>
+    
+    <div id="contentArea" style="display: none;">
+        <h1 class="mb-4" id="pageTitle">Reader Inspector</h1>
+        
+        <!-- Basic Info Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Reader Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Name</div>
+                            <div class="stat-value-small" id="readerName">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Email</div>
+                            <div class="stat-value-small" id="readerEmail">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Account Created</div>
+                            <div class="stat-value-small" id="readerCreated">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Account Status</div>
+                            <div class="stat-value-small" id="readerStatus">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Summary Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Activity Summary (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Activities</div>
+                            <div class="stat-value" id="totalActivities">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Active Days</div>
+                            <div class="stat-value" id="activeDays">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Word Lookups</div>
+                            <div class="stat-value" id="wordLookups">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-label">Page Views</div>
+                            <div class="stat-value" id="pageViews">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Activities</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadActivities()">Refresh</button>
+            </div>
+            <div class="card-body">
+                <div class="activity-timeline" id="activitiesTimeline">
+                    <p class="text-muted">Loading activities...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+const readerId = '{{.ReaderID}}';
+
+// Ensure getAuthToken is available
+if (typeof getAuthToken === 'undefined') {
+    window.getAuthToken = function() {
+        return sessionStorage.getItem('auth_token');
+    };
+}
+
+// Logout handler
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            } else if (window.consultantLogout) {
+                window.consultantLogout();
+            }
+        });
+    }
+    
+    loadConsultantUserInfo();
+    loadReaderDetails();
+});
+
+// Load consultant user info
+function loadConsultantUserInfo() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        const userNameDisplay = document.getElementById('user-name-display');
+        const userNameBrand = document.getElementById('user-name-brand');
+        const userInfoNav = document.getElementById('user-info-nav');
+        
+        if (userInfoNav) userInfoNav.style.display = 'block';
+        
+        let displayName = '';
+        if (user.user_metadata) {
+            const firstName = user.user_metadata.first_name || '';
+            const lastName = user.user_metadata.last_name || '';
+            displayName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || user.email?.split('@')[0] || 'Consultant');
+        } else if (user.first_name) {
+            displayName = user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
+        } else if (user.email) {
+            displayName = user.email.split('@')[0];
+        } else {
+            displayName = 'Consultant';
+        }
+        
+        if (userNameDisplay) userNameDisplay.textContent = displayName;
+        if (userNameBrand) {
+            userNameBrand.textContent = displayName;
+            userNameBrand.style.display = 'inline';
+        }
+    })
+    .catch(err => console.error('Error loading user info:', err));
+}
+
+// Load reader details
+function loadReaderDetails() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        document.getElementById('loadingState').innerHTML = '<p class="text-danger">Error: No authentication token or reader ID</p>';
+        return;
+    }
+    
+    // Load reader info and activity summary in parallel
+    Promise.all([
+        fetch(`/rest/v1/users?id=eq.${readerId}`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        }).then(r => r.json()),
+        fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        }).then(r => r.json()),
+        loadActivities()
+    ])
+    .then(([users, summary]) => {
+        const reader = Array.isArray(users) && users.length > 0 ? users[0] : null;
+        
+        if (!reader) {
+            document.getElementById('loadingState').innerHTML = '<p class="text-danger">Reader not found</p>';
+            return;
+        }
+        
+        // Set basic info
+        const fullName = `${reader.first_name || ''} ${reader.last_name || ''}`.trim() || 'Unknown';
+        document.getElementById('pageTitle').textContent = `Reader Inspector: ${fullName}`;
+        document.getElementById('readerName').textContent = fullName;
+        document.getElementById('readerEmail').textContent = reader.email || 'N/A';
+        
+        if (reader.created_at) {
+            const createdDate = new Date(reader.created_at);
+            document.getElementById('readerCreated').textContent = createdDate.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        } else {
+            document.getElementById('readerCreated').textContent = 'N/A';
+        }
+        
+        document.getElementById('readerStatus').textContent = reader.is_verified ? '✓ Verified' : 'Not Verified';
+        
+        // Set activity summary
+        if (summary) {
+            document.getElementById('totalActivities').textContent = summary.TotalActivities || 0;
+            document.getElementById('activeDays').textContent = summary.ActiveDays || 0;
+            document.getElementById('wordLookups').textContent = summary.WordLookups || 0;
+            document.getElementById('pageViews').textContent = summary.PageViews || 0;
+        }
+        
+        // Show content, hide loading
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('contentArea').style.display = 'block';
+    })
+    .catch(err => {
+        console.error('Error loading reader details:', err);
+        document.getElementById('loadingState').innerHTML = '<p class="text-danger">Error loading reader details. Please try again.</p>';
+    });
+}
+
+// Load activities
+function loadActivities() {
+    const token = getAuthToken();
+    if (!token || !readerId) return Promise.resolve();
+    
+    return Promise.all([
+        fetch(`/rest/v1/interactions?user_id=eq.${readerId}&order=created_at.desc&limit=50`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        }).then(r => r.json()),
+        fetch(`/rest/v1/activity_logs?user_id=eq.${readerId}&order=created_at.desc&limit=50`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        }).then(r => r.json())
+    ])
+    .then(([interactions, activityLogs]) => {
+        // Combine and sort activities
+        const allActivities = [];
+        
+        if (Array.isArray(interactions)) {
+            interactions.forEach(activity => {
+                allActivities.push({
+                    ...activity,
+                    source: 'interactions',
+                    created_at: activity.created_at
+                });
+            });
+        }
+        
+        if (Array.isArray(activityLogs)) {
+            activityLogs.forEach(activity => {
+                allActivities.push({
+                    ...activity,
+                    source: 'activity_logs',
+                    event_type: activity.activity_type,
+                    created_at: activity.created_at
+                });
+            });
+        }
+        
+        // Sort by date (most recent first)
+        allActivities.sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+        
+        // Display activities
+        const activitiesContainer = document.getElementById('activitiesTimeline');
+        if (allActivities.length === 0) {
+            activitiesContainer.innerHTML = '<p class="text-muted">No activities found.</p>';
+        } else {
+            let activitiesHtml = '';
+            allActivities.slice(0, 50).forEach(activity => {
+                const date = new Date(activity.created_at);
+                const timeStr = date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                let activityDetail = '';
+                if (activity.event_type === 'PAGE_SYNC' || activity.activity_type === 'PAGE_SYNC') {
+                    let pageInfo = '';
+                    if (activity.page_number) {
+                        let sectionInfo = '';
+                        if (activity.parsed_context && activity.parsed_context.section_index !== undefined) {
+                            const sectionNum = typeof activity.parsed_context.section_index === 'number' 
+                                ? activity.parsed_context.section_index 
+                                : parseInt(activity.parsed_context.section_index, 10);
+                            sectionInfo = ` - sect. ${sectionNum + 1}`;
+                        }
+                        pageInfo = `Page ${activity.page_number}${sectionInfo}`;
+                    }
+                    activityDetail = `Page Navigation: ${pageInfo || 'N/A'}`;
+                } else if (activity.event_type === 'DEFINITION_LOOKUP' || activity.activity_type === 'WORD_LOOKUP') {
+                    const word = activity.parsed_context?.word || activity.context?.word || 'word';
+                    activityDetail = `Word Lookup: "${word}"`;
+                } else if (activity.event_type === 'HELP_REQUEST' || activity.activity_type === 'HELP_REQUEST') {
+                    activityDetail = `Help Request: ${activity.content ? activity.content.substring(0, 50) + '...' : 'Request made'}`;
+                } else if (activity.event_type === 'LOGIN' || activity.activity_type === 'LOGIN') {
+                    activityDetail = 'Logged In';
+                } else if (activity.event_type === 'LOGOUT' || activity.activity_type === 'LOGOUT') {
+                    activityDetail = 'Logged Out';
+                } else {
+                    activityDetail = activity.event_type || activity.activity_type || 'Activity';
+                }
+                
+                activitiesHtml += `
+                    <div class="activity-item">
+                        <div class="activity-time">${timeStr}</div>
+                        <div class="activity-detail">${escapeHtml(activityDetail)}</div>
+                    </div>
+                `;
+            });
+            activitiesContainer.innerHTML = activitiesHtml;
+        }
+    })
+    .catch(err => {
+        console.error('Error loading activities:', err);
+        document.getElementById('activitiesTimeline').innerHTML = '<p class="text-danger">Error loading activities.</p>';
+    });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{{end}}
+
+
