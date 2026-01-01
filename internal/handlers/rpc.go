@@ -112,7 +112,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		json.NewEncoder(w).Encode(page)
 		return
 	}
-	
+
 	// If page was nil or had no sections, try fallback
 	if page != nil && len(page.Sections) == 0 {
 		log.Printf("Page %d found but has no sections, trying fallback", pageNum)
@@ -120,13 +120,13 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 
 	// Fallback: Query sections directly (handle both old and new structures)
 	log.Printf("Page %d not found in pages table, trying direct sections query", pageNum)
-	
+
 	// Try querying old structure first (with start_page/end_page)
 	query := `SELECT id, content FROM sections 
 	          WHERE start_page <= ? AND end_page >= ?
 	          ORDER BY number`
 	rows, err := database.DB.Query(query, pageNum, pageNum)
-	
+
 	var foundSections []models.Section
 	if err != nil {
 		// Old structure query failed - try new structure (with page_number)

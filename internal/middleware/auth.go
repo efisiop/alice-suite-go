@@ -181,4 +181,3 @@ func RequireConsultant(next http.Handler) http.Handler {
 func RequireReader(next http.Handler) http.Handler {
 	return RequireRole("reader")(next)
 }
-

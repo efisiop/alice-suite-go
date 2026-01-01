@@ -1,0 +1,596 @@
+{{define "title"}}My Page - Alice Suite{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/reader/interaction">Reading</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/reader/my-page">My Page</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<div class="container-fluid">
+    <h1 class="mb-4">My Page</h1>
+    
+    <div class="row">
+        <!-- My Help Requests Column -->
+        <div class="col-md-4">
+            <div class="card section-card">
+                <div class="card-header section-header" data-bs-toggle="collapse" data-bs-target="#helpRequestsContent" aria-expanded="false">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-question-circle me-2"></i>
+                            My Help Requests
+                            <span class="badge bg-secondary ms-2" id="help-requests-count">0</span>
+                        </span>
+                        <i class="bi bi-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div class="collapse" id="helpRequestsContent">
+                    <div class="card-body section-body">
+                        <div id="my-help-requests">
+                            <p class="text-muted small">Loading...</p>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-sm btn-primary" onclick="showHelpRequestDialog()">
+                                <i class="bi bi-plus-circle"></i> New Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Messages Column -->
+        <div class="col-md-4">
+            <div class="card section-card">
+                <div class="card-header section-header" data-bs-toggle="collapse" data-bs-target="#messagesContent" aria-expanded="false">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-envelope me-2"></i>
+                            My Messages
+                            <span class="badge bg-secondary ms-2" id="messages-count">0</span>
+                        </span>
+                        <i class="bi bi-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div class="collapse" id="messagesContent">
+                    <div class="card-body section-body">
+                        <div id="my-messages">
+                            <p class="text-muted small">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Progress Column -->
+        <div class="col-md-4">
+            <div class="card section-card">
+                <div class="card-header section-header" data-bs-toggle="collapse" data-bs-target="#progressContent" aria-expanded="false">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-graph-up me-2"></i>
+                            My Progress
+                        </span>
+                        <i class="bi bi-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div class="collapse" id="progressContent">
+                    <div class="card-body section-body">
+                        <div id="my-progress">
+                            <p class="text-muted small">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Request Modal -->
+<div class="modal fade" id="helpRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="help-request-form">
+                    <div class="mb-3">
+                        <label for="help-content" class="form-label">What do you need help with?</label>
+                        <textarea class="form-control" id="help-content" rows="4" required placeholder="Describe what you need help with..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit Request</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "head"}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+.section-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    margin-bottom: 1rem;
+}
+
+.section-header {
+    cursor: pointer;
+    background: linear-gradient(135deg, #155724 0%, #1e7e34 100%);
+    color: white;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.section-header:hover {
+    opacity: 0.95;
+}
+
+.section-header .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.section-header[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.section-body {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+/* Help Requests */
+.help-request-item {
+    border-left: 3px solid #155724;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+}
+
+.help-request-item.pending {
+    border-left-color: #ffc107;
+}
+
+.help-request-item.assigned {
+    border-left-color: #1e7e34;
+}
+
+.help-request-item.resolved {
+    border-left-color: #28a745;
+}
+
+.help-request-response {
+    background-color: #d4edda;
+    border-left: 2px solid #155724;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.help-request-message-text {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Messages */
+.message-item {
+    border-left: 3px solid #155724;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+}
+
+.message-item.unread {
+    background-color: #d4edda;
+    border-left-color: #1e7e34;
+}
+
+/* Progress */
+.progress-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.progress-stat:last-child {
+    border-bottom: none;
+}
+
+.progress-stat .label {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.progress-stat .value {
+    font-weight: 600;
+    color: #333;
+}
+
+.progress-bar-custom {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #155724 0%, #1e7e34 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 1.5rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+</style>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function showHelpRequestDialog() {
+    const modal = new bootstrap.Modal(document.getElementById('helpRequestModal'));
+    modal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[my-page.html] DOMContentLoaded fired');
+    
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Attach logout handler
+    const logoutLink = document.getElementById('logout-link-reader');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (window.logout) {
+                window.logout();
+            }
+        });
+    }
+
+    // Load user info in navbar
+    setTimeout(function() {
+        if (typeof loadUserInfoInNavbar === 'function') {
+            loadUserInfoInNavbar();
+        }
+    }, 500);
+    
+    // Load all sections
+    loadMyHelpRequests();
+    loadMyMessages();
+    loadMyProgress();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadMyHelpRequests, 30000);
+    setInterval(loadMyMessages, 30000);
+});
+
+// Load and display reader's help requests
+function loadMyHelpRequests() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        if (!user || !user.id) return;
+        return fetch(`/rest/v1/help_requests?user_id=eq.${user.id}&order=created_at.desc&limit=20`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(requests => {
+        const container = document.getElementById('my-help-requests');
+        const countBadge = document.getElementById('help-requests-count');
+        
+        if (!Array.isArray(requests) || requests.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-chat-dots"></i>
+                    <p class="small mb-0">No help requests yet</p>
+                </div>
+            `;
+            countBadge.textContent = '0';
+            return;
+        }
+        
+        countBadge.textContent = requests.length;
+        
+        let html = '';
+        requests.forEach(request => {
+            let statusBadge = '';
+            if (request.status === 'pending') {
+                statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
+            } else if (request.status === 'assigned') {
+                statusBadge = '<span class="badge bg-info">Assigned</span>';
+            } else if (request.status === 'resolved') {
+                statusBadge = '<span class="badge bg-success">Resolved</span>';
+            }
+            
+            const createdDate = new Date(request.created_at);
+            const createdStr = createdDate.toLocaleDateString();
+            
+            let contentPreview = '';
+            if (request.content) {
+                const preview = request.content.length > 60 ? request.content.substring(0, 60) + '...' : request.content;
+                contentPreview = `<div class="small text-muted mt-1">${escapeHtml(preview)}</div>`;
+            }
+            
+            let responseSection = '';
+            if (request.status === 'resolved' && request.response) {
+                const responsePreview = request.response.length > 80 ? request.response.substring(0, 80) + '...' : request.response;
+                responseSection = `
+                    <div class="help-request-response">
+                        <strong class="small"><i class="bi bi-reply"></i> Response:</strong>
+                        <div class="small">${escapeHtml(responsePreview)}</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="help-request-item ${request.status}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        ${statusBadge}
+                        <small class="text-muted">${createdStr}</small>
+                    </div>
+                    ${contentPreview}
+                    ${responseSection}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading help requests:', err);
+        document.getElementById('my-help-requests').innerHTML = '<p class="text-danger small">Error loading</p>';
+    });
+}
+
+// Load messages (consultant responses to help requests)
+function loadMyMessages() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        if (!user || !user.id) return;
+        // Get resolved help requests with responses (these are the "messages")
+        return fetch(`/rest/v1/help_requests?user_id=eq.${user.id}&status=eq.resolved&order=resolved_at.desc&limit=20`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(requests => {
+        const container = document.getElementById('my-messages');
+        const countBadge = document.getElementById('messages-count');
+        
+        // Filter to only those with responses
+        const messagesWithResponses = requests.filter(r => r.response);
+        
+        if (messagesWithResponses.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-envelope"></i>
+                    <p class="small mb-0">No messages yet</p>
+                    <p class="small text-muted">Consultant responses will appear here</p>
+                </div>
+            `;
+            countBadge.textContent = '0';
+            return;
+        }
+        
+        countBadge.textContent = messagesWithResponses.length;
+        
+        let html = '';
+        messagesWithResponses.forEach(msg => {
+            const resolvedDate = msg.resolved_at ? new Date(msg.resolved_at).toLocaleDateString() : '';
+            
+            html += `
+                <div class="message-item">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="small"><i class="bi bi-person-circle"></i> Consultant</strong>
+                        <small class="text-muted">${resolvedDate}</small>
+                    </div>
+                    <div class="small">${escapeHtml(msg.response)}</div>
+                    <div class="small text-muted mt-1 fst-italic">
+                        Re: ${escapeHtml(msg.content ? msg.content.substring(0, 40) + '...' : 'Your request')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading messages:', err);
+        document.getElementById('my-messages').innerHTML = '<p class="text-danger small">Error loading</p>';
+    });
+}
+
+// Load reading progress
+function loadMyProgress() {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        if (!user || !user.id) return;
+        
+        // Fetch activity data
+        return Promise.all([
+            fetch(`/rest/v1/interactions?user_id=eq.${user.id}&limit=100`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            }).then(r => r.json()),
+            fetch(`/rest/v1/activity_logs?user_id=eq.${user.id}&limit=100`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            }).then(r => r.json())
+        ]);
+    })
+    .then(([interactions, activityLogs]) => {
+        const container = document.getElementById('my-progress');
+        
+        // Calculate stats
+        const totalInteractions = Array.isArray(interactions) ? interactions.length : 0;
+        const totalActivities = Array.isArray(activityLogs) ? activityLogs.length : 0;
+        
+        // Count unique days active
+        const activeDays = new Set();
+        if (Array.isArray(interactions)) {
+            interactions.forEach(i => {
+                if (i.created_at) activeDays.add(new Date(i.created_at).toDateString());
+            });
+        }
+        if (Array.isArray(activityLogs)) {
+            activityLogs.forEach(a => {
+                if (a.created_at) activeDays.add(new Date(a.created_at).toDateString());
+            });
+        }
+        
+        // Count word lookups
+        const wordLookups = Array.isArray(interactions) ? 
+            interactions.filter(i => i.interaction_type === 'word_lookup').length : 0;
+        
+        // Estimate reading progress (mock - would need actual page tracking)
+        const chaptersRead = Math.min(12, Math.floor(totalInteractions / 10));
+        const progressPercent = Math.min(100, Math.round((chaptersRead / 12) * 100));
+        
+        container.innerHTML = `
+            <div class="progress-stat">
+                <span class="label">Days Active</span>
+                <span class="value">${activeDays.size}</span>
+            </div>
+            <div class="progress-stat">
+                <span class="label">Word Lookups</span>
+                <span class="value">${wordLookups}</span>
+            </div>
+            <div class="progress-stat">
+                <span class="label">Total Interactions</span>
+                <span class="value">${totalInteractions}</span>
+            </div>
+            <div class="progress-stat">
+                <span class="label">Chapters Progress</span>
+                <span class="value">${chaptersRead} / 12</span>
+            </div>
+            <div class="progress-bar-custom">
+                <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
+            </div>
+            <div class="text-center mt-2">
+                <small class="text-muted">${progressPercent}% Complete</small>
+            </div>
+        `;
+    })
+    .catch(err => {
+        console.error('Error loading progress:', err);
+        document.getElementById('my-progress').innerHTML = `
+            <div class="empty-state">
+                <i class="bi bi-graph-up"></i>
+                <p class="small mb-0">Start reading to track progress</p>
+            </div>
+        `;
+    });
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Handle help request submission
+document.getElementById('help-request-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const content = document.getElementById('help-content').value;
+    const token = localStorage.getItem('auth_token');
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+    
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        return fetch('/rest/v1/help_requests?select=*', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({
+                user_id: user.id,
+                book_id: 'alice-in-wonderland',
+                content: content,
+                status: 'pending'
+            })
+        });
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert('Help request submitted successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('helpRequestModal')).hide();
+        document.getElementById('help-request-form').reset();
+        loadMyHelpRequests();
+        // Expand the help requests section to show the new request
+        const helpRequestsCollapse = document.getElementById('helpRequestsContent');
+        if (!helpRequestsCollapse.classList.contains('show')) {
+            new bootstrap.Collapse(helpRequestsCollapse, {show: true});
+        }
+    })
+    .catch(err => {
+        alert('Failed to submit help request');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Request';
+    });
+});
+</script>
+{{end}}

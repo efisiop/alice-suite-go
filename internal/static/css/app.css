@@ -64,11 +64,6 @@ body[data-app="reader"] .navbar-light .nav-link {
     color: white !important;
 }
 
-body.reader-app .navbar-light #user-name-brand,
-body[data-app="reader"] .navbar-light #user-name-brand {
-    color: rgba(255, 255, 255, 0.9) !important;
-}
-
 body.reader-app .text-primary,
 body[data-app="reader"] .text-primary {
     color: var(--reader-primary) !important;
@@ -214,28 +209,10 @@ body {
     font-size: 1.5rem;
 }
 
-/* User name in navbar brand - visible even in narrow windows */
-#user-name-brand {
-    font-weight: normal;
-    font-size: 0.9rem;
-    opacity: 0.9;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-
 /* Ensure navbar brand flex container doesn't break in narrow windows */
 .navbar-brand.d-flex {
     min-width: 0; /* Allow flex items to shrink */
     flex-wrap: nowrap;
-}
-
-@media (max-width: 576px) {
-    #user-name-brand {
-        max-width: 120px;
-        font-size: 0.85rem;
-    }
 }
 
 .card {

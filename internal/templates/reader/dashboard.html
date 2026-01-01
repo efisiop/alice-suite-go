@@ -2,13 +2,10 @@
 
 {{define "nav"}}
 <li class="nav-item">
-    <a class="nav-link" href="/reader">Dashboard</a>
-</li>
-<li class="nav-item">
     <a class="nav-link" href="/reader/interaction">Reading</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/reader/statistics">Statistics</a>
+    <a class="nav-link" href="/reader/my-page">My Page</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
@@ -42,9 +39,9 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Help Requests</h5>
-                        <p class="card-text">Get help from consultants</p>
-                        <button class="btn btn-outline-primary" onclick="showHelpRequestDialog()">Request Help</button>
+                        <h5 class="card-title">My Page</h5>
+                        <p class="card-text">View your help requests</p>
+                        <a href="/reader/my-page" class="btn btn-outline-primary">Go to My Page</a>
                     </div>
                 </div>
             </div>
@@ -63,37 +60,13 @@
     </div>
 </div>
 
-<!-- Help Request Modal -->
-<div class="modal fade" id="helpRequestModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Request Help</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="help-request-form">
-                    <div class="mb-3">
-                        <label for="help-content" class="form-label">What do you need help with?</label>
-                        <textarea class="form-control" id="help-content" rows="4" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{{end}}
+
+{{define "head"}}
 {{end}}
 
 {{define "scripts"}}
 <script>
-// Logout function is now in app.js (global), but we'll attach event listener here
-function showHelpRequestDialog() {
-    const modal = new bootstrap.Modal(document.getElementById('helpRequestModal'));
-    modal.show();
-}
-
-// Load recent activity
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[dashboard.html] DOMContentLoaded fired');
     
@@ -103,75 +76,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Attach logout handler (backup - app.js also handles this)
+    // Attach logout handler
     const logoutLink = document.getElementById('logout-link-reader');
     if (logoutLink) {
-        console.log('[dashboard.html] Found logout link, attaching handler');
         logoutLink.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('[dashboard.html] Logout clicked');
             if (window.logout) {
-                console.log('[dashboard.html] Calling window.logout()');
                 window.logout();
-            } else {
-                console.error('[dashboard.html] window.logout is not defined!');
             }
         });
-    } else {
-        console.warn('[dashboard.html] Logout link not found');
     }
 
-    // User info is loaded by app.js automatically
-    // But let's also try loading it here as a backup (with longer delay to ensure app.js has loaded)
+    // Load user info in navbar
     setTimeout(function() {
-        console.log('[dashboard.html] Checking for loadUserInfoInNavbar function...');
-        const userNameBrand = document.getElementById('user-name-brand');
-        console.log('[dashboard.html] user-name-brand element found:', !!userNameBrand);
         if (typeof loadUserInfoInNavbar === 'function') {
-            console.log('[dashboard.html] Calling loadUserInfoInNavbar() as backup');
             loadUserInfoInNavbar();
-        } else {
-            console.error('[dashboard.html] loadUserInfoInNavbar function not found!');
         }
     }, 500);
     
-    // Load recent activity (simplified)
+    // Load recent activity
     document.getElementById('recent-activity').innerHTML = '<p class="text-muted">No recent activity</p>';
-});
-
-// Handle help request submission
-document.getElementById('help-request-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const content = document.getElementById('help-content').value;
-    const token = localStorage.getItem('auth_token');
-    
-    // Get user and book info (simplified)
-    fetch('/auth/v1/user', {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => res.json())
-    .then(user => {
-        // Assume first book for now
-        return fetch('/rest/v1/help_requests?select=*', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify({
-                user_id: user.id,
-                book_id: 'alice-in-wonderland', // Default book ID
-                content: content,
-                status: 'pending'
-            })
-        });
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert('Help request submitted successfully!');
-        bootstrap.Modal.getInstance(document.getElementById('helpRequestModal')).hide();
-        document.getElementById('help-request-form').reset();
-    })
-    .catch(err => {
-        alert('Failed to submit help request');
-    });
 });
 </script>
 {{end}}

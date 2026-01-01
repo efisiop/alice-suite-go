@@ -96,6 +96,7 @@
 
 .reader-activity-item.activity-recent .activity-what {
     font-weight: bold;
+    font-size: 0.875rem; /* Match activity-type-label size */
     /* Inherit color from parent or use dark gray - will be styled per event type if needed */
     color: #495057;
 }
@@ -133,6 +134,7 @@
 .reader-activity-item.activity-history .activity-what {
     color: #adb5bd !important;
     font-weight: normal;
+    font-size: 0.875rem; /* Match activity-type-label size */
 }
 
 .reader-activity-item.activity-history .activity-icon {
@@ -1224,7 +1226,34 @@ function addActivityToReaderCard(activity) {
     } else if (activity.content) {
         whatContent = activity.content.substring(0, 100);
     } else if (activity.page_number) {
-        whatContent = `Page ${activity.page_number}`;
+        // Check if section_index is available in parsed_context or directly
+        let sectionIndex = null;
+        if (activity.parsed_context && activity.parsed_context.section_index !== undefined) {
+            sectionIndex = activity.parsed_context.section_index;
+        } else if (activity.context && typeof activity.context === 'string') {
+            // Try to parse context if it's a JSON string
+            try {
+                const context = JSON.parse(activity.context);
+                if (context.section_index !== undefined) {
+                    sectionIndex = context.section_index;
+                }
+            } catch (e) {
+                // Context is not JSON, ignore
+            }
+        }
+        
+        // Convert sectionIndex to number if it exists (handles both number and string)
+        if (sectionIndex !== null && sectionIndex !== undefined) {
+            const sectionNum = typeof sectionIndex === 'number' ? sectionIndex : parseInt(sectionIndex, 10);
+            if (!isNaN(sectionNum)) {
+                // Display as "Page X - sect. Y" (section index is 0-based, display as 1-based)
+                whatContent = `Page ${activity.page_number} - sect. ${sectionNum + 1}`;
+            } else {
+                whatContent = `Page ${activity.page_number}`;
+            }
+        } else {
+            whatContent = `Page ${activity.page_number}`;
+        }
     }
     
     // Create activity item (without reader name - it's in the card header)

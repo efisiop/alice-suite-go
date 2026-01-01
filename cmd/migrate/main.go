@@ -30,7 +30,7 @@ func splitSQLStatements(sql string) []string {
 	var current strings.Builder
 	inSingleQuote := false
 	inDoubleQuote := false
-	
+
 	for i, char := range sql {
 		switch char {
 		case '\'':
@@ -58,7 +58,7 @@ func splitSQLStatements(sql string) []string {
 		}
 		_ = i // avoid unused variable
 	}
-	
+
 	// Add remaining statement
 	if current.Len() > 0 {
 		stmt := strings.TrimSpace(current.String())
@@ -66,13 +66,13 @@ func splitSQLStatements(sql string) []string {
 			statements = append(statements, stmt)
 		}
 	}
-	
+
 	return statements
 }
 
 func main() {
 	dbPath := getDBPath()
-	
+
 	// Create data directory if it doesn't exist
 	dbDir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -118,7 +118,7 @@ func main() {
 		}
 
 		sql := string(sqlBytes)
-		
+
 		// Execute entire SQL file - SQLite can handle multiple statements
 		// This approach handles quoted strings and multi-line statements correctly
 		_, err = db.Exec(sql)
@@ -126,16 +126,16 @@ func main() {
 			// If executing entire file fails, try splitting by semicolons
 			// but only split outside of quoted strings
 			statements := splitSQLStatements(sql)
-		for _, statement := range statements {
-			statement = strings.TrimSpace(statement)
-			if statement == "" || strings.HasPrefix(statement, "--") {
-				continue
-			}
+			for _, statement := range statements {
+				statement = strings.TrimSpace(statement)
+				if statement == "" || strings.HasPrefix(statement, "--") {
+					continue
+				}
 
 				_, execErr := db.Exec(statement)
 				if execErr != nil {
 					log.Printf("Warning: Error executing statement in %s: %v", filename, execErr)
-				// Continue with next statement (some errors are expected for IF NOT EXISTS)
+					// Continue with next statement (some errors are expected for IF NOT EXISTS)
 				}
 			}
 		}
@@ -146,6 +146,3 @@ func main() {
 	fmt.Println("\n🎉 All migrations completed successfully!")
 	fmt.Printf("📊 Database created at: %s\n", dbPath)
 }
-
-
-

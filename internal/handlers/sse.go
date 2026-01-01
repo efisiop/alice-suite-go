@@ -118,12 +118,12 @@ func sendSSEEvent(w http.ResponseWriter, event realtime.Event) error {
 	if _, err := fmt.Fprintf(w, "event: %s\n", event.Type); err != nil {
 		return err
 	}
-	
+
 	// Write data line - json.Marshal produces a single line (newlines are escaped as \n)
 	if _, err := fmt.Fprintf(w, "data: %s\n", string(eventJSON)); err != nil {
 		return err
 	}
-	
+
 	// End event with blank line (required by SSE spec)
 	_, err = fmt.Fprintf(w, "\n")
 	return err
@@ -170,4 +170,3 @@ func BroadcastLogout(userID string) {
 	})
 	broadcaster.BroadcastToRole(event, "consultant")
 }
-

@@ -85,3 +85,12 @@ Only test more browsers if:
 - You're doing a production launch
 
 For now, **one or two browsers is fine!** 🎯
+
+
+
+
+
+
+
+
+

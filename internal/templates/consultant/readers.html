@@ -321,7 +321,7 @@ function loadReaders() {
     document.getElementById('empty-state').style.display = 'none';
     document.getElementById('readers-table-container').style.display = 'none';
     
-    fetch('/rest/v1/users?role=eq.reader&is_verified=eq.1&order=created_at.desc', {
+    fetch('/rest/v1/users?role=eq.reader&order=created_at.desc', {
         headers: {'Authorization': 'Bearer ' + token}
     })
     .then(res => {
@@ -336,9 +336,9 @@ function loadReaders() {
             return;
         }
         
+        // Include all readers who have at least an email (required) or a name
         const validReaders = readers.filter(r => 
-            (r.first_name || r.last_name || r.email) && 
-            (r.first_name || r.last_name)
+            r.email || r.first_name || r.last_name
         );
         
         if (validReaders.length === 0) {

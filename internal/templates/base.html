@@ -15,9 +15,8 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="/" id="navbar-brand-link">
+            <a class="navbar-brand" href="/" id="navbar-brand-link">
                 <span>Alice Suite</span>
-                <span id="user-name-brand" class="ms-2" style="font-size: 0.9rem; font-weight: normal; display: none;"></span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -174,7 +173,7 @@
         } else if (path.startsWith('/reader') || path === '/login' || path === '/register' || path === '/verify') {
             // Reader app pages including login/register/verify
             if (path.startsWith('/reader')) {
-                brandLink.href = '/reader';
+                brandLink.href = '/reader/interaction'; // Go to Reading page instead of Dashboard
             } else {
                 brandLink.href = '/';
             }

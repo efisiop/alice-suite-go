@@ -390,13 +390,6 @@ function loadUserInfoInNavbar() {
         userInfoNav.style.display = 'none';
     }
     
-    // Hide name in navbar brand as well
-    const userNameBrand = document.getElementById('user-name-brand');
-    if (userNameBrand) {
-        userNameBrand.style.display = 'none';
-        userNameBrand.textContent = '';
-    }
-    
     const token = getAuthToken();
     if (!token) {
         console.log('[loadUserInfoInNavbar] No auth token found, hiding user info');
@@ -451,18 +444,7 @@ function loadUserInfoInNavbar() {
         
         console.log('[loadUserInfoInNavbar] Setting display name:', displayName);
         
-        // Update the name in the navbar brand (left side, after "Alice Suite") - always do this
-        const userNameBrand = document.getElementById('user-name-brand');
-        console.log('[loadUserInfoInNavbar] Looking for user-name-brand element:', !!userNameBrand);
-        if (userNameBrand) {
-            userNameBrand.textContent = displayName;
-            userNameBrand.style.display = 'inline';
-            console.log('[loadUserInfoInNavbar] Name set in navbar brand:', displayName);
-        } else {
-            console.error('[loadUserInfoInNavbar] user-name-brand element NOT FOUND!');
-        }
-        
-        // Also update the right-side user info nav if elements exist
+        // Update the right-side user info nav if elements exist
         if (userInfoNav && userNameDisplay) {
             userNameDisplay.textContent = displayName;
             userInfoNav.style.display = 'block';

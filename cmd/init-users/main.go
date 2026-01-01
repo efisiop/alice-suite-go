@@ -21,7 +21,7 @@ func getDBPath() string {
 
 func main() {
 	dbPath := getDBPath()
-	
+
 	// Check if database exists
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		log.Fatalf("Database not found at %s. Please run migrations first.", dbPath)

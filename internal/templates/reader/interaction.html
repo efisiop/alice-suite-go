@@ -2,17 +2,71 @@
 
 {{define "nav"}}
 <li class="nav-item">
-    <a class="nav-link" href="/reader">Dashboard</a>
-</li>
-<li class="nav-item">
     <a class="nav-link active" href="/reader/interaction">Reading</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/reader/statistics">Statistics</a>
+    <a class="nav-link" href="/reader/my-page">My Page</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
 </li>
+{{end}}
+
+{{define "head"}}
+<style>
+/* Section Snippets Styling */
+.section-snippet {
+    padding: 0.5rem;
+    border-left: 3px solid #155724;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.section-snippet:hover {
+    background-color: #d4edda;
+    border-left-color: #1e7e34;
+    transform: translateX(2px);
+}
+
+.section-snippet.active {
+    background-color: #d4edda;
+    border-left-color: #155724;
+    border-left-width: 4px;
+    font-weight: 500;
+}
+
+.snippet-text {
+    color: #333;
+    line-height: 1.4;
+}
+
+.section-content {
+    transition: background-color 0.3s ease;
+}
+
+.section-content.section-highlight {
+    background-color: #fff3cd;
+    padding: 0.5rem;
+    border-radius: 4px;
+    animation: highlightFade 2s ease-out;
+}
+
+@keyframes highlightFade {
+    0% {
+        background-color: #fff3cd;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+#section-snippets {
+    max-height: 600px;
+    overflow-y: auto;
+}
+</style>
 {{end}}
 
 {{define "content"}}
@@ -51,7 +105,20 @@
         </div>
     </div>
 
-    <div class="col-md-9">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5>Sections</h5>
+            </div>
+            <div class="card-body">
+                <div id="section-snippets">
+                    <p class="text-muted small">Loading sections...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Page <span id="current-page">1</span></h5>
@@ -93,6 +160,8 @@
 <script>
 let currentPage = 1;
 const bookId = 'alice-in-wonderland'; // Default book ID
+let currentPageSections = []; // Store sections for current page
+let currentSectionIndex = 0; // Track current section index (0-based)
 
 function loadPage(pageNumber) {
     const token = getAuthToken();
@@ -102,6 +171,7 @@ function loadPage(pageNumber) {
     }
 
     document.getElementById('page-content').innerHTML = '<p class="text-muted">Loading...</p>';
+    document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">Loading sections...</p>';
 
     fetch(`/rest/v1/rpc/get_sections_for_page`, {
         method: 'POST',
@@ -125,20 +195,41 @@ function loadPage(pageNumber) {
         // Handle Page object with sections array
         if (!page || !page.sections || page.sections.length === 0) {
             document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
+            document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available.</p>';
+            currentPageSections = [];
             return;
         }
 
-        let content = '';
-        page.sections.forEach(section => {
-            content += `<div class="mb-4">${formatTextWithWordHighlights(section.content)}</div>`;
+        // Store sections data
+        currentPageSections = page.sections;
+
+        // Build section snippets for middle column
+        let snippetsHtml = '';
+        page.sections.forEach((section, index) => {
+            const snippet = getFirstWords(section.content, 6);
+            snippetsHtml += `
+                <div class="section-snippet mb-2" data-section-index="${index}" onclick="showSection(${index})">
+                    <div class="snippet-text small">${escapeHtml(snippet)}...</div>
+                </div>
+            `;
         });
 
-        document.getElementById('page-content').innerHTML = content;
+        document.getElementById('section-snippets').innerHTML = snippetsHtml;
+
+        // Show first section by default
+        if (page.sections.length > 0) {
+            currentSectionIndex = 0;
+            showSection(0);
+        }
+
         document.getElementById('current-page').textContent = pageNumber;
         currentPage = pageNumber;
 
-        // Track page navigation
-        trackActivity('PAGE_SYNC', { page_number: pageNumber });
+        // Track page navigation with section information
+        trackActivity('PAGE_SYNC', { 
+            page_number: pageNumber,
+            section_index: currentSectionIndex
+        });
     })
     .catch(err => {
         console.error('Error loading page:', err);
@@ -152,6 +243,59 @@ function formatTextWithWordHighlights(text) {
         const cleanWord = word.replace(/[.,!?;:]/g, '');
         return `<span class="word-highlight" onclick="lookupWordFromText('${cleanWord}')">${word}</span>`;
     }).join(' ');
+}
+
+function getFirstWords(text, numWords) {
+    if (!text) return '';
+    // Remove HTML tags if any, then split by whitespace
+    const plainText = text.replace(/<[^>]*>/g, '');
+    const words = plainText.trim().split(/\s+/);
+    return words.slice(0, numWords).join(' ');
+}
+
+function showSection(sectionIndex) {
+    // Validate section index
+    if (!currentPageSections || sectionIndex < 0 || sectionIndex >= currentPageSections.length) {
+        return;
+    }
+
+    // Update current section index
+    currentSectionIndex = sectionIndex;
+
+    // Get the selected section
+    const section = currentPageSections[sectionIndex];
+
+    // Update active snippet
+    document.querySelectorAll('.section-snippet').forEach(snippet => {
+        snippet.classList.remove('active');
+    });
+    const snippetElement = document.querySelector(`[data-section-index="${sectionIndex}"]`);
+    if (snippetElement) {
+        snippetElement.classList.add('active');
+    }
+
+    // Display only the selected section in the content area
+    const content = `<div class="section-content">${formatTextWithWordHighlights(section.content)}</div>`;
+    document.getElementById('page-content').innerHTML = content;
+
+    // Scroll to top of content area
+    const pageContentElement = document.getElementById('page-content');
+    if (pageContentElement) {
+        pageContentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Track section navigation
+    trackActivity('PAGE_SYNC', { 
+        page_number: currentPage,
+        section_index: sectionIndex
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function lookupWordFromText(word) {
@@ -212,6 +356,10 @@ function trackActivity(eventType, data) {
     })
     .then(res => res.json())
     .then(user => {
+        // Log the data being sent for debugging
+        if (eventType === 'PAGE_SYNC' && data.section_index !== undefined) {
+            console.log('[trackActivity] Tracking PAGE_SYNC with section_index:', data);
+        }
         return fetch('/api/activity/track', {
             method: 'POST',
             headers: {
