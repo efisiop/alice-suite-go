@@ -111,6 +111,9 @@
                 <h5>Sections</h5>
             </div>
             <div class="card-body">
+                <div id="debug-info" style="font-size: 0.7rem; color: #666; margin-bottom: 10px; padding: 5px; background: #f0f0f0; border-radius: 3px; display: none;">
+                    <strong>Debug:</strong> <span id="debug-text">Loading...</span>
+                </div>
                 <div id="section-snippets">
                     <p class="text-muted small">Loading sections...</p>
                 </div>
@@ -192,7 +195,12 @@ function loadPage(pageNumber) {
         return res.json();
     })
     .then(page => {
-        console.log('[loadPage] Received page data:', page);
+        // Log with alert to ensure visibility
+        console.log('[loadPage] Received page data:', JSON.stringify(page, null, 2));
+        console.log('[loadPage] Page keys:', Object.keys(page || {}));
+        console.log('[loadPage] page.sections:', page?.sections);
+        console.log('[loadPage] page.sections length:', page?.sections?.length);
+        console.log('[loadPage] page.content:', page?.content ? 'exists (' + page.content.length + ' chars)' : 'not present');
         
         // Handle Page object with sections array
         if (!page) {
@@ -205,9 +213,12 @@ function loadPage(pageNumber) {
 
         // Check for sections array (new structure)
         let sections = page.sections;
-        if (!sections || sections.length === 0) {
+        console.log('[loadPage] Initial sections check:', sections);
+        
+        if (!sections || !Array.isArray(sections) || sections.length === 0) {
+            console.log('[loadPage] Sections array is empty or invalid, checking for content field');
             // Fallback: check if there's a content field (old structure)
-            if (page.content) {
+            if (page.content && page.content.trim()) {
                 console.log('[loadPage] Using old structure with content field');
                 // Create a single section from the content
                 sections = [{
@@ -218,6 +229,7 @@ function loadPage(pageNumber) {
                 }];
             } else {
                 console.error('[loadPage] No sections or content found in page data');
+                console.error('[loadPage] Page object:', page);
                 document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
                 document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available.</p>';
                 currentPageSections = [];
@@ -225,30 +237,80 @@ function loadPage(pageNumber) {
             }
         }
 
-        console.log('[loadPage] Found', sections.length, 'sections');
+        console.log('[loadPage] Final sections array length:', sections.length);
+        console.log('[loadPage] Sections details:', sections.map((s, i) => ({
+            index: i,
+            id: s.id,
+            contentLength: s.content ? s.content.length : 0,
+            hasContent: !!s.content
+        })));
 
         // Store sections data
         currentPageSections = sections;
+        console.log('[loadPage] Stored', currentPageSections.length, 'sections in currentPageSections');
 
         // Build section snippets for middle column
         let snippetsHtml = '';
+        let snippetCount = 0;
+        let totalContentLength = 0;
         sections.forEach((section, index) => {
             const sectionContent = section.content || '';
-            const snippet = getFirstWords(sectionContent, 6);
-            snippetsHtml += `
-                <div class="section-snippet mb-2" data-section-index="${index}" onclick="showSection(${index})">
-                    <div class="snippet-text small">${escapeHtml(snippet)}...</div>
-                </div>
-            `;
+            totalContentLength += sectionContent.length;
+            console.log(`[loadPage] Processing section ${index}, content length: ${sectionContent.length}`);
+            
+            // Warn if a section seems unusually long (might be full page content)
+            if (sectionContent.length > 5000) {
+                console.warn(`[loadPage] WARNING: Section ${index} content is very long (${sectionContent.length} chars), might be full page`);
+            }
+            
+            if (sectionContent && sectionContent.trim()) {
+                const snippet = getFirstWords(sectionContent, 6);
+                snippetsHtml += `
+                    <div class="section-snippet mb-2" data-section-index="${index}" onclick="showSection(${index})">
+                        <div class="snippet-text small">${escapeHtml(snippet)}...</div>
+                    </div>
+                `;
+                snippetCount++;
+                console.log(`[loadPage] Added snippet ${index}: "${snippet}"...`);
+            } else {
+                console.warn(`[loadPage] Section ${index} has no content, skipping snippet`);
+            }
         });
+        
+        console.log('[loadPage] Total content length across all sections:', totalContentLength);
+        console.log('[loadPage] Average section length:', sections.length > 0 ? totalContentLength / sections.length : 0);
 
-        document.getElementById('section-snippets').innerHTML = snippetsHtml;
+        console.log('[loadPage] Built', snippetCount, 'snippets, HTML length:', snippetsHtml.length);
+        document.getElementById('section-snippets').innerHTML = snippetsHtml || '<p class="text-muted small">No snippets available.</p>';
+
+        // Update debug info
+        const debugInfo = document.getElementById('debug-info');
+        const debugText = document.getElementById('debug-text');
+        if (debugInfo && debugText) {
+            debugInfo.style.display = 'block';
+            debugText.textContent = `Found ${sections.length} sections, created ${snippetCount} snippets`;
+        }
+
+        // Verify snippets were added
+        const snippetElements = document.querySelectorAll('.section-snippet');
+        console.log('[loadPage] Actual snippet elements in DOM:', snippetElements.length);
+        
+        if (snippetElements.length !== snippetCount) {
+            console.error('[loadPage] MISMATCH: Expected', snippetCount, 'snippets but found', snippetElements.length, 'in DOM');
+            if (debugText) {
+                debugText.textContent += ` (WARNING: ${snippetElements.length} in DOM)`;
+                debugText.style.color = 'red';
+            }
+        }
 
         // Show first section by default
-        if (sections.length > 0) {
+        if (sections.length > 0 && sections[0].content) {
             currentSectionIndex = 0;
-            console.log('[loadPage] Showing first section (index 0)');
+            console.log('[loadPage] About to call showSection(0)');
+            console.log('[loadPage] First section content preview:', sections[0].content.substring(0, 100) + '...');
             showSection(0);
+        } else {
+            console.error('[loadPage] Cannot show first section - no sections or first section has no content');
         }
 
         document.getElementById('current-page').textContent = pageNumber;
@@ -283,60 +345,92 @@ function getFirstWords(text, numWords) {
 }
 
 function showSection(sectionIndex) {
+    console.log('========== [showSection] START ==========');
     console.log('[showSection] Called with index:', sectionIndex);
+    console.log('[showSection] currentPageSections:', currentPageSections);
     console.log('[showSection] currentPageSections length:', currentPageSections ? currentPageSections.length : 0);
+    console.log('[showSection] currentPage:', currentPage);
     
     // Validate section index
     if (!currentPageSections || currentPageSections.length === 0) {
-        console.error('[showSection] No sections available');
+        console.error('[showSection] ERROR: No sections available in currentPageSections');
+        alert('ERROR: No sections available. Check console for details.');
         return;
     }
     
     if (sectionIndex < 0 || sectionIndex >= currentPageSections.length) {
-        console.error('[showSection] Invalid section index:', sectionIndex, 'out of range [0,', currentPageSections.length, ')');
+        console.error('[showSection] ERROR: Invalid section index:', sectionIndex, 'out of range [0,', currentPageSections.length, ')');
+        alert('ERROR: Invalid section index: ' + sectionIndex);
         return;
     }
 
     // Update current section index
     currentSectionIndex = sectionIndex;
+    console.log('[showSection] Set currentSectionIndex to:', currentSectionIndex);
 
     // Get the selected section
     const section = currentPageSections[sectionIndex];
-    console.log('[showSection] Selected section:', section);
+    console.log('[showSection] Selected section object:', section);
+    console.log('[showSection] Section keys:', section ? Object.keys(section) : 'null');
+    console.log('[showSection] Section has content field:', section ? 'content' in section : false);
+    console.log('[showSection] Section content type:', typeof (section?.content));
+    console.log('[showSection] Section content length:', section?.content ? section.content.length : 0);
 
     if (!section) {
-        console.error('[showSection] Section is null or undefined');
+        console.error('[showSection] ERROR: Section is null or undefined');
+        alert('ERROR: Section is null');
         return;
     }
 
     // Update active snippet
-    document.querySelectorAll('.section-snippet').forEach(snippet => {
+    const allSnippets = document.querySelectorAll('.section-snippet');
+    console.log('[showSection] Found', allSnippets.length, 'snippet elements in DOM');
+    allSnippets.forEach((snippet, idx) => {
         snippet.classList.remove('active');
+        console.log('[showSection] Removed active from snippet', idx);
     });
+    
     const snippetElement = document.querySelector(`[data-section-index="${sectionIndex}"]`);
+    console.log('[showSection] Looking for snippet with data-section-index="', sectionIndex, '", found:', !!snippetElement);
+    
     if (snippetElement) {
         snippetElement.classList.add('active');
         console.log('[showSection] Activated snippet element');
     } else {
-        console.warn('[showSection] Snippet element not found for index:', sectionIndex);
+        console.warn('[showSection] WARNING: Snippet element not found for index:', sectionIndex);
+        console.warn('[showSection] Available snippet indices:', Array.from(allSnippets).map(s => s.getAttribute('data-section-index')));
     }
 
     // Get section content
     const sectionContent = section.content || '';
-    if (!sectionContent) {
-        console.error('[showSection] Section content is empty');
+    console.log('[showSection] Extracted sectionContent, length:', sectionContent.length);
+    console.log('[showSection] Section content preview (first 200 chars):', sectionContent.substring(0, 200));
+    
+    if (!sectionContent || !sectionContent.trim()) {
+        console.error('[showSection] ERROR: Section content is empty');
+        alert('ERROR: Section content is empty');
         document.getElementById('page-content').innerHTML = '<p class="text-muted">No content available for this section.</p>';
         return;
     }
 
     // Display only the selected section in the content area
-    const content = `<div class="section-content">${formatTextWithWordHighlights(sectionContent)}</div>`;
+    const formattedContent = formatTextWithWordHighlights(sectionContent);
+    console.log('[showSection] Formatted content length:', formattedContent.length);
+    console.log('[showSection] Formatted content preview (first 200 chars):', formattedContent.substring(0, 200));
+    
+    const content = `<div class="section-content">${formattedContent}</div>`;
     const pageContentElement = document.getElementById('page-content');
+    
     if (pageContentElement) {
+        const previousContent = pageContentElement.innerHTML;
+        console.log('[showSection] Previous content length:', previousContent.length);
         pageContentElement.innerHTML = content;
         console.log('[showSection] Updated page content with section', sectionIndex);
+        console.log('[showSection] New content length:', pageContentElement.innerHTML.length);
     } else {
-        console.error('[showSection] Page content element not found');
+        console.error('[showSection] ERROR: Page content element not found');
+        alert('ERROR: Page content element not found');
+        return;
     }
 
     // Scroll to top of content area
@@ -349,6 +443,8 @@ function showSection(sectionIndex) {
         page_number: currentPage,
         section_index: sectionIndex
     });
+    
+    console.log('========== [showSection] END ==========');
 }
 
 function escapeHtml(text) {
