@@ -40,11 +40,8 @@ func main() {
 
 	hasSectionsTable := err == nil
 	isNewStructure := false
-
+	
 	if hasSectionsTable {
-		if err != nil {
-			log.Fatalf("❌ Error checking table: %v", err)
-		}
 		// Check structure
 		isNewStructure = strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
 
@@ -242,7 +239,7 @@ func main() {
 
 	// Step 5: Import the data
 	fmt.Println("")
-	fmt.Println("💾 Step 4: Importing sections data...")
+	fmt.Println("💾 Step 5: Importing sections data...")
 	fmt.Println("-" + strings.Repeat("-", 60))
 
 	// Start transaction
