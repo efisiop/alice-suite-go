@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -119,52 +120,38 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	}
 
 	// Fallback: Query sections directly (handle both old and new structures)
-	log.Printf("Page %d not found in pages table, trying direct sections query", pageNum)
-
-	// Try querying old structure first (with start_page/end_page)
-	query := `SELECT id, content FROM sections 
-	          WHERE start_page <= ? AND end_page >= ?
-	          ORDER BY number`
-	rows, err := database.DB.Query(query, pageNum, pageNum)
+	log.Printf("Page %d not found in pages table or has no sections, trying direct sections query", pageNum)
 
 	var foundSections []models.Section
-	if err != nil {
-		// Old structure query failed - try new structure (with page_number)
-		log.Printf("Old structure query failed: %v, trying new structure", err)
-		query = `SELECT id, content, page_number, section_number FROM sections 
-		         WHERE page_number = ?
-		         ORDER BY section_number`
-		rows, err = database.DB.Query(query, pageNum)
-		if err != nil {
-			log.Printf("Both structure queries failed: %v", err)
+	var rows *sql.Rows
+	var queryErr error
+
+	// Try querying new structure first (with page_number) - this is the most common case
+	query := `SELECT id, content, page_number, section_number FROM sections 
+	         WHERE page_number = ?
+	         ORDER BY section_number`
+	rows, queryErr = database.DB.Query(query, pageNum)
+	
+	if queryErr != nil {
+		log.Printf("New structure query failed: %v, trying old structure", queryErr)
+		// Try old structure (with start_page/end_page)
+		query = `SELECT id, content FROM sections 
+		          WHERE start_page <= ? AND end_page >= ?
+		          ORDER BY number`
+		rows, queryErr = database.DB.Query(query, pageNum, pageNum)
+		if queryErr != nil {
+			log.Printf("Both structure queries failed: %v", queryErr)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{
-				"error": fmt.Sprintf("Error fetching page: %v", err),
+				"error": fmt.Sprintf("Error fetching page: %v", queryErr),
 			})
 			return
 		}
 		defer rows.Close()
-
-		// Build sections from new structure
-		for rows.Next() {
-			var id, content string
-			var pageNum2, sectionNum int
-			if err := rows.Scan(&id, &content, &pageNum2, &sectionNum); err != nil {
-				log.Printf("Error scanning section: %v", err)
-				continue
-			}
-			foundSections = append(foundSections, models.Section{
-				ID:            id,
-				PageID:        fmt.Sprintf("page-%d", pageNum2),
-				PageNumber:    pageNum2,
-				SectionNumber: sectionNum,
-				Content:       content,
-			})
-		}
-	} else {
-		defer rows.Close()
+		
 		// Build sections from old structure
+		log.Printf("Using old structure (start_page/end_page)")
 		for rows.Next() {
 			var id, content string
 			if err := rows.Scan(&id, &content); err != nil {
@@ -180,6 +167,29 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 				Content:       content,
 			})
 		}
+	} else {
+		defer rows.Close()
+		
+		// Build sections from new structure
+		log.Printf("Using new structure (page_number)")
+		for rows.Next() {
+			var id, content string
+			var pageNum2, sectionNum int
+			if err := rows.Scan(&id, &content, &pageNum2, &sectionNum); err != nil {
+				log.Printf("Error scanning section: %v", err)
+				continue
+			}
+			log.Printf("Found section: id=%s, page_number=%d, section_number=%d, content_length=%d", 
+				id, pageNum2, sectionNum, len(content))
+			foundSections = append(foundSections, models.Section{
+				ID:            id,
+				PageID:        fmt.Sprintf("page-%d", pageNum2),
+				PageNumber:    pageNum2,
+				SectionNumber: sectionNum,
+				Content:       content,
+			})
+		}
+		log.Printf("Total sections found: %d", len(foundSections))
 	}
 
 	if len(foundSections) == 0 {
