@@ -192,21 +192,49 @@ function loadPage(pageNumber) {
         return res.json();
     })
     .then(page => {
+        console.log('[loadPage] Received page data:', page);
+        
         // Handle Page object with sections array
-        if (!page || !page.sections || page.sections.length === 0) {
+        if (!page) {
+            console.error('[loadPage] Page data is null or undefined');
             document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
             document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available.</p>';
             currentPageSections = [];
             return;
         }
 
+        // Check for sections array (new structure)
+        let sections = page.sections;
+        if (!sections || sections.length === 0) {
+            // Fallback: check if there's a content field (old structure)
+            if (page.content) {
+                console.log('[loadPage] Using old structure with content field');
+                // Create a single section from the content
+                sections = [{
+                    id: page.id || 'section-1',
+                    content: page.content,
+                    page_number: page.page_number || pageNumber,
+                    section_number: 1
+                }];
+            } else {
+                console.error('[loadPage] No sections or content found in page data');
+                document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
+                document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available.</p>';
+                currentPageSections = [];
+                return;
+            }
+        }
+
+        console.log('[loadPage] Found', sections.length, 'sections');
+
         // Store sections data
-        currentPageSections = page.sections;
+        currentPageSections = sections;
 
         // Build section snippets for middle column
         let snippetsHtml = '';
-        page.sections.forEach((section, index) => {
-            const snippet = getFirstWords(section.content, 6);
+        sections.forEach((section, index) => {
+            const sectionContent = section.content || '';
+            const snippet = getFirstWords(sectionContent, 6);
             snippetsHtml += `
                 <div class="section-snippet mb-2" data-section-index="${index}" onclick="showSection(${index})">
                     <div class="snippet-text small">${escapeHtml(snippet)}...</div>
@@ -217,8 +245,9 @@ function loadPage(pageNumber) {
         document.getElementById('section-snippets').innerHTML = snippetsHtml;
 
         // Show first section by default
-        if (page.sections.length > 0) {
+        if (sections.length > 0) {
             currentSectionIndex = 0;
+            console.log('[loadPage] Showing first section (index 0)');
             showSection(0);
         }
 
@@ -254,8 +283,17 @@ function getFirstWords(text, numWords) {
 }
 
 function showSection(sectionIndex) {
+    console.log('[showSection] Called with index:', sectionIndex);
+    console.log('[showSection] currentPageSections length:', currentPageSections ? currentPageSections.length : 0);
+    
     // Validate section index
-    if (!currentPageSections || sectionIndex < 0 || sectionIndex >= currentPageSections.length) {
+    if (!currentPageSections || currentPageSections.length === 0) {
+        console.error('[showSection] No sections available');
+        return;
+    }
+    
+    if (sectionIndex < 0 || sectionIndex >= currentPageSections.length) {
+        console.error('[showSection] Invalid section index:', sectionIndex, 'out of range [0,', currentPageSections.length, ')');
         return;
     }
 
@@ -264,6 +302,12 @@ function showSection(sectionIndex) {
 
     // Get the selected section
     const section = currentPageSections[sectionIndex];
+    console.log('[showSection] Selected section:', section);
+
+    if (!section) {
+        console.error('[showSection] Section is null or undefined');
+        return;
+    }
 
     // Update active snippet
     document.querySelectorAll('.section-snippet').forEach(snippet => {
@@ -272,14 +316,30 @@ function showSection(sectionIndex) {
     const snippetElement = document.querySelector(`[data-section-index="${sectionIndex}"]`);
     if (snippetElement) {
         snippetElement.classList.add('active');
+        console.log('[showSection] Activated snippet element');
+    } else {
+        console.warn('[showSection] Snippet element not found for index:', sectionIndex);
+    }
+
+    // Get section content
+    const sectionContent = section.content || '';
+    if (!sectionContent) {
+        console.error('[showSection] Section content is empty');
+        document.getElementById('page-content').innerHTML = '<p class="text-muted">No content available for this section.</p>';
+        return;
     }
 
     // Display only the selected section in the content area
-    const content = `<div class="section-content">${formatTextWithWordHighlights(section.content)}</div>`;
-    document.getElementById('page-content').innerHTML = content;
+    const content = `<div class="section-content">${formatTextWithWordHighlights(sectionContent)}</div>`;
+    const pageContentElement = document.getElementById('page-content');
+    if (pageContentElement) {
+        pageContentElement.innerHTML = content;
+        console.log('[showSection] Updated page content with section', sectionIndex);
+    } else {
+        console.error('[showSection] Page content element not found');
+    }
 
     // Scroll to top of content area
-    const pageContentElement = document.getElementById('page-content');
     if (pageContentElement) {
         pageContentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -473,7 +533,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100);
     
+    // Ensure DOM elements exist before loading page
+    const pageContentElement = document.getElementById('page-content');
+    const sectionSnippetsElement = document.getElementById('section-snippets');
+    
+    if (!pageContentElement) {
+        console.error('[interaction.html] page-content element not found!');
+    }
+    if (!sectionSnippetsElement) {
+        console.error('[interaction.html] section-snippets element not found!');
+    }
+    
+    console.log('[interaction.html] Loading initial page...');
     loadPage(1);
 });
+
+// Also try loading if DOM is already ready (for cases where script loads after DOMContentLoaded)
+if (document.readyState === 'loading') {
+    // DOM is still loading, wait for DOMContentLoaded (handled above)
+    console.log('[interaction.html] DOM is still loading, waiting for DOMContentLoaded');
+} else {
+    // DOM is already loaded
+    console.log('[interaction.html] DOM already loaded, loading page immediately');
+    const pageContentElement = document.getElementById('page-content');
+    const sectionSnippetsElement = document.getElementById('section-snippets');
+    
+    if (pageContentElement && sectionSnippetsElement) {
+        console.log('[interaction.html] Elements found, loading page');
+        loadPage(1);
+    } else {
+        console.warn('[interaction.html] Elements not found yet, will wait for DOMContentLoaded');
+    }
+}
 </script>
 {{end}}
