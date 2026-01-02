@@ -40,14 +40,14 @@ func main() {
 
 	hasSectionsTable := err == nil
 	isNewStructure := false
-	
+
 	if hasSectionsTable {
 		if err != nil {
 			log.Fatalf("❌ Error checking table: %v", err)
 		}
 		// Check structure
 		isNewStructure = strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
-		
+
 		if !isNewStructure {
 			fmt.Printf("   Detected OLD structure in 'sections' table\n")
 			// Check if sections_new exists with new structure
@@ -56,23 +56,23 @@ func main() {
 				SELECT sql FROM sqlite_master 
 				WHERE type='table' AND name='sections_new'
 			`).Scan(&sectionsNewSQL)
-			
+
 			if err2 == nil {
 				fmt.Println("   Found 'sections_new' table with NEW structure")
 				fmt.Println("   Migrating: Dropping old 'sections', renaming 'sections_new' to 'sections'...")
-				
+
 				// Drop old sections table
 				_, err = database.DB.Exec("DROP TABLE IF EXISTS sections")
 				if err != nil {
 					log.Fatalf("❌ Failed to drop old sections table: %v", err)
 				}
-				
+
 				// Rename sections_new to sections
 				_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
 				if err != nil {
 					log.Fatalf("❌ Failed to rename sections_new to sections: %v", err)
 				}
-				
+
 				fmt.Println("   ✓ Migration completed: 'sections_new' is now 'sections'")
 				isNewStructure = true
 			} else {
@@ -88,7 +88,7 @@ func main() {
 			SELECT sql FROM sqlite_master 
 			WHERE type='table' AND name='sections_new'
 		`).Scan(&sectionsNewSQL)
-		
+
 		if err2 == nil {
 			fmt.Println("   Found 'sections_new' table, renaming to 'sections'...")
 			_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
@@ -140,9 +140,93 @@ func main() {
 		fmt.Println("")
 	}
 
-	// Step 3: Import sections data
+	// Step 3: Create pages if they don't exist
 	fmt.Println("")
-	fmt.Println("📥 Step 3: Preparing to import sections data...")
+	fmt.Println("📄 Step 3: Creating pages if needed...")
+	fmt.Println("-" + strings.Repeat("-", 60))
+
+	// Read sections data to extract page numbers
+	sectionsData := getSectionsData()
+	if sectionsData == "" {
+		log.Fatal("❌ ERROR: Could not load sections data")
+	}
+
+	// Extract unique page numbers from sections data (page-1, page-2, etc.)
+	pageMap := make(map[int]bool)
+	lines := strings.Split(sectionsData, "\n")
+	for _, line := range lines {
+		// Extract page_id from INSERT statements like: INSERT INTO sections VALUES('page-1-section-1','page-1',1,1,...
+		if strings.Contains(line, "'page-") {
+			// Find the page number in the line (e.g., 'page-1' -> 1)
+			parts := strings.Split(line, ",")
+			if len(parts) >= 3 {
+				// parts[1] should be the page_id like 'page-1'
+				pageID := strings.Trim(parts[1], " '")
+				if strings.HasPrefix(pageID, "page-") {
+					var pageNum int
+					_, err := fmt.Sscanf(pageID, "page-%d", &pageNum)
+					if err == nil && pageNum > 0 {
+						pageMap[pageNum] = true
+					}
+				}
+			}
+		}
+	}
+
+	if len(pageMap) == 0 {
+		log.Fatal("❌ ERROR: Could not extract page numbers from sections data")
+	}
+
+	fmt.Printf("   Found %d unique pages needed (page 1-%d)\n", len(pageMap), len(pageMap))
+
+	// Create pages that don't exist
+	createdPages := 0
+	txPages, err := database.DB.Begin()
+	if err != nil {
+		log.Fatalf("❌ Failed to begin transaction: %v", err)
+	}
+
+	// Check if book exists
+	var bookExists int
+	database.DB.QueryRow("SELECT COUNT(*) FROM books WHERE id = 'alice-in-wonderland'").Scan(&bookExists)
+	if bookExists == 0 {
+		// Create the book
+		_, err = txPages.Exec(`
+			INSERT INTO books (id, title, author, description, total_pages)
+			VALUES ('alice-in-wonderland', 'Alice''s Adventures in Wonderland', 'Lewis Carroll',
+			        'The classic tale of a girl who falls through a rabbit hole into a fantasy world.', 100)
+		`)
+		if err != nil {
+			txPages.Rollback()
+			log.Printf("⚠️  Warning: Could not create book (may already exist): %v", err)
+		} else {
+			fmt.Println("   ✓ Created book 'alice-in-wonderland'")
+		}
+	}
+
+	// Create each page
+	for pageNum := range pageMap {
+		pageID := fmt.Sprintf("page-%d", pageNum)
+		_, err = txPages.Exec(`
+			INSERT OR IGNORE INTO pages (id, book_id, page_number)
+			VALUES (?, 'alice-in-wonderland', ?)
+		`, pageID, pageNum)
+		if err != nil {
+			txPages.Rollback()
+			log.Fatalf("❌ Failed to create page %d: %v", pageNum, err)
+		}
+		createdPages++
+	}
+
+	if err = txPages.Commit(); err != nil {
+		log.Fatalf("❌ Failed to commit pages: %v", err)
+	}
+
+	fmt.Printf("   ✓ Created/verified %d pages\n", createdPages)
+
+	// Step 4: Import sections data
+	fmt.Println("")
+	fmt.Println("📥 Step 4: Preparing to import sections data...")
 	fmt.Println("-" + strings.Repeat("-", 60))
 
 	// Check if we should clear existing sections
@@ -152,18 +236,11 @@ func main() {
 		clearExisting = true
 	}
 
-	// Read the embedded sections data
-	sectionsData := getSectionsData()
-
-	if sectionsData == "" {
-		log.Fatal("❌ ERROR: Could not load sections data")
-	}
-
 	// Parse and count INSERT statements
 	insertCount := strings.Count(sectionsData, "INSERT INTO sections")
 	fmt.Printf("   Found %d sections to import\n", insertCount)
 
-	// Step 4: Import the data
+	// Step 5: Import the data
 	fmt.Println("")
 	fmt.Println("💾 Step 4: Importing sections data...")
 	fmt.Println("-" + strings.Repeat("-", 60))
@@ -187,11 +264,11 @@ func main() {
 
 	// Split into individual INSERT statements and execute
 	// Each line in the file is one INSERT statement
-	lines := strings.Split(sectionsData, "\n")
+	lines2 := strings.Split(sectionsData, "\n")
 	importedCount := 0
 	failedCount := 0
 
-	for _, line := range lines {
+	for _, line := range lines2 {
 		line = strings.TrimSpace(line)
 		if line == "" || !strings.HasPrefix(line, "INSERT INTO sections") {
 			continue
@@ -231,8 +308,8 @@ func main() {
 	fmt.Printf("   ✓ Successfully imported %d sections\n", importedCount)
 	fmt.Println("")
 
-	// Step 5: Verify the fix
-	fmt.Println("✅ Step 5: Verifying import...")
+	// Step 6: Verify the fix
+	fmt.Println("✅ Step 6: Verifying import...")
 	fmt.Println("-" + strings.Repeat("-", 60))
 
 	var newTotal int
