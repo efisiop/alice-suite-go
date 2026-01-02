@@ -273,4 +273,3 @@ func getEmbeddedSectionsData() string {
 	}
 	return ""
 }
-

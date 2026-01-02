@@ -24,6 +24,7 @@ COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -o bin/server ./cmd/server
 RUN CGO_ENABLED=1 GOOS=linux go build -o bin/migrate ./cmd/migrate
 RUN CGO_ENABLED=1 GOOS=linux go build -o bin/init-users ./cmd/init-users
+RUN CGO_ENABLED=1 GOOS=linux go build -o bin/fix-render ./cmd/fix-render
 
 # Production stage - Use Debian slim for smaller size
 FROM debian:bookworm-slim
@@ -40,9 +41,11 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app/bin/server ./bin/server
 COPY --from=builder /app/bin/migrate ./bin/migrate
 COPY --from=builder /app/bin/init-users ./bin/init-users
+COPY --from=builder /app/bin/fix-render ./bin/fix-render
 
 # Copy required files
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/scripts/sections-data.sql ./scripts/sections-data.sql
 COPY --from=builder /app/internal/static ./internal/static
 COPY --from=builder /app/internal/templates ./internal/templates
 

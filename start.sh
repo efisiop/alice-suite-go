@@ -10,6 +10,10 @@ mkdir -p "$(dirname "$DB_PATH")"
 echo "Ensuring users are initialized..."
 ./bin/init-users
 
+# Run fix-render to ensure sections data is correct (idempotent - safe to run multiple times)
+echo "Checking and fixing sections data if needed..."
+./bin/fix-render
+
 # Start the server
 echo "Starting server..."
 exec ./bin/server
