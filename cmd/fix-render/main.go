@@ -39,16 +39,68 @@ func main() {
 		WHERE type='table' AND name='sections'
 	`).Scan(&tableSQL)
 
-	if err == sql.ErrNoRows {
-		log.Fatal("❌ ERROR: sections table does not exist! Run migrations first.")
-	} else if err != nil {
-		log.Fatalf("❌ Error checking table: %v", err)
-	}
-
-	// Check structure
-	isNewStructure := strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
-	if !isNewStructure {
-		log.Fatal("❌ ERROR: Old database structure detected. Please run migrations first.")
+	hasSectionsTable := err == nil
+	isNewStructure := false
+	
+	if hasSectionsTable {
+		if err != nil {
+			log.Fatalf("❌ Error checking table: %v", err)
+		}
+		// Check structure
+		isNewStructure = strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
+		
+		if !isNewStructure {
+			fmt.Printf("   Detected OLD structure in 'sections' table\n")
+			// Check if sections_new exists with new structure
+			var sectionsNewSQL string
+			err2 := database.DB.QueryRow(`
+				SELECT sql FROM sqlite_master 
+				WHERE type='table' AND name='sections_new'
+			`).Scan(&sectionsNewSQL)
+			
+			if err2 == nil {
+				fmt.Println("   Found 'sections_new' table with NEW structure")
+				fmt.Println("   Migrating: Dropping old 'sections', renaming 'sections_new' to 'sections'...")
+				
+				// Drop old sections table
+				_, err = database.DB.Exec("DROP TABLE IF EXISTS sections")
+				if err != nil {
+					log.Fatalf("❌ Failed to drop old sections table: %v", err)
+				}
+				
+				// Rename sections_new to sections
+				_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
+				if err != nil {
+					log.Fatalf("❌ Failed to rename sections_new to sections: %v", err)
+				}
+				
+				fmt.Println("   ✓ Migration completed: 'sections_new' is now 'sections'")
+				isNewStructure = true
+			} else {
+				log.Fatal("❌ ERROR: Old database structure detected and no sections_new table. Please run migrations first.")
+			}
+		} else {
+			fmt.Printf("   Detected NEW structure in 'sections' table\n")
+		}
+	} else {
+		// Check if sections_new exists
+		var sectionsNewSQL string
+		err2 := database.DB.QueryRow(`
+			SELECT sql FROM sqlite_master 
+			WHERE type='table' AND name='sections_new'
+		`).Scan(&sectionsNewSQL)
+		
+		if err2 == nil {
+			fmt.Println("   Found 'sections_new' table, renaming to 'sections'...")
+			_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
+			if err != nil {
+				log.Fatalf("❌ Failed to rename sections_new to sections: %v", err)
+			}
+			fmt.Println("   ✓ Renamed 'sections_new' to 'sections'")
+			isNewStructure = true
+		} else {
+			log.Fatal("❌ ERROR: No sections table found. Please run migrations first.")
+		}
 	}
 
 	// Count existing sections
