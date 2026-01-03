@@ -71,28 +71,53 @@
 
 {{define "content"}}
 <div class="row">
+    <!-- Page Navigation (Sections) - First Column (Left) -->
     <div class="col-md-3">
         <div class="card mb-3">
             <div class="card-header">
                 <h5>Navigation</h5>
             </div>
             <div class="card-body">
-                <div class="mb-2">
-                    <label for="page-number" class="form-label">Go to Page</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" id="page-number" min="1" value="1">
-                        <button class="btn btn-primary" onclick="goToPage()">Go</button>
-                    </div>
+                <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
+                    <label for="page-number" class="form-label mb-0 small">Go to Page</label>
+                    <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
+                    <button class="btn btn-sm btn-primary" onclick="goToPage()">Go</button>
                 </div>
-                <div class="mb-2">
-                    <button class="btn btn-sm btn-outline-primary w-100" onclick="previousPage()">Previous Page</button>
-                </div>
-                <div class="mb-2">
-                    <button class="btn btn-sm btn-outline-primary w-100" onclick="nextPage()">Next Page</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="previousPage()">Previous</button>
+                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="nextPage()">Next</button>
                 </div>
             </div>
         </div>
 
+        <div class="card">
+            <div class="card-header">
+                <h5>Page <span id="current-page-display">1</span></h5>
+            </div>
+            <div class="card-body">
+                <div id="section-snippets">
+                    <p class="text-muted small">Loading sections...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Content (Book Text) - Second Column (Middle) -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Section <span id="current-section">1</span></h5>
+            </div>
+            <div class="card-body">
+                <div id="page-content" class="reading-content">
+                    <p class="text-muted">Loading page content...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools - Third Column (Right) -->
+    <div class="col-md-3">
         <div class="card">
             <div class="card-header">
                 <h5>Tools</h5>
@@ -101,38 +126,6 @@
                 <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showDictionary()">Dictionary</button>
                 <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showAIHelp()">AI Help</button>
                 <button class="btn btn-sm btn-outline-primary w-100" onclick="requestHelp()">Request Help</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h5>Sections</h5>
-            </div>
-            <div class="card-body">
-                <div id="debug-info" style="font-size: 0.7rem; color: #666; margin-bottom: 10px; padding: 5px; background: #f0f0f0; border-radius: 3px; display: none;">
-                    <strong>Debug:</strong> <span id="debug-text">Loading...</span>
-                </div>
-                <div id="section-snippets">
-                    <p class="text-muted small">Loading sections...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Page <span id="current-page">1</span></h5>
-                <div>
-                    <span class="badge bg-secondary" id="book-title">Alice in Wonderland</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="page-content" class="reading-content">
-                    <p class="text-muted">Loading page content...</p>
-                </div>
             </div>
         </div>
     </div>
@@ -283,14 +276,6 @@ function loadPage(pageNumber) {
         console.log('[loadPage] Built', snippetCount, 'snippets, HTML length:', snippetsHtml.length);
         document.getElementById('section-snippets').innerHTML = snippetsHtml || '<p class="text-muted small">No snippets available.</p>';
 
-        // Update debug info
-        const debugInfo = document.getElementById('debug-info');
-        const debugText = document.getElementById('debug-text');
-        if (debugInfo && debugText) {
-            debugInfo.style.display = 'block';
-            debugText.textContent = `Found ${sections.length} sections, created ${snippetCount} snippets`;
-        }
-
         // Verify snippets were added
         const snippetElements = document.querySelectorAll('.section-snippet');
         console.log('[loadPage] Actual snippet elements in DOM:', snippetElements.length);
@@ -313,7 +298,7 @@ function loadPage(pageNumber) {
             console.error('[loadPage] Cannot show first section - no sections or first section has no content');
         }
 
-        document.getElementById('current-page').textContent = pageNumber;
+        document.getElementById('current-page-display').textContent = pageNumber;
         currentPage = pageNumber;
 
         // Track page navigation with section information
@@ -431,6 +416,12 @@ function showSection(sectionIndex) {
         console.error('[showSection] ERROR: Page content element not found');
         alert('ERROR: Page content element not found');
         return;
+    }
+    
+    // Update current section number display (1-based for user display)
+    const currentSectionElement = document.getElementById('current-section');
+    if (currentSectionElement) {
+        currentSectionElement.textContent = sectionIndex + 1;
     }
 
     // Scroll to top of content area
