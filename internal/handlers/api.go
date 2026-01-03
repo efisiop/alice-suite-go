@@ -63,6 +63,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/recent-activities", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantRecentActivities)))
 	mux.Handle("/api/consultant/reader/activity", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderActivity)))
 	mux.Handle("/api/consultant/reader/state", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderState)))
+	mux.Handle("/api/consultant/reader/purchase-date", middleware.RequireConsultant(http.HandlerFunc(HandleUpdateBookPurchaseDate)))
 
 	// Help requests API
 	mux.HandleFunc("/rest/v1/help_requests", HandleHelpRequests)
@@ -216,7 +217,7 @@ func HandleReadingProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, err := auth.ValidateJWT(token)
+	_, err = auth.ValidateJWT(token)
 	if err != nil {
 		if err == auth.ErrInvalidToken || err == auth.ErrExpiredToken {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
@@ -226,24 +227,12 @@ func HandleReadingProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract user_id from token (not from query parameter or request body)
-	userID := claims.UserID
-
 	switch r.Method {
 	case http.MethodGet:
-		bookID := r.URL.Query().Get("book_id")
-		if bookID == "" {
-			http.Error(w, "book_id parameter required", http.StatusBadRequest)
-			return
-		}
-		// TODO: Implement reading progress retrieval
-		// Use userID from token, bookID from query
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Reading progress - to be implemented",
-			"user_id": userID,
-			"book_id": bookID,
-		})
+		// Delegate to generic REST handler for reading_progress table
+		// This allows query parameters like ?user_id=eq.xxx&book_id=eq.yyy
+		HandleRESTTable(w, r)
+		return
 
 	case http.MethodPost, http.MethodPut:
 		var req struct {

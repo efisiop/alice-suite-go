@@ -8,14 +8,14 @@ import (
 
 // ActiveReader represents a reader who is currently active
 type ActiveReader struct {
-	UserID      string
-	Email       string
-	FirstName   string
-	LastName    string
-	BookID      string
-	CurrentPage int
+	UserID       string
+	Email        string
+	FirstName    string
+	LastName     string
+	BookID       string
+	CurrentPage  int
 	LastActiveAt time.Time
-	Status      string
+	Status       string
 }
 
 // GetActiveReaders returns readers active in the last N minutes
@@ -70,19 +70,53 @@ type ReaderActivitySummary struct {
 }
 
 // GetReaderActivitySummary returns activity summary for a specific reader
+// Combines data from both interactions and activity_logs tables
 func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary, error) {
-	query := `SELECT 
-	          COUNT(*) as total_activities,
-	          COUNT(DISTINCT DATE(created_at)) as active_days,
-	          SUM(CASE WHEN activity_type = 'WORD_LOOKUP' THEN 1 ELSE 0 END) as word_lookups,
-	          SUM(CASE WHEN activity_type = 'AI_INTERACTION' THEN 1 ELSE 0 END) as ai_interactions,
-	          SUM(CASE WHEN activity_type = 'PAGE_VIEW' THEN 1 ELSE 0 END) as page_views
-	          FROM activity_logs
-	          WHERE user_id = ? 
-	          AND created_at >= datetime('now', '-' || ? || ' hours')`
+	// Calculate the cutoff time
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	// Query that combines both interactions and activity_logs tables
+	// Maps event_type from interactions to match activity_type from activity_logs
+	// Use COALESCE to handle NULLs properly in CASE statements
+	query := `
+		SELECT 
+			COUNT(*) as total_activities,
+			COUNT(DISTINCT DATE(created_at)) as active_days,
+			SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'DEFINITION_LOOKUP' OR COALESCE(activity_type, '') = 'WORD_LOOKUP' THEN 1
+				ELSE 0 
+			END) as word_lookups,
+			SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'AI_QUERY' OR COALESCE(activity_type, '') = 'AI_INTERACTION' THEN 1
+				ELSE 0 
+			END) as ai_interactions,
+			SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'PAGE_SYNC' OR COALESCE(activity_type, '') = 'PAGE_VIEW' THEN 1
+				ELSE 0 
+			END) as page_views
+		FROM (
+			SELECT 
+				created_at,
+				event_type,
+				NULL as activity_type
+			FROM interactions
+			WHERE user_id = ? 
+			AND datetime(created_at) >= datetime(?)
+			
+			UNION ALL
+			
+			SELECT 
+				created_at,
+				NULL as event_type,
+				activity_type
+			FROM activity_logs
+			WHERE user_id = ? 
+			AND datetime(created_at) >= datetime(?)
+		) combined_activities`
 
 	summary := &ReaderActivitySummary{}
-	err := DB.QueryRow(query, userID, hours).Scan(
+	err := DB.QueryRow(query, userID, cutoffTimeStr, userID, cutoffTimeStr).Scan(
 		&summary.TotalActivities,
 		&summary.ActiveDays,
 		&summary.WordLookups,
@@ -161,16 +195,15 @@ func GetReaderState(userID string) (*ReaderState, error) {
 
 // ReaderState represents the denormalized state of a reader
 type ReaderState struct {
-	UserID            string
-	BookID            *string
-	CurrentPage       *int
-	SectionID         *string
-	LastActivityType  *string
-	LastActivityAt    time.Time
-	TotalPagesRead    int
-	TotalWordLookups   int
+	UserID              string
+	BookID              *string
+	CurrentPage         *int
+	SectionID           *string
+	LastActivityType    *string
+	LastActivityAt      time.Time
+	TotalPagesRead      int
+	TotalWordLookups    int
 	TotalAIInteractions int
-	Status            string
-	UpdatedAt         time.Time
+	Status              string
+	UpdatedAt           time.Time
 }
-

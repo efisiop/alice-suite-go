@@ -197,7 +197,6 @@
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <h5 class="mb-0">Reader Accounts</h5>
-                    <small class="text-muted">Sorted by most recently created account</small>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <div class="activity-legend">
@@ -370,6 +369,22 @@ async function loadReadersWithActivities(readers, token) {
     const tbody = document.getElementById('readers-table-body');
     tbody.innerHTML = '';
     
+    // Get first book ID (assuming all readers use the same book)
+    let bookId = null;
+    try {
+        const booksResponse = await fetch(`/rest/v1/books?limit=1`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (booksResponse.ok) {
+            const books = await booksResponse.json();
+            if (Array.isArray(books) && books.length > 0) {
+                bookId = books[0].id;
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to load book ID:', err);
+    }
+    
     for (const reader of readers) {
         const activityData = await loadReaderActivity(reader.id, token);
         readerActivityData[reader.id] = {
@@ -378,7 +393,33 @@ async function loadReadersWithActivities(readers, token) {
             offset: 0  // Current scroll position (0 = most recent)
         };
         
-        const row = createReaderRow(reader, activityData);
+        // Load purchase date for this reader
+        let purchaseDate = '-';
+        if (bookId) {
+            try {
+                const progressResponse = await fetch(`/rest/v1/reading_progress?user_id=eq.${reader.id}&book_id=eq.${bookId}`, {
+                    headers: {'Authorization': 'Bearer ' + token}
+                });
+                if (progressResponse.ok) {
+                    const progress = await progressResponse.json();
+                    const progressData = Array.isArray(progress) ? progress[0] : progress;
+                    if (progressData && progressData.purchase_date) {
+                        const date = new Date(progressData.purchase_date);
+                        if (!isNaN(date.getTime())) {
+                            purchaseDate = date.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                            });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn(`Failed to load purchase date for reader ${reader.id}:`, err);
+            }
+        }
+        
+        const row = createReaderRow(reader, activityData, purchaseDate);
         tbody.appendChild(row);
     }
 }
@@ -442,7 +483,7 @@ async function loadReaderActivity(userId, token) {
 }
 
 // Create a table row for a reader
-function createReaderRow(reader, activityData) {
+function createReaderRow(reader, activityData, purchaseDate = '-') {
     const row = document.createElement('tr');
     row.id = `reader-row-${reader.id}`;
     
@@ -473,13 +514,11 @@ function createReaderRow(reader, activityData) {
         accountActivated = createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
     }
     
-    const bookPurchaseDate = '-';
-    
     row.innerHTML = `
         <td class="reader-name" title="${escapeHtml(firstName)}">${escapeHtml(firstName)}</td>
         <td class="reader-name" title="${escapeHtml(lastName)}">${escapeHtml(lastName)}</td>
         <td class="compact-cell" title="${escapeHtml(email)}">${escapeHtml(email)}</td>
-        <td class="compact-cell">${bookPurchaseDate}</td>
+        <td class="compact-cell">${escapeHtml(purchaseDate)}</td>
         <td class="compact-cell">${accountActivated}</td>
         <td class="calendar-cell" id="calendar-${reader.id}"></td>
     `;

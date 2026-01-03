@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ func GetBookByID(id string) (*models.Book, error) {
 	book := &models.Book{}
 	query := `SELECT id, title, author, description, total_pages, created_at
 	          FROM books WHERE id = ?`
-	
+
 	err := DB.QueryRow(query, id).Scan(
 		&book.ID, &book.Title, &book.Author, &book.Description, &book.TotalPages, &book.CreatedAt,
 	)
@@ -165,7 +166,7 @@ func GetChapterByID(id string) (*models.Chapter, error) {
 	chapter := &models.Chapter{}
 	query := `SELECT id, book_id, title, number, created_at
 	          FROM chapters WHERE id = ?`
-	
+
 	var createdAtStr string
 	err := DB.QueryRow(query, id).Scan(
 		&chapter.ID, &chapter.BookID, &chapter.Title, &chapter.Number, &createdAtStr,
@@ -195,7 +196,7 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	var createdAtStr string
 	query := `SELECT id, book_id, page_number, chapter_id, chapter_title, content, word_count, created_at
 	          FROM pages WHERE book_id = ? AND page_number = ?`
-	
+
 	err := DB.QueryRow(query, bookID, pageNumber).Scan(
 		&page.ID, &page.BookID, &page.PageNumber, &chapterID, &chapterTitle,
 		&page.Content, &page.WordCount, &createdAtStr,
@@ -206,21 +207,21 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Parse created_at
 	if createdAtStr != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", createdAtStr); err == nil {
 			page.CreatedAt = t
 		}
 	}
-	
+
 	if chapterID.Valid {
 		page.ChapterID = &chapterID.String
 	}
 	if chapterTitle.Valid {
 		page.ChapterTitle = &chapterTitle.String
 	}
-	
+
 	// Get sections for this page
 	sectionsQuery := `SELECT id, page_id, page_number, section_number, content, word_count, created_at
 	                  FROM sections WHERE page_id = ? ORDER BY section_number`
@@ -229,7 +230,7 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	page.Sections = []models.Section{}
 	for rows.Next() {
 		var section models.Section
@@ -249,7 +250,7 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 		}
 		page.Sections = append(page.Sections, section)
 	}
-	
+
 	return page, rows.Err()
 }
 
@@ -268,7 +269,7 @@ func GetSectionByID(id string) (*models.Section, error) {
 	var createdAtStr string
 	query := `SELECT id, page_id, page_number, section_number, content, word_count, created_at
 	          FROM sections WHERE id = ?`
-	
+
 	err := DB.QueryRow(query, id).Scan(
 		&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
 		&section.Content, &section.WordCount, &createdAtStr,
@@ -301,7 +302,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 	glossary := &models.AliceGlossary{}
 	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
 	          FROM alice_glossary WHERE book_id = ? AND term = ?`
-	
+
 	err := DB.QueryRow(query, bookID, term).Scan(
 		&glossary.ID, &glossary.BookID, &glossary.Term, &glossary.Definition,
 		&glossary.SourceSentence, &glossary.Example, &glossary.ChapterReference,
@@ -319,7 +320,7 @@ func SearchGlossaryTerms(bookID, searchTerm string) ([]*models.AliceGlossary, er
 	          FROM alice_glossary 
 	          WHERE book_id = ? AND (term LIKE ? OR definition LIKE ?)
 	          ORDER BY term`
-	
+
 	searchPattern := "%" + searchTerm + "%"
 	rows, err := DB.Query(query, bookID, searchPattern, searchPattern)
 	if err != nil {
@@ -350,7 +351,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 	          JOIN glossary_section_links gs ON g.id = gs.glossary_id
 	          WHERE gs.section_id = ?
 	          ORDER BY g.term`
-	
+
 	rows, err := DB.Query(query, sectionID)
 	if err != nil {
 		return nil, err
@@ -381,7 +382,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 	          JOIN sections s ON gs.section_id = s.id
 	          WHERE g.book_id = ? AND gs.page_number = ? AND gs.section_number = ?
 	          ORDER BY g.term`
-	
+
 	rows, err := DB.Query(query, bookID, pageNumber, sectionNumber)
 	if err != nil {
 		return nil, err
@@ -411,13 +412,13 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	if err == nil && term != nil {
 		return term, nil
 	}
-	
+
 	// Try case-insensitive search
 	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
 	          FROM alice_glossary 
 	          WHERE book_id = ? AND LOWER(term) = LOWER(?)
 	          LIMIT 1`
-	
+
 	term = &models.AliceGlossary{}
 	err = DB.QueryRow(query, bookID, word).Scan(
 		&term.ID, &term.BookID, &term.Term, &term.Definition,
@@ -441,7 +442,7 @@ func VerifyCode(code, bookID string) (*models.VerificationCode, error) {
 	var usedBy sql.NullString
 	query := `SELECT code, book_id, is_used, used_by, created_at
 	          FROM verification_codes WHERE code = ? AND book_id = ?`
-	
+
 	err := DB.QueryRow(query, code, bookID).Scan(
 		&vc.Code, &vc.BookID, &vc.IsUsed, &usedBy, &vc.CreatedAt,
 	)
@@ -451,7 +452,7 @@ func VerifyCode(code, bookID string) (*models.VerificationCode, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if usedBy.Valid {
 		vc.UsedBy = &usedBy.String
 	}
@@ -470,14 +471,14 @@ func UseVerificationCode(code, userID string) error {
 // GetReadingProgress retrieves reading progress for a user and book
 func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) {
 	progress := &models.ReadingProgress{}
-	var chapterID, sectionID sql.NullString
+	var chapterID, sectionID, purchaseDate sql.NullString
 	var lastPage sql.NullInt64
-	query := `SELECT id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, created_at, updated_at
+	query := `SELECT id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, purchase_date, created_at, updated_at
 	          FROM reading_progress WHERE user_id = ? AND book_id = ?`
-	
+
 	err := DB.QueryRow(query, userID, bookID).Scan(
 		&progress.ID, &progress.UserID, &progress.BookID, &chapterID, &sectionID,
-		&lastPage, &progress.LastReadAt, &progress.CreatedAt, &progress.UpdatedAt,
+		&lastPage, &progress.LastReadAt, &purchaseDate, &progress.CreatedAt, &progress.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -485,7 +486,7 @@ func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if chapterID.Valid {
 		progress.ChapterID = &chapterID.String
 	}
@@ -496,6 +497,9 @@ func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) 
 		pageNum := int(lastPage.Int64)
 		progress.LastPage = &pageNum
 	}
+	if purchaseDate.Valid {
+		progress.PurchaseDate = &purchaseDate.String
+	}
 	return progress, nil
 }
 
@@ -503,18 +507,73 @@ func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) 
 func UpdateReadingProgress(progress *models.ReadingProgress) error {
 	if progress.ID == "" {
 		progress.ID = uuid.New().String()
-		query := `INSERT INTO reading_progress (id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, created_at, updated_at)
-		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		var purchaseDate interface{}
+		if progress.PurchaseDate != nil {
+			purchaseDate = *progress.PurchaseDate
+		}
+		query := `INSERT INTO reading_progress (id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, purchase_date, created_at, updated_at)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		_, err := DB.Exec(query, progress.ID, progress.UserID, progress.BookID, progress.ChapterID, progress.SectionID,
-			progress.LastPage, time.Now(), time.Now(), time.Now())
+			progress.LastPage, time.Now(), purchaseDate, time.Now(), time.Now())
 		return err
 	}
 
-	query := `UPDATE reading_progress SET chapter_id = ?, section_id = ?, last_page = ?, last_read_at = ?, updated_at = ?
+	var purchaseDate interface{}
+	if progress.PurchaseDate != nil {
+		purchaseDate = *progress.PurchaseDate
+	}
+	query := `UPDATE reading_progress SET chapter_id = ?, section_id = ?, last_page = ?, last_read_at = ?, purchase_date = ?, updated_at = ?
 	          WHERE id = ?`
 	resolvedAt := time.Now()
-	_, err := DB.Exec(query, progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, resolvedAt, progress.ID)
+	_, err := DB.Exec(query, progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
 	return err
+}
+
+// UpdateBookPurchaseDate updates the purchase date for a reader's book
+func UpdateBookPurchaseDate(userID, bookID, purchaseDate string) error {
+	// Handle empty string as NULL
+	var purchaseDateValue interface{}
+	if purchaseDate == "" {
+		purchaseDateValue = nil
+	} else {
+		purchaseDateValue = purchaseDate
+	}
+
+	// First, check if reading_progress record exists
+	var existingID string
+	err := DB.QueryRow(`SELECT id FROM reading_progress WHERE user_id = ? AND book_id = ?`, userID, bookID).Scan(&existingID)
+
+	if err == sql.ErrNoRows {
+		// Create new reading_progress record if it doesn't exist
+		progressID := uuid.New().String()
+		query := `INSERT INTO reading_progress (id, user_id, book_id, purchase_date, created_at, updated_at)
+		          VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`
+		_, err = DB.Exec(query, progressID, userID, bookID, purchaseDateValue)
+		if err != nil {
+			// Check if error is due to missing column
+			if strings.Contains(err.Error(), "no such column: purchase_date") {
+				return fmt.Errorf("purchase_date column does not exist. Please run migration 007_add_book_purchase_date.sql: %w", err)
+			}
+			return fmt.Errorf("failed to insert reading progress: %w", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check reading progress: %w", err)
+	}
+
+	// Update existing record
+	query := `UPDATE reading_progress SET purchase_date = ?, updated_at = datetime('now')
+	          WHERE user_id = ? AND book_id = ?`
+	_, err = DB.Exec(query, purchaseDateValue, userID, bookID)
+	if err != nil {
+		// Check if error is due to missing column
+		if strings.Contains(err.Error(), "no such column: purchase_date") {
+			return fmt.Errorf("purchase_date column does not exist. Please run migration 007_add_book_purchase_date.sql: %w", err)
+		}
+		return fmt.Errorf("failed to update purchase date: %w", err)
+	}
+	return nil
 }
 
 // Vocabulary Lookup Queries
@@ -676,11 +735,11 @@ func GetHelpRequests(userID string) ([]*models.HelpRequest, error) {
 func GetHelpRequestByID(id string) (*models.HelpRequest, error) {
 	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at
 	          FROM help_requests WHERE id = ?`
-	
+
 	request := &models.HelpRequest{}
 	var sectionID, assignedTo, response sql.NullString
 	var resolvedAt sql.NullTime
-	
+
 	err := DB.QueryRow(query, id).Scan(
 		&request.ID, &request.UserID, &request.BookID, &sectionID, &request.Status,
 		&request.Content, &request.Context, &assignedTo, &response, &resolvedAt,
@@ -692,7 +751,7 @@ func GetHelpRequestByID(id string) (*models.HelpRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if sectionID.Valid {
 		request.SectionID = &sectionID.String
 	}
@@ -705,7 +764,7 @@ func GetHelpRequestByID(id string) (*models.HelpRequest, error) {
 	if resolvedAt.Valid {
 		request.ResolvedAt = &resolvedAt.Time
 	}
-	
+
 	return request, nil
 }
 

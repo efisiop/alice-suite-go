@@ -148,13 +148,26 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-label">Book Purchase Date</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="date" class="form-control form-control-sm" id="purchaseDateInput" style="max-width: 200px;">
+                                <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
+                                <span class="text-muted" id="purchaseDateDisplay">Not set</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Activity Summary Section -->
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Activity Summary (Last 30 Days)</h5>
+                <small class="text-muted" id="lastUpdated">Last updated: -</small>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -190,7 +203,7 @@
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Activities</h5>
-                <button class="btn btn-sm btn-outline-primary" onclick="loadActivities()">Refresh</button>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshAll()">Refresh All</button>
             </div>
             <div class="card-body">
                 <div class="activity-timeline" id="activitiesTimeline">
@@ -213,6 +226,9 @@ if (typeof getAuthToken === 'undefined') {
     };
 }
 
+// Auto-refresh interval (30 seconds)
+let refreshInterval = null;
+
 // Logout handler
 document.addEventListener('DOMContentLoaded', function() {
     const logoutLink = document.getElementById('logout-link');
@@ -229,7 +245,108 @@ document.addEventListener('DOMContentLoaded', function() {
     
     loadConsultantUserInfo();
     loadReaderDetails();
+    
+    // Start auto-refresh every 30 seconds
+    startAutoRefresh();
 });
+
+// Start auto-refresh interval
+function startAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    refreshInterval = setInterval(function() {
+        refreshStats();
+    }, 30000); // Refresh every 30 seconds
+}
+
+// Stop auto-refresh (e.g., when page is hidden)
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+}
+
+// Pause auto-refresh when page is hidden, resume when visible
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+        // Immediately refresh when page becomes visible
+        refreshStats();
+    }
+});
+
+// Refresh all data (stats and activities)
+function refreshAll() {
+    refreshStats();
+    loadActivities();
+}
+
+// Load reading progress for the current reader
+function loadReadingProgress(bookId) {
+    const token = getAuthToken();
+    if (!token || !readerId || !bookId) return;
+    
+    fetch(`/rest/v1/reading_progress?user_id=eq.${readerId}&book_id=eq.${bookId}`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => r.json())
+    .then(readingProgress => {
+        // Handle both array and single object responses
+        const progress = Array.isArray(readingProgress) ? readingProgress[0] : readingProgress;
+        const purchaseDateInput = document.getElementById('purchaseDateInput');
+        const purchaseDateDisplay = document.getElementById('purchaseDateDisplay');
+        
+        if (progress && progress.purchase_date) {
+            const date = new Date(progress.purchase_date);
+            if (!isNaN(date.getTime())) {
+                const formattedDate = date.toISOString().split('T')[0];
+                purchaseDateInput.value = formattedDate;
+                purchaseDateDisplay.textContent = date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+        } else {
+            purchaseDateInput.value = '';
+            purchaseDateDisplay.textContent = 'Not set';
+        }
+    })
+    .catch(err => {
+        console.error('Error loading reading progress:', err);
+    });
+}
+
+// Refresh only stats (for auto-refresh)
+function refreshStats() {
+    const token = getAuthToken();
+    if (!token || !readerId) return;
+    
+    fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => r.json())
+    .then(summary => {
+        if (summary) {
+            document.getElementById('totalActivities').textContent = summary.TotalActivities || 0;
+            document.getElementById('activeDays').textContent = summary.ActiveDays || 0;
+            document.getElementById('wordLookups').textContent = summary.WordLookups || 0;
+            document.getElementById('pageViews').textContent = summary.PageViews || 0;
+            
+            // Update last updated timestamp
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${now.toLocaleTimeString()}`;
+        }
+    })
+    .catch(err => {
+        console.error('Error refreshing stats:', err);
+    });
+}
 
 // Load consultant user info
 function loadConsultantUserInfo() {
@@ -277,23 +394,66 @@ function loadReaderDetails() {
         return;
     }
     
-    // Load reader info and activity summary in parallel
-    Promise.all([
-        fetch(`/rest/v1/users?id=eq.${readerId}`, {
-            headers: {'Authorization': 'Bearer ' + token}
-        }).then(r => r.json()),
-        fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
-            headers: {'Authorization': 'Bearer ' + token}
-        }).then(r => r.json()),
-        loadActivities()
-    ])
-    .then(([users, summary]) => {
+    // Get book_id from reader state first
+    let bookId = null;
+    fetch(`/api/consultant/reader/state?user_id=${readerId}`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => r.json())
+    .then(state => {
+        if (state && state.book_id) {
+            bookId = state.book_id;
+        } else {
+            // If no book_id in state, get first book from system
+            return fetch(`/rest/v1/books?limit=1`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            }).then(r => r.json()).then(books => {
+                if (Array.isArray(books) && books.length > 0) {
+                    bookId = books[0].id;
+                }
+            });
+        }
+    })
+    .then(() => {
+        // Load reader info, activity summary, and reading progress in parallel
+        const promises = [
+            fetch(`/rest/v1/users?id=eq.${readerId}`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            }).then(r => r.json()),
+            fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
+                headers: {'Authorization': 'Bearer ' + token}
+            }).then(r => r.json()),
+            loadActivities()
+        ];
+        
+        // Add reading progress fetch if we have a book_id
+        if (bookId) {
+            promises.push(
+                fetch(`/rest/v1/reading_progress?user_id=eq.${readerId}&book_id=eq.${bookId}`, {
+                    headers: {'Authorization': 'Bearer ' + token}
+                }).then(r => r.json())
+            );
+        }
+        
+        return Promise.all(promises);
+    })
+    .then((results) => {
+        const users = results[0];
+        const summary = results[1];
+        const readingProgress = results.length > 3 ? results[3] : null;
+        
+        return [users, summary, readingProgress, bookId];
+    })
+    .then(([users, summary, readingProgress, currentBookId]) => {
         const reader = Array.isArray(users) && users.length > 0 ? users[0] : null;
         
         if (!reader) {
             document.getElementById('loadingState').innerHTML = '<p class="text-danger">Reader not found</p>';
             return;
         }
+        
+        // Store book_id globally for save function
+        window.readerBookId = currentBookId;
         
         // Set basic info
         const fullName = `${reader.first_name || ''} ${reader.last_name || ''}`.trim() || 'Unknown';
@@ -314,6 +474,35 @@ function loadReaderDetails() {
         
         document.getElementById('readerStatus').textContent = reader.is_verified ? '✓ Verified' : 'Not Verified';
         
+        // Set purchase date if available
+        if (readingProgress) {
+            // Handle both array and single object responses
+            const progress = Array.isArray(readingProgress) ? readingProgress[0] : readingProgress;
+            if (progress && progress.purchase_date) {
+                const purchaseDateInput = document.getElementById('purchaseDateInput');
+                const purchaseDateDisplay = document.getElementById('purchaseDateDisplay');
+                // Format date for input (YYYY-MM-DD)
+                const date = new Date(progress.purchase_date);
+                if (!isNaN(date.getTime())) {
+                    const formattedDate = date.toISOString().split('T')[0];
+                    purchaseDateInput.value = formattedDate;
+                    purchaseDateDisplay.textContent = date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+            } else {
+                // Clear if no purchase date
+                document.getElementById('purchaseDateInput').value = '';
+                document.getElementById('purchaseDateDisplay').textContent = 'Not set';
+            }
+        } else {
+            // Clear if no reading progress
+            document.getElementById('purchaseDateInput').value = '';
+            document.getElementById('purchaseDateDisplay').textContent = 'Not set';
+        }
+        
         // Set activity summary
         if (summary) {
             document.getElementById('totalActivities').textContent = summary.TotalActivities || 0;
@@ -321,6 +510,11 @@ function loadReaderDetails() {
             document.getElementById('wordLookups').textContent = summary.WordLookups || 0;
             document.getElementById('pageViews').textContent = summary.PageViews || 0;
         }
+        
+        // Update last updated timestamp
+        const now = new Date();
+        document.getElementById('lastUpdated').textContent = 
+            `Last updated: ${now.toLocaleTimeString()}`;
         
         // Show content, hide loading
         document.getElementById('loadingState').style.display = 'none';
@@ -351,9 +545,22 @@ function loadActivities() {
         
         if (Array.isArray(interactions)) {
             interactions.forEach(activity => {
+                // Parse context JSON if it exists
+                let parsedContext = null;
+                if (activity.context && typeof activity.context === 'string') {
+                    try {
+                        parsedContext = JSON.parse(activity.context);
+                    } catch (e) {
+                        console.warn('Failed to parse context JSON:', e);
+                    }
+                } else if (activity.context && typeof activity.context === 'object') {
+                    parsedContext = activity.context;
+                }
+                
                 allActivities.push({
                     ...activity,
                     source: 'interactions',
+                    parsed_context: parsedContext,
                     created_at: activity.created_at
                 });
             });
@@ -361,10 +568,23 @@ function loadActivities() {
         
         if (Array.isArray(activityLogs)) {
             activityLogs.forEach(activity => {
+                // Parse metadata JSON if it exists (activity_logs uses metadata field)
+                let parsedContext = null;
+                if (activity.metadata && typeof activity.metadata === 'string') {
+                    try {
+                        parsedContext = JSON.parse(activity.metadata);
+                    } catch (e) {
+                        console.warn('Failed to parse metadata JSON:', e);
+                    }
+                } else if (activity.metadata && typeof activity.metadata === 'object') {
+                    parsedContext = activity.metadata;
+                }
+                
                 allActivities.push({
                     ...activity,
                     source: 'activity_logs',
                     event_type: activity.activity_type,
+                    parsed_context: parsedContext,
                     created_at: activity.created_at
                 });
             });
@@ -431,6 +651,69 @@ function loadActivities() {
     .catch(err => {
         console.error('Error loading activities:', err);
         document.getElementById('activitiesTimeline').innerHTML = '<p class="text-danger">Error loading activities.</p>';
+    });
+}
+
+// Save purchase date
+function savePurchaseDate() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        alert('Error: No authentication token or reader ID');
+        return;
+    }
+    
+    const purchaseDateInput = document.getElementById('purchaseDateInput');
+    const purchaseDate = purchaseDateInput.value; // Format: YYYY-MM-DD
+    
+    if (!window.readerBookId) {
+        alert('Error: No book ID available. Please ensure the reader has a book assigned.');
+        return;
+    }
+    
+    fetch('/api/consultant/reader/purchase-date', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            user_id: readerId,
+            book_id: window.readerBookId,
+            purchase_date: purchaseDate || ''
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update display
+            const purchaseDateInput = document.getElementById('purchaseDateInput');
+            const purchaseDateDisplay = document.getElementById('purchaseDateDisplay');
+            if (purchaseDate) {
+                const date = new Date(purchaseDate);
+                if (!isNaN(date.getTime())) {
+                    purchaseDateInput.value = purchaseDate;
+                    purchaseDateDisplay.textContent = date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+            } else {
+                purchaseDateInput.value = '';
+                purchaseDateDisplay.textContent = 'Not set';
+            }
+            alert('Purchase date saved successfully!');
+            // Reload the reading progress to ensure data is fresh
+            if (window.readerBookId) {
+                loadReadingProgress(window.readerBookId);
+            }
+        } else {
+            alert('Error saving purchase date');
+        }
+    })
+    .catch(err => {
+        console.error('Error saving purchase date:', err);
+        alert('Error saving purchase date. Please try again.');
     });
 }
 

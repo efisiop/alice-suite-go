@@ -82,15 +82,16 @@ type VerificationCode struct {
 
 // ReadingProgress tracks user's progress in the physical book
 type ReadingProgress struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	BookID    string    `json:"book_id"`
-	ChapterID *string   `json:"chapter_id"`
-	SectionID *string   `json:"section_id"`
-	LastPage  *int      `json:"last_page"`
-	LastReadAt time.Time `json:"last_read_at"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           string     `json:"id"`
+	UserID       string     `json:"user_id"`
+	BookID       string     `json:"book_id"`
+	ChapterID    *string    `json:"chapter_id"`
+	SectionID    *string    `json:"section_id"`
+	LastPage     *int       `json:"last_page"`
+	LastReadAt   time.Time  `json:"last_read_at"`
+	PurchaseDate *string    `json:"purchase_date,omitempty"` // Date when reader purchased/obtained the book
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 // VocabularyLookup represents a word looked up by a user

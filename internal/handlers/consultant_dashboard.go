@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -133,5 +135,45 @@ func HandleConsultantReaderState(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(state)
+}
+
+// HandleUpdateBookPurchaseDate handles PUT /api/consultant/reader/purchase-date
+// Updates the book purchase date for a reader
+func HandleUpdateBookPurchaseDate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract user ID and book ID from request
+	var req struct {
+		UserID      string `json:"user_id"`
+		BookID      string `json:"book_id"`
+		PurchaseDate string `json:"purchase_date"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.UserID == "" || req.BookID == "" {
+		http.Error(w, "user_id and book_id are required", http.StatusBadRequest)
+		return
+	}
+
+	// Update purchase date (empty string means clear the date)
+	err := database.UpdateBookPurchaseDate(req.UserID, req.BookID, req.PurchaseDate)
+	if err != nil {
+		log.Printf("Error updating purchase date: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to update purchase date: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"message": "Purchase date updated",
+	})
 }
 
