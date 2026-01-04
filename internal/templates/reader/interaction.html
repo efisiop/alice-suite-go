@@ -66,6 +66,25 @@
     max-height: 600px;
     overflow-y: auto;
 }
+
+/* Collapsible Navigation Header */
+.nav-collapse-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.nav-collapse-header:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.nav-collapse-icon {
+    float: right;
+    transition: transform 0.3s ease;
+}
+
+.nav-collapse-header[aria-expanded="true"] .nav-collapse-icon {
+    transform: rotate(180deg);
+}
 </style>
 {{end}}
 
@@ -73,30 +92,28 @@
 <div class="row">
     <!-- Page Navigation (Sections) - First Column (Left) -->
     <div class="col-md-3">
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5>Navigation</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
-                    <label for="page-number" class="form-label mb-0 small">Go to Page</label>
-                    <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
-                    <button class="btn btn-sm btn-primary" onclick="goToPage()">Go</button>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="previousPage()">Previous</button>
-                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="nextPage()">Next</button>
-                </div>
-            </div>
-        </div>
-
         <div class="card">
-            <div class="card-header">
-                <h5>Page <span id="current-page-display">1</span></h5>
+            <div class="card-header nav-collapse-header" data-bs-toggle="collapse" data-bs-target="#navCollapseContent" aria-expanded="true" aria-controls="navCollapseContent">
+                <h5 class="mb-0 d-inline">Page/Sections Navigation</h5>
+                <span class="nav-collapse-icon">▼</span>
             </div>
-            <div class="card-body">
-                <div id="section-snippets">
-                    <p class="text-muted small">Loading sections...</p>
+            <div class="collapse show" id="navCollapseContent">
+                <div class="card-body">
+                    <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
+                        <label for="page-number" class="form-label mb-0 small">Go to Page</label>
+                        <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
+                        <button class="btn btn-sm btn-primary" onclick="goToPage()">Go</button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="previousPage()">Previous</button>
+                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="nextPage()">Next</button>
+                    </div>
+                </div>
+                <div class="card-body border-top">
+                    <h6 class="mb-2">Select the section you're reading</h6>
+                    <div id="section-snippets">
+                        <p class="text-muted small">Loading sections...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -106,7 +123,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Section <span id="current-section">1</span></h5>
+                <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
             </div>
             <div class="card-body">
                 <div id="page-content" class="reading-content">
@@ -298,7 +315,7 @@ function loadPage(pageNumber) {
             console.error('[loadPage] Cannot show first section - no sections or first section has no content');
         }
 
-        document.getElementById('current-page-display').textContent = pageNumber;
+        document.getElementById('current-page-display-main').textContent = pageNumber;
         currentPage = pageNumber;
 
         // Track page navigation with section information
