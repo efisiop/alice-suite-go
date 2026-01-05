@@ -177,3 +177,23 @@ func HandleUpdateBookPurchaseDate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleGetOnlineReaders handles GET /api/consultant/online-readers
+// Returns a map of reader IDs that are currently online
+func HandleGetOnlineReaders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	onlineMap, err := database.GetOnlineReaderIDs()
+	if err != nil {
+		http.Error(w, "Failed to fetch online readers", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"online_readers": onlineMap,
+	})
+}
+

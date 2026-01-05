@@ -161,6 +161,54 @@ func CleanupAllReaderSessions() error {
 	return nil
 }
 
+// IsUserOnline checks if a user has an active session (online)
+// A user is considered online if they have an active session that hasn't expired
+// and has been active within the last 10 minutes
+func IsUserOnline(userID string) (bool, error) {
+	var count int
+	// Check if user has an active session (not expired and active within last 10 minutes)
+	query := `SELECT COUNT(*) FROM sessions 
+	          WHERE user_id = ? 
+	          AND expires_at > datetime('now') 
+	          AND last_active_at >= datetime('now', '-10 minutes')`
+	
+	err := DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check user online status: %w", err)
+	}
+	
+	return count > 0, nil
+}
+
+// GetOnlineReaderIDs returns a map of reader IDs that are currently online
+func GetOnlineReaderIDs() (map[string]bool, error) {
+	onlineMap := make(map[string]bool)
+	
+	// Get all readers with active sessions (not expired and active within last 10 minutes)
+	query := `SELECT DISTINCT s.user_id 
+	          FROM sessions s
+	          INNER JOIN users u ON s.user_id = u.id
+	          WHERE u.role = 'reader'
+	          AND s.expires_at > datetime('now') 
+	          AND s.last_active_at >= datetime('now', '-10 minutes')`
+	
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get online readers: %w", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			continue
+		}
+		onlineMap[userID] = true
+	}
+	
+	return onlineMap, rows.Err()
+}
+
 // hashToken creates a SHA-256 hash of the token
 func hashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))

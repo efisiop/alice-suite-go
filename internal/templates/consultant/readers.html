@@ -19,6 +19,37 @@
     white-space: nowrap;
 }
 
+/* Online status indicator */
+.online-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #28a745;
+    display: inline-block;
+    margin-right: 8px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 4px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+.reader-row-status {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
 .readers-table td {
     padding: 0.5rem;
     vertical-align: middle;
@@ -227,6 +258,7 @@
                     <table class="table table-hover readers-table mb-0">
                         <thead>
                             <tr>
+                                <th style="width: 20px;"></th>
                                 <th class="col-name">Name</th>
                                 <th class="col-lastname">Last Name</th>
                                 <th class="col-email">Email</th>
@@ -251,6 +283,9 @@
 // Store activity data globally for calendar navigation
 const readerActivityData = {};
 
+// Store online status for readers
+let onlineReaders = {};
+
 // Ensure getAuthToken is available
 if (typeof getAuthToken === 'undefined') {
     window.getAuthToken = function() {
@@ -274,6 +309,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     loadConsultantUserInfo();
     loadReaders();
+    
+    // Start polling for online status updates every 10 seconds
+    updateOnlineStatus();
+    setInterval(updateOnlineStatus, 10000);
 });
 
 // Load consultant user info
@@ -354,7 +393,13 @@ function loadReaders() {
         document.getElementById('empty-state').style.display = 'none';
         document.getElementById('readers-table-container').style.display = 'block';
         
-        loadReadersWithActivities(validReaders, token);
+        // Update online status before loading readers
+        updateOnlineStatus().then(() => {
+            loadReadersWithActivities(validReaders, token);
+        }).catch(() => {
+            // If online status fails, still load readers
+            loadReadersWithActivities(validReaders, token);
+        });
     })
     .catch(err => {
         console.error('Error loading readers:', err);
@@ -514,7 +559,12 @@ function createReaderRow(reader, activityData, purchaseDate = '-') {
         accountActivated = createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
     }
     
+    // Check if reader is online
+    const isOnline = onlineReaders[reader.id] || false;
+    const onlineDot = isOnline ? '<span class="online-indicator" title="Online"></span>' : '<span style="width: 10px; display: inline-block; margin-right: 8px;"></span>';
+    
     row.innerHTML = `
+        <td style="width: 20px; padding-right: 0;">${onlineDot}</td>
         <td class="reader-name" title="${escapeHtml(firstName)}">${escapeHtml(firstName)}</td>
         <td class="reader-name" title="${escapeHtml(lastName)}">${escapeHtml(lastName)}</td>
         <td class="compact-cell" title="${escapeHtml(email)}">${escapeHtml(email)}</td>
@@ -629,6 +679,46 @@ function navigateCalendar(readerId, delta) {
 // Format date as short string
 function formatDateShort(date) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Update online status for all readers
+function updateOnlineStatus() {
+    const token = getAuthToken();
+    if (!token) return Promise.resolve();
+    
+    return fetch('/api/consultant/online-readers', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        onlineReaders = data.online_readers || {};
+        updateOnlineIndicators();
+    })
+    .catch(err => {
+        console.error('Error updating online status:', err);
+    });
+}
+
+// Update online indicators in the table
+function updateOnlineIndicators() {
+    const rows = document.querySelectorAll('#readers-table-body tr');
+    rows.forEach(row => {
+        const readerId = row.id.replace('reader-row-', '');
+        const isOnline = onlineReaders[readerId] || false;
+        
+        // Find the first td (status indicator cell)
+        const statusCell = row.querySelector('td:first-child');
+        if (statusCell) {
+            if (isOnline) {
+                statusCell.innerHTML = '<span class="online-indicator" title="Online"></span>';
+            } else {
+                statusCell.innerHTML = '<span style="width: 10px; display: inline-block; margin-right: 8px;"></span>';
+            }
+        }
+    });
 }
 
 // Escape HTML to prevent XSS

@@ -22,6 +22,8 @@
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent; /* Prevent tap highlight on mobile */
+    touch-action: manipulation; /* Prevent double-tap zoom and improve touch response */
 }
 
 .section-snippet:hover {
@@ -85,6 +87,21 @@
 .nav-collapse-header[aria-expanded="true"] .nav-collapse-icon {
     transform: rotate(180deg);
 }
+
+/* Prevent unwanted scrolling on mobile */
+html {
+    scroll-behavior: auto; /* Disable smooth scrolling that can cause jumps */
+}
+
+/* Prevent focus scrolling on mobile */
+* {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent auto-scroll when content changes */
+#page-content {
+    scroll-behavior: auto;
+}
 </style>
 {{end}}
 
@@ -102,11 +119,11 @@
                     <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
                         <label for="page-number" class="form-label mb-0 small">Go to Page</label>
                         <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
-                        <button class="btn btn-sm btn-primary" onclick="goToPage()">Go</button>
+                        <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="previousPage()">Previous</button>
-                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="nextPage()">Next</button>
+                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">Previous</button>
+                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">Next</button>
                     </div>
                 </div>
                 <div class="card-body border-top">
@@ -276,7 +293,7 @@ function loadPage(pageNumber) {
             if (sectionContent && sectionContent.trim()) {
                 const snippet = getFirstWords(sectionContent, 6);
                 snippetsHtml += `
-                    <div class="section-snippet mb-2" data-section-index="${index}" onclick="showSection(${index})">
+                    <div class="section-snippet mb-2" data-section-index="${index}" onclick="event.preventDefault(); event.stopPropagation(); showSection(${index}); return false;">
                         <div class="snippet-text small">${escapeHtml(snippet)}...</div>
                     </div>
                 `;
@@ -366,6 +383,9 @@ function showSection(sectionIndex) {
         return;
     }
 
+    // Preserve scroll position to prevent jumping on mobile
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+
     // Update current section index
     currentSectionIndex = sectionIndex;
     console.log('[showSection] Set currentSectionIndex to:', currentSectionIndex);
@@ -429,6 +449,12 @@ function showSection(sectionIndex) {
         pageContentElement.innerHTML = content;
         console.log('[showSection] Updated page content with section', sectionIndex);
         console.log('[showSection] New content length:', pageContentElement.innerHTML.length);
+        
+        // Restore scroll position to prevent jumping on mobile
+        // Use requestAnimationFrame to ensure DOM has updated
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollPosition);
+        });
     } else {
         console.error('[showSection] ERROR: Page content element not found');
         alert('ERROR: Page content element not found');
@@ -440,9 +466,6 @@ function showSection(sectionIndex) {
     if (currentSectionElement) {
         currentSectionElement.textContent = sectionIndex + 1;
     }
-
-    // Note: Removed automatic scrolling to prevent content jumping on mobile
-    // Users can manually scroll to view the content if needed
 
     // Track section navigation
     trackActivity('PAGE_SYNC', { 
@@ -540,21 +563,45 @@ function trackActivity(eventType, data) {
 }
 
 function goToPage() {
+    // Preserve scroll position to prevent jumping on mobile
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    
     const pageInput = document.getElementById('page-number');
     const page = parseInt(pageInput.value);
     if (page > 0) {
         loadPage(page);
+        
+        // Restore scroll position after content loads
+        setTimeout(() => {
+            window.scrollTo(0, scrollPosition);
+        }, 100);
     }
 }
 
 function previousPage() {
+    // Preserve scroll position to prevent jumping on mobile
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    
     if (currentPage > 1) {
         loadPage(currentPage - 1);
+        
+        // Restore scroll position after content loads
+        setTimeout(() => {
+            window.scrollTo(0, scrollPosition);
+        }, 100);
     }
 }
 
 function nextPage() {
+    // Preserve scroll position to prevent jumping on mobile
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    
     loadPage(currentPage + 1);
+    
+    // Restore scroll position after content loads
+    setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+    }, 100);
 }
 
 function showDictionary() {
