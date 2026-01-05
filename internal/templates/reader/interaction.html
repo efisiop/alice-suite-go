@@ -441,10 +441,8 @@ function showSection(sectionIndex) {
         currentSectionElement.textContent = sectionIndex + 1;
     }
 
-    // Scroll to top of content area
-    if (pageContentElement) {
-        pageContentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    // Note: Removed automatic scrolling to prevent content jumping on mobile
+    // Users can manually scroll to view the content if needed
 
     // Track section navigation
     trackActivity('PAGE_SYNC', { 

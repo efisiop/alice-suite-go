@@ -504,6 +504,8 @@ func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) 
 }
 
 // UpdateReadingProgress updates reading progress
+// IMPORTANT: If PurchaseDate is nil, it preserves the existing purchase_date in the database
+// Only updates purchase_date if it's explicitly provided
 func UpdateReadingProgress(progress *models.ReadingProgress) error {
 	if progress.ID == "" {
 		progress.ID = uuid.New().String()
@@ -518,14 +520,36 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 		return err
 	}
 
+	// For updates, we need to preserve purchase_date if it's not explicitly provided
+	// First, get the existing purchase_date from the database
+	var existingPurchaseDate sql.NullString
+	err := DB.QueryRow(`SELECT purchase_date FROM reading_progress WHERE id = ?`, progress.ID).Scan(&existingPurchaseDate)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to get existing purchase_date: %w", err)
+	}
+
+	// Determine what purchase_date value to use
 	var purchaseDate interface{}
 	if progress.PurchaseDate != nil {
-		purchaseDate = *progress.PurchaseDate
+		// Explicitly provided - use it (even if empty string to clear it)
+		if *progress.PurchaseDate == "" {
+			purchaseDate = nil
+		} else {
+			purchaseDate = *progress.PurchaseDate
+		}
+	} else {
+		// Not provided - preserve existing value
+		if existingPurchaseDate.Valid {
+			purchaseDate = existingPurchaseDate.String
+		} else {
+			purchaseDate = nil
+		}
 	}
+
 	query := `UPDATE reading_progress SET chapter_id = ?, section_id = ?, last_page = ?, last_read_at = ?, purchase_date = ?, updated_at = ?
 	          WHERE id = ?`
 	resolvedAt := time.Now()
-	_, err := DB.Exec(query, progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
+	_, err = DB.Exec(query, progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
 	return err
 }
 
