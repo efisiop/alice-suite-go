@@ -3,8 +3,8 @@ services:
     name: alice-suite-go
     runtime: go
     plan: free
-    buildCommand: go mod download && CGO_ENABLED=1 go build -o bin/server ./cmd/server && CGO_ENABLED=1 go build -o bin/migrate ./cmd/migrate && CGO_ENABLED=1 go build -o bin/init-users ./cmd/init-users && CGO_ENABLED=1 go build -o bin/fix-render ./cmd/fix-render && mkdir -p data && DB_PATH=data/alice-suite.db ./bin/migrate && DB_PATH=data/alice-suite.db ./bin/init-users && DB_PATH=data/alice-suite.db ./bin/fix-render
-    startCommand: ./bin/server
+    buildCommand: go mod download && CGO_ENABLED=1 go build -o bin/server ./cmd/server && CGO_ENABLED=1 go build -o bin/migrate ./cmd/migrate && CGO_ENABLED=1 go build -o bin/init-users ./cmd/init-users && CGO_ENABLED=1 go build -o bin/fix-render ./cmd/fix-render && CGO_ENABLED=1 go build -o bin/verify-deployment ./cmd/verify-deployment
+    startCommand: ./start.sh
     envVars:
       - key: PORT
         value: 10000
