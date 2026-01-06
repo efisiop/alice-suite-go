@@ -68,10 +68,15 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 		return
 	}
 
-	// Query glossary
-	query := `SELECT term, definition, example FROM alice_glossary WHERE term = ? AND book_id = ? LIMIT 1`
+	// Normalize term to lowercase for case-insensitive lookup (consistent with DictionaryService)
+	// This ensures "waistcoat-pocket", "Waistcoat-Pocket", "WAISTCOAT-POCKET" all match
+	normalizedTerm := strings.ToLower(strings.TrimSpace(term))
+
+	// Query glossary with case-insensitive comparison
+	query := `SELECT term, definition, example FROM alice_glossary WHERE LOWER(term) = ? AND book_id = ? LIMIT 1`
 	var definition, example string
-	err := database.DB.QueryRow(query, term, bookID).Scan(&term, &definition, &example)
+	var dbTerm string // Store the actual term from database (preserves original casing)
+	err := database.DB.QueryRow(query, normalizedTerm, bookID).Scan(&dbTerm, &definition, &example)
 	if err != nil {
 		// Term not found
 		w.Header().Set("Content-Type", "application/json")
@@ -84,7 +89,7 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"term":       term,
+		"term":       dbTerm, // Return the actual term from database (preserves original casing)
 		"definition": definition,
 		"example":    example,
 	})
