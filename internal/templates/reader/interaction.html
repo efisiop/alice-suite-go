@@ -102,6 +102,184 @@ html {
 #page-content {
     scroll-behavior: auto;
 }
+
+/* Clickable word highlighting */
+.word-highlight {
+    cursor: pointer;
+    color: #0056b3;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    transition: background-color 0.2s ease;
+}
+
+.word-highlight:hover {
+    background-color: #e7f3ff;
+    border-radius: 2px;
+}
+
+/* Inline dictionary popup */
+.dictionary-popup {
+    position: fixed;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    max-width: 350px;
+    z-index: 1050;
+    display: none;
+    animation: popupFadeIn 0.2s ease-out;
+}
+
+.dictionary-popup.show {
+    display: block;
+}
+
+@keyframes popupFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dictionary-popup-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.dictionary-popup-definition {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+}
+
+.dictionary-popup-example {
+    color: #777;
+    font-style: italic;
+    font-size: 0.9rem;
+    border-left: 3px solid #28a745;
+    padding-left: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Multiple examples styling */
+.dictionary-popup-examples {
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+}
+
+.dictionary-popup-examples-title {
+    display: block;
+    color: #555;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.dictionary-popup-examples-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    list-style-type: disc;
+}
+
+.dictionary-popup-examples-list li {
+    color: #777;
+    font-style: italic;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.4rem;
+}
+
+.dictionary-popup-examples-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* Expand examples button */
+.dictionary-popup-more-examples {
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.dictionary-popup-more-examples:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.dictionary-popup-more-examples:active {
+    background-color: #dee2e6;
+}
+
+.dictionary-popup-additional-examples {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+    display: none;
+}
+
+.dictionary-popup-additional-examples.show {
+    display: block;
+}
+
+.dictionary-popup-additional-examples-list {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.25rem;
+    list-style-type: disc;
+}
+
+.dictionary-popup-additional-examples-list li {
+    color: #777;
+    font-style: italic;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.4rem;
+}
+
+.dictionary-popup-additional-examples-list li:last-child {
+    margin-bottom: 0;
+}
+
+.dictionary-popup-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+}
+
+.dictionary-popup-close:hover {
+    color: #333;
+}
+
+/* Loading state */
+.dictionary-popup-loading {
+    text-align: center;
+    color: #666;
+    padding: 1rem;
+}
 </style>
 {{end}}
 
@@ -165,7 +343,7 @@ html {
     </div>
 </div>
 
-<!-- Dictionary Modal -->
+<!-- Dictionary Modal (kept for manual lookup via Dictionary button) -->
 <div class="modal fade" id="dictionaryModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -182,6 +360,14 @@ html {
                 <div id="dictionary-result" class="mt-3"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Inline Dictionary Popup (Tier 1: Instant definitions) -->
+<div id="dictionary-popup" class="dictionary-popup">
+    <button class="dictionary-popup-close" onclick="hideDictionaryPopup()" aria-label="Close">&times;</button>
+    <div id="dictionary-popup-content">
+        <div class="dictionary-popup-loading">Loading definition...</div>
     </div>
 </div>
 {{end}}
@@ -348,11 +534,33 @@ function loadPage(pageNumber) {
 }
 
 function formatTextWithWordHighlights(text) {
-    // Simple word highlighting - can be enhanced
-    return text.split(' ').map(word => {
-        const cleanWord = word.replace(/[.,!?;:]/g, '');
-        return `<span class="word-highlight" onclick="lookupWordFromText('${cleanWord}')">${word}</span>`;
-    }).join(' ');
+    // Make all words clickable for Tier 1 instant definitions
+    // Handles punctuation and preserves original formatting
+    if (!text) return '';
+    
+    // Split by whitespace and process each word
+    const words = text.split(/(\s+)/); // Split but keep whitespace
+    return words.map((part, index) => {
+        // Skip whitespace parts
+        if (/^\s+$/.test(part)) {
+            return part;
+        }
+        
+        // Extract word without punctuation for lookup, but keep punctuation in display
+        const cleanWord = part.replace(/[.,!?;:()\[\]{}"']/g, '').toLowerCase();
+        
+        // Skip empty strings (just punctuation)
+        if (!cleanWord) {
+            return escapeHtml(part);
+        }
+        
+        // Escape HTML for security and create clickable word
+        const escapedWord = escapeHtml(part);
+        const escapedCleanWord = escapeHtml(cleanWord);
+        
+        // Create clickable span with word
+        return `<span class="word-highlight" onclick="lookupWordFromText('${escapedCleanWord}', event)" data-word="${escapedCleanWord}">${escapedWord}</span>`;
+    }).join('');
 }
 
 function getFirstWords(text, numWords) {
@@ -483,19 +691,68 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function lookupWordFromText(word) {
-    lookupWord(word);
-    const modal = new bootstrap.Modal(document.getElementById('dictionaryModal'));
-    modal.show();
-    document.getElementById('lookup-word').value = word;
+// Show inline dictionary popup (Tier 1: Instant definitions)
+function lookupWordFromText(word, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    if (!word || !word.trim()) return;
+    
+    const popup = document.getElementById('dictionary-popup');
+    const popupContent = document.getElementById('dictionary-popup-content');
+    
+    if (!popup || !popupContent) return;
+    
+    // Show popup with loading state
+    popupContent.innerHTML = '<div class="dictionary-popup-loading">Loading definition...</div>';
+    popup.classList.add('show');
+    
+    // Position popup near the clicked word
+    if (event && event.target) {
+        const rect = event.target.getBoundingClientRect();
+        popup.style.left = rect.left + 'px';
+        popup.style.top = (rect.bottom + 5) + 'px';
+        
+        // Adjust if popup goes off-screen
+        setTimeout(() => {
+            const popupRect = popup.getBoundingClientRect();
+            if (popupRect.right > window.innerWidth) {
+                popup.style.left = (window.innerWidth - popupRect.width - 10) + 'px';
+            }
+            if (popupRect.bottom > window.innerHeight) {
+                popup.style.top = (rect.top - popupRect.height - 5) + 'px';
+            }
+        }, 0);
+    } else {
+        // Center popup if no event position
+        popup.style.left = '50%';
+        popup.style.top = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+    }
+    
+    // Fetch definition
+    lookupWordInline(word, popupContent);
 }
 
-function lookupWord(word) {
-    const lookupWordInput = document.getElementById('lookup-word');
-    const wordToLookup = word || lookupWordInput.value;
-    
-    if (!wordToLookup) return;
+// Hide inline dictionary popup
+function hideDictionaryPopup() {
+    const popup = document.getElementById('dictionary-popup');
+    if (popup) {
+        popup.classList.remove('show');
+    }
+}
 
+// Lookup word and display in inline popup
+function lookupWordInline(word, popupContent) {
+    const wordToLookup = word.trim();
+    
+    if (!wordToLookup) {
+        popupContent.innerHTML = '<div class="dictionary-popup-loading text-danger">No word provided</div>';
+        return;
+    }
+    
     const token = getAuthToken();
     fetch('/rest/v1/rpc/get_definition_with_context', {
         method: 'POST',
@@ -510,25 +767,257 @@ function lookupWord(word) {
     })
     .then(res => res.json())
     .then(data => {
-        const resultDiv = document.getElementById('dictionary-result');
-        if (data.definition) {
-            resultDiv.innerHTML = `
-                <div class="card">
-                    <div class="card-body">
-                        <h6>${data.term}</h6>
-                        <p>${data.definition}</p>
-                        ${data.example ? `<p class="text-muted"><em>${data.example}</em></p>` : ''}
-                    </div>
-                </div>
-            `;
+        if (data.definition && data.definition !== 'Word not found in dictionary.') {
+            let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
+            html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
+            
+            // Handle examples: Show first example, button to show 2 more
+            if (data.example) {
+                // Split examples if there are multiple (using our special separator)
+                const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
+                
+                if (examples.length === 1) {
+                    // Single example - display normally
+                    html += `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
+                } else if (examples.length > 1) {
+                    // Multiple examples: Show first one, button for 2 more
+                    html += `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
+                    
+                    // Show button if there are 2 or more additional examples
+                    if (examples.length >= 3) {
+                        // Get next 2 examples (max 2 additional)
+                        const additionalExamples = examples.slice(1, 3);
+                        const exampleCount = additionalExamples.length;
+                        html += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)">
+                            Show ${exampleCount} more example${exampleCount > 1 ? 's' : ''}
+                        </button>`;
+                        html += `<div class="dictionary-popup-additional-examples">
+                            <ul class="dictionary-popup-additional-examples-list">
+                                ${additionalExamples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}
+                            </ul>
+                        </div>`;
+                    } else if (examples.length === 2) {
+                        // Only 1 additional example
+                        html += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)">
+                            Show 1 more example
+                        </button>`;
+                        html += `<div class="dictionary-popup-additional-examples">
+                            <ul class="dictionary-popup-additional-examples-list">
+                                <li>${escapeHtml(examples[1])}</li>
+                            </ul>
+                        </div>`;
+                    }
+                }
+            }
+            
+            popupContent.innerHTML = html;
+            
             // Track dictionary lookup
             trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
         } else {
-            resultDiv.innerHTML = '<p class="text-muted">Word not found in glossary.</p>';
+            popupContent.innerHTML = '<div class="dictionary-popup-loading text-muted">Word not found in dictionary.</div>';
         }
     })
     .catch(err => {
-        document.getElementById('dictionary-result').innerHTML = '<p class="text-danger">Error looking up word.</p>';
+        console.error('Error looking up word:', err);
+        popupContent.innerHTML = '<div class="dictionary-popup-loading text-danger">Error looking up word. Please try again.</div>';
+    });
+}
+
+// Close popup when clicking outside
+document.addEventListener('click', function(event) {
+    const popup = document.getElementById('dictionary-popup');
+    if (popup && !popup.contains(event.target) && !event.target.classList.contains('word-highlight')) {
+        hideDictionaryPopup();
+    }
+});
+
+// Close popup with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        hideDictionaryPopup();
+    }
+});
+
+// Show more examples when button is clicked (for inline popup)
+function showMoreExamples(button) {
+    if (!button) return;
+    
+    // Find the additional examples container (should be the next sibling)
+    const container = button.nextElementSibling;
+    if (container && container.classList.contains('dictionary-popup-additional-examples')) {
+        // Toggle visibility
+        if (container.classList.contains('show')) {
+            // Hide additional examples
+            container.classList.remove('show');
+            // Update button text - extract the number from current text
+            const currentText = button.textContent.trim();
+            if (currentText.includes('Hide 2 more')) {
+                button.textContent = 'Show 2 more examples';
+            } else if (currentText.includes('Hide 1 more')) {
+                button.textContent = 'Show 1 more example';
+            } else {
+                // Fallback - try to extract number
+                const match = currentText.match(/\d+/);
+                if (match) {
+                    const count = parseInt(match[0]);
+                    button.textContent = `Show ${count} more example${count > 1 ? 's' : ''}`;
+                }
+            }
+        } else {
+            // Show additional examples
+            container.classList.add('show');
+            // Update button text
+            const currentText = button.textContent.trim();
+            if (currentText.includes('Show 2 more')) {
+                button.textContent = 'Hide 2 more examples';
+            } else if (currentText.includes('Show 1 more')) {
+                button.textContent = 'Hide 1 more example';
+            } else {
+                // Fallback - try to extract number
+                const match = currentText.match(/\d+/);
+                if (match) {
+                    const count = parseInt(match[0]);
+                    button.textContent = `Hide ${count} more example${count > 1 ? 's' : ''}`;
+                }
+            }
+        }
+    }
+}
+
+// Show more examples when button is clicked (for modal)
+function showMoreExamplesModal(button) {
+    if (!button) return;
+    
+    // Find the additional examples container (should be the next sibling)
+    const container = button.nextElementSibling;
+    if (container && container.classList.contains('dictionary-popup-additional-examples')) {
+        // Toggle visibility
+        if (container.classList.contains('show')) {
+            // Hide additional examples
+            container.classList.remove('show');
+            // Update button text
+            const currentText = button.textContent.trim();
+            if (currentText.includes('Hide 2 more')) {
+                button.textContent = 'Show 2 more examples';
+            } else if (currentText.includes('Hide 1 more')) {
+                button.textContent = 'Show 1 more example';
+            } else {
+                const match = currentText.match(/\d+/);
+                if (match) {
+                    const count = parseInt(match[0]);
+                    button.textContent = `Show ${count} more example${count > 1 ? 's' : ''}`;
+                }
+            }
+        } else {
+            // Show additional examples
+            container.classList.add('show');
+            // Update button text
+            const currentText = button.textContent.trim();
+            if (currentText.includes('Show 2 more')) {
+                button.textContent = 'Hide 2 more examples';
+            } else if (currentText.includes('Show 1 more')) {
+                button.textContent = 'Hide 1 more example';
+            } else {
+                const match = currentText.match(/\d+/);
+                if (match) {
+                    const count = parseInt(match[0]);
+                    button.textContent = `Hide ${count} more example${count > 1 ? 's' : ''}`;
+                }
+            }
+        }
+    }
+}
+
+// Lookup word for modal (manual dictionary lookup)
+function lookupWord(word) {
+    const lookupWordInput = document.getElementById('lookup-word');
+    const wordToLookup = word || lookupWordInput.value;
+    
+    if (!wordToLookup) return;
+
+    const token = getAuthToken();
+    const resultDiv = document.getElementById('dictionary-result');
+    
+    if (resultDiv) {
+        resultDiv.innerHTML = '<p class="text-muted">Loading...</p>';
+    }
+    
+    fetch('/rest/v1/rpc/get_definition_with_context', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            term: wordToLookup,
+            book_id: bookId
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (resultDiv) {
+            if (data.definition && data.definition !== 'Word not found in dictionary.') {
+                let exampleHtml = '';
+                
+                // Handle examples: Show first example, button for 2 more
+                if (data.example) {
+                    const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
+                    
+                    if (examples.length === 1) {
+                        // Single example
+                        exampleHtml = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
+                    } else if (examples.length > 1) {
+                        // Multiple examples: Show first one, button for 2 more
+                        exampleHtml = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
+                        
+                        if (examples.length >= 3) {
+                            // Get next 2 examples (max 2 additional)
+                            const additionalExamples = examples.slice(1, 3);
+                            const exampleCount = additionalExamples.length;
+                            exampleHtml += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
+                                Show ${exampleCount} more example${exampleCount > 1 ? 's' : ''}
+                            </button>`;
+                            exampleHtml += `<div class="mt-2 dictionary-popup-additional-examples">
+                                <ul class="small text-muted mb-0" style="margin-left: 1.5rem; list-style-type: disc;">
+                                    ${additionalExamples.map(ex => `<li><em>${escapeHtml(ex)}</em></li>`).join('')}
+                                </ul>
+                            </div>`;
+                        } else if (examples.length === 2) {
+                            // Only 1 additional example
+                            exampleHtml += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
+                                Show 1 more example
+                            </button>`;
+                            exampleHtml += `<div class="mt-2 dictionary-popup-additional-examples">
+                                <ul class="small text-muted mb-0" style="margin-left: 1.5rem; list-style-type: disc;">
+                                    <li><em>${escapeHtml(examples[1])}</em></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>${escapeHtml(data.term || wordToLookup)}</h6>
+                            <p>${escapeHtml(data.definition)}</p>
+                            ${exampleHtml}
+                        </div>
+                    </div>
+                `;
+                // Track dictionary lookup
+                trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
+            } else {
+                resultDiv.innerHTML = '<p class="text-muted">Word not found in dictionary.</p>';
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Error looking up word:', err);
+        if (resultDiv) {
+            resultDiv.innerHTML = '<p class="text-danger">Error looking up word. Please try again.</p>';
+        }
     });
 }
 

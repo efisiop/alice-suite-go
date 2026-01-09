@@ -58,41 +58,53 @@ func HandleRPC(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetDefinitionWithContext handles get_definition_with_context RPC
+// Uses enhanced DictionaryService that checks: 1) Glossary, 2) Cache, 3) External API
 func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, params map[string]interface{}) {
 	term, _ := params["term"].(string)
 	bookID, _ := params["book_id"].(string)
-	_ = params["section_id"] // sectionID not used yet but may be needed for context
+	var sectionID *string
+	if sid, ok := params["section_id"].(string); ok && sid != "" {
+		sectionID = &sid
+	}
 
 	if term == "" {
 		http.Error(w, "term parameter required", http.StatusBadRequest)
 		return
 	}
 
-	// Normalize term to lowercase for case-insensitive lookup (consistent with DictionaryService)
-	// This ensures "waistcoat-pocket", "Waistcoat-Pocket", "WAISTCOAT-POCKET" all match
-	normalizedTerm := strings.ToLower(strings.TrimSpace(term))
+	if bookID == "" {
+		bookID = "alice-in-wonderland" // Default book ID
+	}
 
-	// Query glossary with case-insensitive comparison
-	query := `SELECT term, definition, example FROM alice_glossary WHERE LOWER(term) = ? AND book_id = ? LIMIT 1`
-	var definition, example string
-	var dbTerm string // Store the actual term from database (preserves original casing)
-	err := database.DB.QueryRow(query, normalizedTerm, bookID).Scan(&dbTerm, &definition, &example)
-	if err != nil {
-		// Term not found
-		w.Header().Set("Content-Type", "application/json")
+	// Use enhanced DictionaryService which handles:
+	// 1. Glossary lookup (technical terms)
+	// 2. Cache lookup (previously fetched)
+	// 3. External API lookup (common words)
+	glossaryTerm, err := dictionaryService.LookupWordInContext(bookID, term, nil, sectionID)
+	
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err != nil || glossaryTerm == nil {
+		// Word not found in glossary, cache, or external API
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"term":       term,
-			"definition": "Word not found in glossary",
+			"definition": "Word not found in dictionary.",
 		})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"term":       dbTerm, // Return the actual term from database (preserves original casing)
-		"definition": definition,
-		"example":    example,
-	})
+	// Return the definition (from glossary, cache, or external API)
+	response := map[string]interface{}{
+		"term":       glossaryTerm.Term, // Preserves original casing
+		"definition": glossaryTerm.Definition,
+	}
+	
+	// Include example if available
+	if glossaryTerm.Example != "" {
+		response["example"] = glossaryTerm.Example
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // handleGetSectionsForPage handles get_sections_for_page RPC

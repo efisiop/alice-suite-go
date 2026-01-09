@@ -173,5 +173,18 @@ type ReadingStats struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+// DictionaryCache represents a cached definition from external dictionary API
+type DictionaryCache struct {
+	ID           string    `json:"id"`
+	Word         string    `json:"word"`
+	Definition   string    `json:"definition"`
+	Example      string    `json:"example"`
+	Phonetic     string    `json:"phonetic"`
+	PartOfSpeech string    `json:"part_of_speech"`
+	SourceAPI    string    `json:"source_api"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 
 

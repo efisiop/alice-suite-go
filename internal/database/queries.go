@@ -843,3 +843,42 @@ func UpdateHelpRequest(request *models.HelpRequest) error {
 	_, err := DB.Exec(query, request.Status, request.AssignedTo, request.Response, resolvedAt, time.Now(), request.ID)
 	return err
 }
+
+// Dictionary Cache Functions
+
+// GetCachedDefinition retrieves a cached definition from dictionary_cache table
+func GetCachedDefinition(word string) (*models.DictionaryCache, error) {
+	normalizedWord := strings.ToLower(strings.TrimSpace(word))
+	query := `SELECT id, word, definition, example, phonetic, part_of_speech, source_api, created_at, updated_at
+	          FROM dictionary_cache WHERE word = ? LIMIT 1`
+
+	cache := &models.DictionaryCache{}
+	err := DB.QueryRow(query, normalizedWord).Scan(
+		&cache.ID, &cache.Word, &cache.Definition, &cache.Example,
+		&cache.Phonetic, &cache.PartOfSpeech, &cache.SourceAPI,
+		&cache.CreatedAt, &cache.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
+// CacheDefinition stores a definition in the dictionary_cache table
+func CacheDefinition(cache *models.DictionaryCache) error {
+	normalizedWord := strings.ToLower(strings.TrimSpace(cache.Word))
+	if cache.ID == "" {
+		cache.ID = fmt.Sprintf("dict-cache-%s-%d", normalizedWord, time.Now().UnixNano())
+	}
+
+	query := `INSERT OR REPLACE INTO dictionary_cache 
+	          (id, word, definition, example, phonetic, part_of_speech, source_api, created_at, updated_at)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+
+	_, err := DB.Exec(query, cache.ID, normalizedWord, cache.Definition, cache.Example,
+		cache.Phonetic, cache.PartOfSpeech, cache.SourceAPI)
+	return err
+}
