@@ -492,14 +492,32 @@ html {
 }
 
 .text-highlighted {
-    background-color: rgba(255, 255, 0, 0.4) !important;
-    padding: 2px 4px;
-    border-radius: 3px;
+    background-color: #ffff00 !important;
+    background-color: rgba(255, 255, 0, 0.7) !important;
+    padding: 2px 0;
+    border-radius: 2px;
     transition: background-color 0.2s ease;
+    box-shadow: 0 1px 2px rgba(255, 255, 0, 0.3);
+    /* Make it look like a real highlighter marker */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
 }
 
 .text-highlighted:hover {
-    background-color: rgba(255, 255, 0, 0.6) !important;
+    background-color: rgba(255, 255, 0, 0.85) !important;
+}
+
+/* Better selection styling for mobile */
+::selection {
+    background-color: #ffff00;
+    background-color: rgba(255, 255, 0, 0.7);
+    color: inherit;
+}
+
+::-moz-selection {
+    background-color: #ffff00;
+    background-color: rgba(255, 255, 0, 0.7);
+    color: inherit;
 }
 
 /* Floating Selection Toolbar */
@@ -690,6 +708,15 @@ html {
 @media (max-width: 768px) {
     .reading-content {
         -webkit-tap-highlight-color: rgba(255, 255, 0, 0.3);
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
+    }
+    
+    .text-selection-active .reading-content * {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+        -webkit-touch-callout: default !important;
     }
     
     .pencil-select-btn {
@@ -2520,17 +2547,22 @@ function enableTextSelection() {
     
     // Add event listeners for text selection
     pageContent.addEventListener('mouseup', handleTextSelection);
-    pageContent.addEventListener('touchend', handleTextSelectionMobile, { passive: false });
+    // For mobile, use touchend with passive: false to allow preventDefault if needed
+    pageContent.addEventListener('touchend', handleTextSelectionMobile, { passive: true });
+    // Also listen for selection changes
     document.addEventListener('selectionchange', handleSelectionChange);
     
     // Click outside to clear selection
     document.addEventListener('click', handleClickOutside, true);
+    // Also for touch
+    document.addEventListener('touchend', handleClickOutsideTouch, true);
     
-    // On mobile, add touch overlay (but make it non-intrusive)
-    const overlay = document.getElementById('touch-selection-overlay');
-    if (overlay && window.innerWidth <= 768) {
-        // Don't block interactions, just provide visual feedback
-        overlay.classList.add('active');
+    // On mobile, make text more selectable
+    if (window.innerWidth <= 768) {
+        pageContent.style.webkitUserSelect = 'text';
+        pageContent.style.userSelect = 'text';
+        // Enable touch callout on iOS
+        pageContent.style.webkitTouchCallout = 'default';
     }
 }
 
@@ -2551,6 +2583,29 @@ function handleClickOutside(e) {
     clearSelection();
 }
 
+// Handle touch outside selection area (mobile)
+function handleClickOutsideTouch(e) {
+    if (!textSelectionModeActive) return;
+    
+    const toolbar = document.getElementById('selection-toolbar');
+    const btn = document.getElementById('text-selection-btn');
+    const pageContent = document.getElementById('page-content');
+    const target = e.target;
+    
+    // Don't clear if touching toolbar, button, or page content
+    if (toolbar && toolbar.contains(target)) return;
+    if (btn && btn.contains(target)) return;
+    if (pageContent && pageContent.contains(target)) return;
+    
+    // Small delay to avoid clearing selection while user is selecting
+    setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.toString().trim().length === 0) {
+            clearSelection();
+        }
+    }, 200);
+}
+
 // Disable text selection
 function disableTextSelection() {
     const pageContent = document.getElementById('page-content');
@@ -2560,6 +2615,7 @@ function disableTextSelection() {
     pageContent.removeEventListener('touchend', handleTextSelectionMobile);
     document.removeEventListener('selectionchange', handleSelectionChange);
     document.removeEventListener('click', handleClickOutside, true);
+    document.removeEventListener('touchend', handleClickOutsideTouch, true);
     
     const overlay = document.getElementById('touch-selection-overlay');
     if (overlay) {
@@ -2600,27 +2656,35 @@ function handleTextSelection(e) {
 function handleTextSelectionMobile(e) {
     if (!textSelectionModeActive) return;
     
-    // Don't prevent default immediately - let native selection happen first
+    // Allow native selection to happen first, then process
     setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
             selectedText = selection.toString().trim();
-            selectedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
             
-            // Highlight the selected text (might not work on all mobile browsers)
-            try {
-                highlightSelectedText(selectedRange);
-            } catch (err) {
-                // Native selection highlight will be visible
+            // Get the range and clone it before modifying
+            if (selection.rangeCount > 0) {
+                selectedRange = selection.getRangeAt(0).cloneRange();
+                
+                // Highlight the selected text
+                try {
+                    highlightSelectedText(selectedRange);
+                } catch (err) {
+                    console.log('Highlight error:', err);
+                    // Native selection highlight will still be visible
+                }
             }
             
             // Show toolbar (position at bottom on mobile)
-            showSelectionToolbar(e);
-            
-            // Prevent text selection from being cleared immediately
-            e.stopPropagation();
+            // Use touch position if available
+            const touch = e.changedTouches && e.changedTouches[0];
+            const eventForToolbar = touch ? {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            } : e;
+            showSelectionToolbar(eventForToolbar);
         }
-    }, 100);
+    }, 150); // Slightly longer delay for mobile to ensure selection is complete
 }
 
 // Handle selection change (when user clicks elsewhere)
@@ -2643,7 +2707,7 @@ function handleSelectionChange() {
     }, 200);
 }
 
-// Highlight selected text
+// Highlight selected text (works better on mobile)
 function highlightSelectedText(range) {
     if (!range) return;
     
@@ -2651,39 +2715,41 @@ function highlightSelectedText(range) {
     clearHighlights();
     
     try {
-        // Check if range spans multiple elements (more complex selection)
-        const isComplex = range.startContainer !== range.endContainer || 
-                         range.startContainer.nodeType === Node.TEXT_NODE && 
-                         range.endContainer.nodeType === Node.TEXT_NODE;
+        // Use a more robust highlighting method that works across multiple nodes
+        // This is better for mobile selections that may span multiple elements
         
-        if (isComplex) {
-            // For complex selections, just mark the visible selection
-            // The browser's native selection highlight will be visible
-            return;
-        }
+        const contents = range.extractContents();
         
-        // For simple selections within a single text node, we can highlight it
-        const span = document.createElement('span');
-        span.className = 'text-highlighted';
-        span.setAttribute('data-selected-text', selectedText);
+        // Create highlight span
+        const highlightSpan = document.createElement('span');
+        highlightSpan.className = 'text-highlighted';
+        highlightSpan.setAttribute('data-selected-text', selectedText);
         
-        try {
-            // Try to surround contents (works for simple selections)
-            range.surroundContents(span);
-        } catch (e) {
-            // If that fails, try extracting and wrapping
-            try {
-                const contents = range.extractContents();
-                span.appendChild(contents);
-                range.insertNode(span);
-            } catch (e2) {
-                // If all else fails, just use native selection highlight
-                console.log('Could not apply custom highlight, using native selection');
-            }
+        // Wrap all contents in the highlight span
+        highlightSpan.appendChild(contents);
+        
+        // Insert the highlighted span back
+        range.insertNode(highlightSpan);
+        
+        // Normalize to merge adjacent text nodes
+        if (highlightSpan.parentNode) {
+            highlightSpan.parentNode.normalize();
         }
     } catch (e) {
-        console.log('Could not highlight text:', e);
-        // Fall back to native browser selection highlight
+        // If that fails, try simpler approach
+        try {
+            const span = document.createElement('span');
+            span.className = 'text-highlighted';
+            span.setAttribute('data-selected-text', selectedText);
+            
+            // For simple selections, use surroundContents
+            if (range.collapsed === false) {
+                range.surroundContents(span);
+            }
+        } catch (e2) {
+            // If all else fails, the native browser selection will show
+            console.log('Using native selection highlight');
+        }
     }
 }
 
