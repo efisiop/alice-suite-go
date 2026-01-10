@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
@@ -53,9 +55,20 @@ func NewAIService() *AIService {
 		moonshotKey = os.Getenv("ANTHROPIC_AUTH_TOKEN") // Fallback to old env var name
 	}
 
-	moonshotURL := os.Getenv("ANTHROPIC_BASE_URL")
+	moonshotURL := os.Getenv("MOONSHOT_BASE_URL") // Use MOONSHOT_BASE_URL instead of ANTHROPIC_BASE_URL
 	if moonshotURL == "" {
-		moonshotURL = "https://api.moonshot.cn/v1" // Default Moonshot API
+		moonshotURL = os.Getenv("ANTHROPIC_BASE_URL") // Fallback to old env var name
+	}
+	// Validate and fix incorrect Moonshot URLs
+	if moonshotURL != "" {
+		// Fix common incorrect URLs
+		if strings.Contains(moonshotURL, "moonshot.ai") || strings.Contains(moonshotURL, "/anthropic") {
+			log.Printf("Warning: ANTHROPIC_BASE_URL or MOONSHOT_BASE_URL is set to incorrect value: %s. Using default Moonshot API URL instead.", moonshotURL)
+			moonshotURL = "https://api.moonshot.cn/v1"
+		}
+	}
+	if moonshotURL == "" {
+		moonshotURL = "https://api.moonshot.cn/v1" // Default Moonshot API (correct URL)
 	}
 
 	return &AIService{
