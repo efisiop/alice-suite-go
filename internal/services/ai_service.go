@@ -19,28 +19,50 @@ var (
 	ErrInvalidInteractionType = errors.New("invalid interaction type")
 )
 
+// AIProvider represents which AI service to use
+type AIProvider string
+
+const (
+	ProviderGemini   AIProvider = "gemini"
+	ProviderMoonshot AIProvider = "moonshot"
+	ProviderAuto     AIProvider = "auto" // Try Gemini first, fallback to Moonshot
+)
+
 // AIService handles AI interactions
 type AIService struct {
-	apiKey  string
-	baseURL string
-	client  *http.Client
+	provider     AIProvider
+	geminiKey    string
+	moonshotKey  string
+	moonshotURL  string
+	client       *http.Client
 }
 
-// NewAIService creates a new AI service
+// NewAIService creates a new AI service with support for multiple providers
 func NewAIService() *AIService {
-	apiKey := os.Getenv("MOONSHOT_API_KEY")
-	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_AUTH_TOKEN") // Fallback to Anthropic token
+	// Get provider preference (default: auto = try Gemini first, fallback to Moonshot)
+	providerStr := os.Getenv("AI_PROVIDER")
+	if providerStr == "" {
+		providerStr = "auto"
+	}
+	provider := AIProvider(providerStr)
+	
+	// Get API keys
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	moonshotKey := os.Getenv("MOONSHOT_API_KEY")
+	if moonshotKey == "" {
+		moonshotKey = os.Getenv("ANTHROPIC_AUTH_TOKEN") // Fallback to old env var name
 	}
 
-	baseURL := os.Getenv("ANTHROPIC_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://api.moonshot.cn/v1" // Default Moonshot API
+	moonshotURL := os.Getenv("ANTHROPIC_BASE_URL")
+	if moonshotURL == "" {
+		moonshotURL = "https://api.moonshot.cn/v1" // Default Moonshot API
 	}
 
 	return &AIService{
-		apiKey:  apiKey,
-		baseURL: baseURL,
+		provider:    provider,
+		geminiKey:   geminiKey,
+		moonshotKey: moonshotKey,
+		moonshotURL: moonshotURL,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -75,7 +97,7 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 	// Build prompt based on interaction type
 	prompt := s.buildPrompt(interactionType, question, context)
 
-	// Call AI API
+	// Call AI API (with automatic fallback if using "auto" provider)
 	response, err := s.callAI(prompt)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAIServiceUnavailable, err)
@@ -124,15 +146,150 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 	}
 }
 
-// callAI calls the AI API (Moonshot/Kimi or Anthropic)
+// callAI calls the AI API (Gemini or Moonshot) with automatic fallback
 func (s *AIService) callAI(prompt string) (string, error) {
-	if s.apiKey == "" {
-		return "AI service not configured. Please set MOONSHOT_API_KEY or ANTHROPIC_AUTH_TOKEN environment variable.", nil
+	// Determine which provider(s) to try
+	var providers []AIProvider
+	
+	switch s.provider {
+	case ProviderGemini:
+		providers = []AIProvider{ProviderGemini}
+	case ProviderMoonshot:
+		providers = []AIProvider{ProviderMoonshot}
+	case ProviderAuto:
+		// Try Gemini first, then Moonshot
+		providers = []AIProvider{ProviderGemini, ProviderMoonshot}
+	default:
+		providers = []AIProvider{ProviderGemini, ProviderMoonshot} // Default to auto behavior
 	}
 
-	// Prepare request payload
+	// Try each provider in order
+	var lastErr error
+	for _, provider := range providers {
+		var response string
+		var err error
+		
+		switch provider {
+		case ProviderGemini:
+			response, err = s.callGemini(prompt)
+		case ProviderMoonshot:
+			response, err = s.callMoonshot(prompt)
+		default:
+			continue
+		}
+		
+		if err == nil && response != "" {
+			return response, nil
+		}
+		lastErr = err
+	}
+
+	// All providers failed
+	if lastErr != nil {
+		return "", lastErr
+	}
+	
+	return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+}
+
+// callGemini calls the Google Gemini API
+func (s *AIService) callGemini(prompt string) (string, error) {
+	if s.geminiKey == "" {
+		return "", errors.New("GEMINI_API_KEY not set")
+	}
+
+	// Gemini API endpoint (using gemini-1.5-flash for faster responses and free tier)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=%s", s.geminiKey)
+
+	// Gemini uses a different request format
 	payload := map[string]interface{}{
-		"model": "moonshot-v1-8k", // or "kimi-v1" depending on your setup
+		"contents": []map[string]interface{}{
+			{
+				"parts": []map[string]interface{}{
+					{
+						"text": prompt,
+					},
+				},
+			},
+		},
+		"generationConfig": map[string]interface{}{
+			"temperature": 0.7,
+			"maxOutputTokens": 1000,
+		},
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal Gemini request: %w", err)
+	}
+
+	// Create request
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create Gemini request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send request
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Gemini API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Gemini response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Gemini API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	// Parse Gemini response (different structure)
+	var geminiResponse struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+
+	err = json.Unmarshal(body, &geminiResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Gemini response: %w", err)
+	}
+
+	if geminiResponse.Error != nil {
+		return "", fmt.Errorf("Gemini API error: %s", geminiResponse.Error.Message)
+	}
+
+	if len(geminiResponse.Candidates) == 0 || len(geminiResponse.Candidates[0].Content.Parts) == 0 {
+		return "", errors.New("no response from Gemini API")
+	}
+
+	return geminiResponse.Candidates[0].Content.Parts[0].Text, nil
+}
+
+// callMoonshot calls the Moonshot/Kimi API
+func (s *AIService) callMoonshot(prompt string) (string, error) {
+	if s.moonshotKey == "" {
+		return "", errors.New("MOONSHOT_API_KEY not set")
+	}
+
+	// Moonshot API endpoint
+	url := s.moonshotURL + "/chat/completions"
+
+	// Moonshot uses OpenAI-compatible format
+	payload := map[string]interface{}{
+		"model": "moonshot-v1-8k", // or "moonshot-v1-32k" for longer context
 		"messages": []map[string]string{
 			{
 				"role":    "user",
@@ -145,54 +302,61 @@ func (s *AIService) callAI(prompt string) (string, error) {
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal Moonshot request: %w", err)
 	}
 
 	// Create request
-	req, err := http.NewRequest("POST", s.baseURL+"/chat/completions", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create Moonshot request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+s.moonshotKey)
 
 	// Send request
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Moonshot API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read Moonshot response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("AI API error: %s", string(body))
+		return "", fmt.Errorf("Moonshot API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Parse response
-	var aiResponse struct {
+	// Parse Moonshot response (OpenAI-compatible format)
+	var moonshotResponse struct {
 		Choices []struct {
 			Message struct {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
 
-	err = json.Unmarshal(body, &aiResponse)
+	err = json.Unmarshal(body, &moonshotResponse)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse Moonshot response: %w", err)
 	}
 
-	if len(aiResponse.Choices) == 0 {
-		return "", errors.New("no response from AI")
+	if moonshotResponse.Error != nil {
+		return "", fmt.Errorf("Moonshot API error: %s", moonshotResponse.Error.Message)
 	}
 
-	return aiResponse.Choices[0].Message.Content, nil
+	if len(moonshotResponse.Choices) == 0 {
+		return "", errors.New("no response from Moonshot API")
+	}
+
+	return moonshotResponse.Choices[0].Message.Content, nil
 }
 
 // GetUserInteractions retrieves AI interactions for a user

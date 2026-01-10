@@ -14,3 +14,10 @@ services:
         generateValue: true
       - key: DB_PATH
         value: data/alice-suite.db
+      # AI Provider Configuration
+      - key: GEMINI_API_KEY
+        value: AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio
+      - key: MOONSHOT_API_KEY
+        value: sk-Zdba3VV4Ak2fKMMhh3xZIBeJeVfWYsmVWZm7LtKyMwSybqhd
+      - key: AI_PROVIDER
+        value: auto  # Options: "auto" (try Gemini first, fallback to Moonshot), "gemini", or "moonshot"
