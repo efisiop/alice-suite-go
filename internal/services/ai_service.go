@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,14 +72,31 @@ func NewAIService() *AIService {
 		moonshotURL = "https://api.moonshot.cn/v1" // Default Moonshot API (correct URL)
 	}
 
+	// Create HTTP client with custom TLS config for Moonshot (handles certificate issues)
+	// Note: In production, you might want to verify certificates properly
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// For Moonshot TLS certificate issues, we can skip verification if needed
+	// This is a workaround for the "x509: negative serial number" error
+	// Only use this if Moonshot's certificate has issues
+	if os.Getenv("MOONSHOT_SKIP_TLS_VERIFY") == "true" {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client = &http.Client{
+			Transport: tr,
+			Timeout:   30 * time.Second,
+		}
+	}
+
 	return &AIService{
 		provider:    provider,
 		geminiKey:   geminiKey,
 		moonshotKey: moonshotKey,
 		moonshotURL: moonshotURL,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:      client,
 	}
 }
 
@@ -161,22 +179,48 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 
 // callAI calls the AI API (Gemini or Moonshot) with automatic fallback
 func (s *AIService) callAI(prompt string) (string, error) {
-	// Determine which provider(s) to try
+	// Determine which provider(s) to try based on configured keys
 	var providers []AIProvider
 	
 	switch s.provider {
 	case ProviderGemini:
-		providers = []AIProvider{ProviderGemini}
+		if s.geminiKey != "" {
+			providers = []AIProvider{ProviderGemini}
+		} else {
+			return "", errors.New("GEMINI_API_KEY not set but provider is set to 'gemini'")
+		}
 	case ProviderMoonshot:
-		providers = []AIProvider{ProviderMoonshot}
+		if s.moonshotKey != "" {
+			providers = []AIProvider{ProviderMoonshot}
+		} else {
+			return "", errors.New("MOONSHOT_API_KEY not set but provider is set to 'moonshot'")
+		}
 	case ProviderAuto:
-		// Try Gemini first, then Moonshot
-		providers = []AIProvider{ProviderGemini, ProviderMoonshot}
+		// Try Gemini first if key is available, then Moonshot if key is available
+		if s.geminiKey != "" {
+			providers = append(providers, ProviderGemini)
+		}
+		if s.moonshotKey != "" {
+			providers = append(providers, ProviderMoonshot)
+		}
+		// If neither key is set, return error
+		if len(providers) == 0 {
+			return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+		}
 	default:
-		providers = []AIProvider{ProviderGemini, ProviderMoonshot} // Default to auto behavior
+		// Default to auto behavior
+		if s.geminiKey != "" {
+			providers = append(providers, ProviderGemini)
+		}
+		if s.moonshotKey != "" {
+			providers = append(providers, ProviderMoonshot)
+		}
+		if len(providers) == 0 {
+			return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+		}
 	}
 
-	// Try each provider in order
+	// Try each provider in order (only those with keys configured)
 	var lastErr error
 	for _, provider := range providers {
 		var response string
@@ -184,14 +228,23 @@ func (s *AIService) callAI(prompt string) (string, error) {
 		
 		switch provider {
 		case ProviderGemini:
+			log.Printf("Trying Gemini API...")
 			response, err = s.callGemini(prompt)
+			if err != nil {
+				log.Printf("Gemini API failed: %v", err)
+			}
 		case ProviderMoonshot:
+			log.Printf("Trying Moonshot API...")
 			response, err = s.callMoonshot(prompt)
+			if err != nil {
+				log.Printf("Moonshot API failed: %v", err)
+			}
 		default:
 			continue
 		}
 		
 		if err == nil && response != "" {
+			log.Printf("AI API call successful using %s", provider)
 			return response, nil
 		}
 		lastErr = err
@@ -199,7 +252,7 @@ func (s *AIService) callAI(prompt string) (string, error) {
 
 	// All providers failed
 	if lastErr != nil {
-		return "", lastErr
+		return "", fmt.Errorf("all AI providers failed. Last error: %w", lastErr)
 	}
 	
 	return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
