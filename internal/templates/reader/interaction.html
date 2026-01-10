@@ -124,11 +124,12 @@ html {
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 1rem;
+    padding: 0;
     max-width: 350px;
     z-index: 1050;
     display: none;
     animation: popupFadeIn 0.2s ease-out;
+    user-select: none; /* Prevent text selection during drag */
 }
 
 .dictionary-popup.show {
@@ -146,12 +147,32 @@ html {
     }
 }
 
+/* Draggable header area */
+.dictionary-popup-drag-handle {
+    cursor: move;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    border-radius: 8px 8px 0 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none; /* Prevent touch scrolling while dragging */
+}
+
+.dictionary-popup-drag-handle:active {
+    cursor: grabbing;
+    background-color: #e9ecef;
+}
+
+.dictionary-popup-content-inner {
+    padding: 1rem;
+}
+
 .dictionary-popup-header {
     font-weight: bold;
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
     color: #333;
-    border-bottom: 1px solid #eee;
     padding-bottom: 0.5rem;
 }
 
@@ -161,6 +182,16 @@ html {
     margin-bottom: 0.5rem;
 }
 
+/* Examples container - hidden by default */
+.dictionary-popup-examples-container {
+    margin-top: 0.5rem;
+    display: none; /* Hidden by default, shown when button is clicked */
+}
+
+.dictionary-popup-examples-container.show {
+    display: block;
+}
+
 .dictionary-popup-example {
     color: #777;
     font-style: italic;
@@ -168,16 +199,53 @@ html {
     border-left: 3px solid #28a745;
     padding-left: 0.5rem;
     margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
-/* Multiple examples styling */
-.dictionary-popup-examples {
-    margin-top: 0.75rem;
+.dictionary-popup-example:first-child {
+    margin-top: 0;
+}
+
+.dictionary-popup-example:last-child {
+    margin-bottom: 0;
+}
+
+/* See example button */
+.dictionary-popup-see-example {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.dictionary-popup-see-example:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.dictionary-popup-see-example:active {
+    background-color: #dee2e6;
+}
+
+/* Additional examples (for when there are 2+ examples) */
+.dictionary-popup-additional-examples {
+    margin-top: 0.5rem;
     padding-top: 0.5rem;
     border-top: 1px solid #eee;
+    display: none;
 }
 
-.dictionary-popup-examples-title {
+.dictionary-popup-additional-examples.show {
+    display: block;
+}
+
+.dictionary-popup-additional-examples-title {
     display: block;
     color: #555;
     font-size: 0.85rem;
@@ -185,13 +253,13 @@ html {
     margin-bottom: 0.5rem;
 }
 
-.dictionary-popup-examples-list {
+.dictionary-popup-additional-examples-list {
     margin: 0;
     padding-left: 1.25rem;
     list-style-type: disc;
 }
 
-.dictionary-popup-examples-list li {
+.dictionary-popup-additional-examples-list li {
     color: #777;
     font-style: italic;
     font-size: 0.9rem;
@@ -199,11 +267,11 @@ html {
     margin-bottom: 0.4rem;
 }
 
-.dictionary-popup-examples-list li:last-child {
+.dictionary-popup-additional-examples-list li:last-child {
     margin-bottom: 0;
 }
 
-/* Expand examples button */
+/* Expand more examples button (if 3+ examples) */
 .dictionary-popup-more-examples {
     margin-top: 0.5rem;
     padding: 0.25rem 0.5rem;
@@ -226,17 +294,6 @@ html {
     background-color: #dee2e6;
 }
 
-.dictionary-popup-additional-examples {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid #eee;
-    display: none;
-}
-
-.dictionary-popup-additional-examples.show {
-    display: block;
-}
-
 .dictionary-popup-additional-examples-list {
     margin: 0.5rem 0 0 0;
     padding-left: 1.25rem;
@@ -256,9 +313,6 @@ html {
 }
 
 .dictionary-popup-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
     background: none;
     border: none;
     font-size: 1.2rem;
@@ -268,10 +322,15 @@ html {
     width: 24px;
     height: 24px;
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .dictionary-popup-close:hover {
     color: #333;
+}
+
+.dictionary-popup-close:active {
+    color: #000;
 }
 
 /* Loading state */
@@ -363,10 +422,55 @@ html {
     </div>
 </div>
 
+<!-- AI Help Modal (Tier 2: AI Assistance) -->
+<div class="modal fade" id="aiHelpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">AI Help Assistant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="ai-question" class="form-label">What would you like help with?</label>
+                    <textarea class="form-control" id="ai-question" rows="3" placeholder="Ask me anything about the text you're reading... (e.g., 'Explain this passage', 'What does this section mean?', 'Simplify this concept')"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Interaction Type:</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-chat" value="chat" checked>
+                        <label class="btn btn-outline-primary" for="ai-type-chat">Chat</label>
+                        
+                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-explain" value="explain">
+                        <label class="btn btn-outline-primary" for="ai-type-explain">Explain</label>
+                        
+                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-simplify" value="simplify">
+                        <label class="btn btn-outline-primary" for="ai-type-simplify">Simplify</label>
+                    </div>
+                </div>
+                <button class="btn btn-primary w-100" onclick="askAI()" id="ai-ask-button">
+                    <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status"></span>
+                    Ask AI
+                </button>
+                <div id="ai-response" class="mt-4" style="display: none;">
+                    <hr>
+                    <h6>AI Response:</h6>
+                    <div id="ai-response-content" class="alert alert-info" style="white-space: pre-wrap;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Inline Dictionary Popup (Tier 1: Instant definitions) -->
 <div id="dictionary-popup" class="dictionary-popup">
-    <button class="dictionary-popup-close" onclick="hideDictionaryPopup()" aria-label="Close">&times;</button>
-    <div id="dictionary-popup-content">
+    <div class="dictionary-popup-drag-handle" id="dictionary-popup-drag-handle">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 500; color: #666; font-size: 0.9rem;">Dictionary</span>
+            <button class="dictionary-popup-close" onclick="event.stopPropagation(); hideDictionaryPopup(); return false;" aria-label="Close" style="position: relative; top: 0; right: 0; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #999; padding: 0; width: 24px; height: 24px; line-height: 1;">&times;</button>
+        </div>
+    </div>
+    <div class="dictionary-popup-content-inner" id="dictionary-popup-content">
         <div class="dictionary-popup-loading">Loading definition...</div>
     </div>
 </div>
@@ -691,6 +795,87 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Drag state for dictionary popup
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let popupStartX = 0;
+let popupStartY = 0;
+
+// Initialize drag functionality for dictionary popup
+function initDictionaryPopupDrag() {
+    const popup = document.getElementById('dictionary-popup');
+    const dragHandle = document.getElementById('dictionary-popup-drag-handle');
+    
+    if (!popup || !dragHandle) return;
+    
+    // Mouse events
+    dragHandle.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', stopDrag);
+    
+    // Touch events for mobile
+    dragHandle.addEventListener('touchstart', startDragTouch, { passive: false });
+    document.addEventListener('touchmove', dragTouch, { passive: false });
+    document.addEventListener('touchend', stopDrag);
+    
+    function startDrag(e) {
+        if (e.target.classList.contains('dictionary-popup-close')) {
+            return; // Don't start drag if clicking close button
+        }
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        const rect = popup.getBoundingClientRect();
+        popupStartX = rect.left;
+        popupStartY = rect.top;
+        popup.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+    
+    function startDragTouch(e) {
+        if (e.target.classList.contains('dictionary-popup-close')) {
+            return;
+        }
+        const touch = e.touches[0];
+        isDragging = true;
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+        const rect = popup.getBoundingClientRect();
+        popupStartX = rect.left;
+        popupStartY = rect.top;
+        e.preventDefault();
+    }
+    
+    function drag(e) {
+        if (!isDragging) return;
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        popup.style.left = (popupStartX + deltaX) + 'px';
+        popup.style.top = (popupStartY + deltaY) + 'px';
+        popup.style.transform = 'none'; // Remove centering transform
+        e.preventDefault();
+    }
+    
+    function dragTouch(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - dragStartX;
+        const deltaY = touch.clientY - dragStartY;
+        popup.style.left = (popupStartX + deltaX) + 'px';
+        popup.style.top = (popupStartY + deltaY) + 'px';
+        popup.style.transform = 'none';
+        e.preventDefault();
+    }
+    
+    function stopDrag() {
+        if (isDragging) {
+            isDragging = false;
+            popup.style.cursor = '';
+        }
+    }
+}
+
 // Show inline dictionary popup (Tier 1: Instant definitions)
 function lookupWordFromText(word, event) {
     if (event) {
@@ -705,6 +890,12 @@ function lookupWordFromText(word, event) {
     
     if (!popup || !popupContent) return;
     
+    // Initialize drag functionality if not already done
+    if (!popup.dataset.dragInitialized) {
+        initDictionaryPopupDrag();
+        popup.dataset.dragInitialized = 'true';
+    }
+    
     // Show popup with loading state
     popupContent.innerHTML = '<div class="dictionary-popup-loading">Loading definition...</div>';
     popup.classList.add('show');
@@ -714,6 +905,7 @@ function lookupWordFromText(word, event) {
         const rect = event.target.getBoundingClientRect();
         popup.style.left = rect.left + 'px';
         popup.style.top = (rect.bottom + 5) + 'px';
+        popup.style.transform = 'none';
         
         // Adjust if popup goes off-screen
         setTimeout(() => {
@@ -723,6 +915,12 @@ function lookupWordFromText(word, event) {
             }
             if (popupRect.bottom > window.innerHeight) {
                 popup.style.top = (rect.top - popupRect.height - 5) + 'px';
+            }
+            if (popupRect.top < 0) {
+                popup.style.top = '10px';
+            }
+            if (popupRect.left < 0) {
+                popup.style.left = '10px';
             }
         }, 0);
     } else {
@@ -741,6 +939,9 @@ function hideDictionaryPopup() {
     const popup = document.getElementById('dictionary-popup');
     if (popup) {
         popup.classList.remove('show');
+        // Reset drag state
+        isDragging = false;
+        popup.style.cursor = '';
     }
 }
 
@@ -771,42 +972,54 @@ function lookupWordInline(word, popupContent) {
             let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
             
-            // Handle examples: Show first example, button to show 2 more
+            // Handle examples: Hidden by default, show with "See an example" button
             if (data.example) {
                 // Split examples if there are multiple (using our special separator)
                 const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
                 
-                if (examples.length === 1) {
-                    // Single example - display normally
-                    html += `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
-                } else if (examples.length > 1) {
-                    // Multiple examples: Show first one, button for 2 more
-                    html += `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
-                    
-                    // Show button if there are 2 or more additional examples
-                    if (examples.length >= 3) {
-                        // Get next 2 examples (max 2 additional)
-                        const additionalExamples = examples.slice(1, 3);
-                        const exampleCount = additionalExamples.length;
-                        html += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)">
-                            Show ${exampleCount} more example${exampleCount > 1 ? 's' : ''}
-                        </button>`;
-                        html += `<div class="dictionary-popup-additional-examples">
-                            <ul class="dictionary-popup-additional-examples-list">
-                                ${additionalExamples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}
-                            </ul>
-                        </div>`;
+                if (examples.length > 0) {
+                    // Build examples HTML (will be hidden initially)
+                    let examplesHtml = '';
+                    if (examples.length === 1) {
+                        // Single example
+                        examplesHtml = `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
                     } else if (examples.length === 2) {
-                        // Only 1 additional example
-                        html += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)">
-                            Show 1 more example
-                        </button>`;
-                        html += `<div class="dictionary-popup-additional-examples">
-                            <ul class="dictionary-popup-additional-examples-list">
-                                <li>${escapeHtml(examples[1])}</li>
-                            </ul>
-                        </div>`;
+                        // Two examples - show both when button is clicked
+                        examplesHtml = examples.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
+                    } else if (examples.length >= 3) {
+                        // Three or more examples - show first 2 when button is clicked, then option for more
+                        const firstTwo = examples.slice(0, 2);
+                        const rest = examples.slice(2);
+                        examplesHtml = firstTwo.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
+                        
+                        // Add button for additional examples if there are more than 2
+                        if (rest.length > 0) {
+                            examplesHtml += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)" style="margin-top: 0.5rem;">
+                                See ${rest.length} more example${rest.length > 1 ? 's' : ''}
+                            </button>`;
+                            examplesHtml += `<div class="dictionary-popup-additional-examples">
+                                ${rest.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('')}
+                            </div>`;
+                        }
                     }
+                    
+                    // Determine button text
+                    let buttonText = 'See an example';
+                    if (examples.length === 2) {
+                        buttonText = 'See 2 examples';
+                    } else if (examples.length > 2) {
+                        buttonText = 'See examples';
+                    }
+                    
+                    // Button to show examples (hidden after click)
+                    html += `<button class="dictionary-popup-see-example" onclick="showExamples(this)">
+                        ${escapeHtml(buttonText)}
+                    </button>`;
+                    
+                    // Hidden container for examples
+                    html += `<div class="dictionary-popup-examples-container">
+                        ${examplesHtml}
+                    </div>`;
                 }
             }
             
@@ -839,7 +1052,21 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Show more examples when button is clicked (for inline popup)
+// Show examples when "See an example" button is clicked
+function showExamples(button) {
+    if (!button) return;
+    
+    // Find the examples container (should be the next sibling)
+    const container = button.nextElementSibling;
+    if (container && container.classList.contains('dictionary-popup-examples-container')) {
+        // Show examples
+        container.classList.add('show');
+        // Hide the "See an example" button
+        button.style.display = 'none';
+    }
+}
+
+// Show more examples when button is clicked (for inline popup - when 3+ examples)
 function showMoreExamples(button) {
     if (!button) return;
     
@@ -852,16 +1079,12 @@ function showMoreExamples(button) {
             container.classList.remove('show');
             // Update button text - extract the number from current text
             const currentText = button.textContent.trim();
-            if (currentText.includes('Hide 2 more')) {
-                button.textContent = 'Show 2 more examples';
-            } else if (currentText.includes('Hide 1 more')) {
-                button.textContent = 'Show 1 more example';
-            } else {
-                // Fallback - try to extract number
+            if (currentText.includes('Hide')) {
+                // Extract number and restore "See X more examples"
                 const match = currentText.match(/\d+/);
                 if (match) {
                     const count = parseInt(match[0]);
-                    button.textContent = `Show ${count} more example${count > 1 ? 's' : ''}`;
+                    button.textContent = `See ${count} more example${count > 1 ? 's' : ''}`;
                 }
             }
         } else {
@@ -869,12 +1092,8 @@ function showMoreExamples(button) {
             container.classList.add('show');
             // Update button text
             const currentText = button.textContent.trim();
-            if (currentText.includes('Show 2 more')) {
-                button.textContent = 'Hide 2 more examples';
-            } else if (currentText.includes('Show 1 more')) {
-                button.textContent = 'Hide 1 more example';
-            } else {
-                // Fallback - try to extract number
+            if (currentText.includes('See')) {
+                // Extract number and change to "Hide X more examples"
                 const match = currentText.match(/\d+/);
                 if (match) {
                     const count = parseInt(match[0]);
@@ -885,7 +1104,21 @@ function showMoreExamples(button) {
     }
 }
 
-// Show more examples when button is clicked (for modal)
+// Show examples when "See an example" button is clicked (for modal)
+function showExamplesModal(button) {
+    if (!button) return;
+    
+    // Find the examples container (should be the next sibling)
+    const container = button.nextElementSibling;
+    if (container && container.classList.contains('dictionary-popup-examples-container')) {
+        // Show examples
+        container.style.display = 'block';
+        // Hide the "See an example" button
+        button.style.display = 'none';
+    }
+}
+
+// Show more examples when button is clicked (for modal - when 3+ examples)
 function showMoreExamplesModal(button) {
     if (!button) return;
     
@@ -893,32 +1126,26 @@ function showMoreExamplesModal(button) {
     const container = button.nextElementSibling;
     if (container && container.classList.contains('dictionary-popup-additional-examples')) {
         // Toggle visibility
-        if (container.classList.contains('show')) {
+        if (container.style.display === 'block' || container.classList.contains('show')) {
             // Hide additional examples
+            container.style.display = 'none';
             container.classList.remove('show');
             // Update button text
             const currentText = button.textContent.trim();
-            if (currentText.includes('Hide 2 more')) {
-                button.textContent = 'Show 2 more examples';
-            } else if (currentText.includes('Hide 1 more')) {
-                button.textContent = 'Show 1 more example';
-            } else {
+            if (currentText.includes('Hide')) {
                 const match = currentText.match(/\d+/);
                 if (match) {
                     const count = parseInt(match[0]);
-                    button.textContent = `Show ${count} more example${count > 1 ? 's' : ''}`;
+                    button.textContent = `See ${count} more example${count > 1 ? 's' : ''}`;
                 }
             }
         } else {
             // Show additional examples
+            container.style.display = 'block';
             container.classList.add('show');
             // Update button text
             const currentText = button.textContent.trim();
-            if (currentText.includes('Show 2 more')) {
-                button.textContent = 'Hide 2 more examples';
-            } else if (currentText.includes('Show 1 more')) {
-                button.textContent = 'Hide 1 more example';
-            } else {
+            if (currentText.includes('See')) {
                 const match = currentText.match(/\d+/);
                 if (match) {
                     const count = parseInt(match[0]);
@@ -960,40 +1187,48 @@ function lookupWord(word) {
             if (data.definition && data.definition !== 'Word not found in dictionary.') {
                 let exampleHtml = '';
                 
-                // Handle examples: Show first example, button for 2 more
+                // Handle examples: Hidden by default, show with "See an example" button
                 if (data.example) {
                     const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
                     
-                    if (examples.length === 1) {
-                        // Single example
-                        exampleHtml = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
-                    } else if (examples.length > 1) {
-                        // Multiple examples: Show first one, button for 2 more
-                        exampleHtml = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
-                        
-                        if (examples.length >= 3) {
-                            // Get next 2 examples (max 2 additional)
-                            const additionalExamples = examples.slice(1, 3);
-                            const exampleCount = additionalExamples.length;
-                            exampleHtml += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
-                                Show ${exampleCount} more example${exampleCount > 1 ? 's' : ''}
-                            </button>`;
-                            exampleHtml += `<div class="mt-2 dictionary-popup-additional-examples">
-                                <ul class="small text-muted mb-0" style="margin-left: 1.5rem; list-style-type: disc;">
-                                    ${additionalExamples.map(ex => `<li><em>${escapeHtml(ex)}</em></li>`).join('')}
-                                </ul>
-                            </div>`;
+                    if (examples.length > 0) {
+                        // Build examples HTML (hidden initially)
+                        let examplesContent = '';
+                        if (examples.length === 1) {
+                            examplesContent = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
                         } else if (examples.length === 2) {
-                            // Only 1 additional example
-                            exampleHtml += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
-                                Show 1 more example
-                            </button>`;
-                            exampleHtml += `<div class="mt-2 dictionary-popup-additional-examples">
-                                <ul class="small text-muted mb-0" style="margin-left: 1.5rem; list-style-type: disc;">
-                                    <li><em>${escapeHtml(examples[1])}</em></li>
-                                </ul>
-                            </div>`;
+                            examplesContent = examples.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('');
+                        } else if (examples.length >= 3) {
+                            // Show first 2, then button for rest
+                            const firstTwo = examples.slice(0, 2);
+                            const rest = examples.slice(2);
+                            examplesContent = firstTwo.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('');
+                            
+                            if (rest.length > 0) {
+                                examplesContent += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
+                                    See ${rest.length} more example${rest.length > 1 ? 's' : ''}
+                                </button>`;
+                                examplesContent += `<div class="mt-2 dictionary-popup-additional-examples">
+                                    ${rest.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('')}
+                                </div>`;
+                            }
                         }
+                        
+                        // Determine button text
+                        let buttonText = 'See an example';
+                        if (examples.length === 2) {
+                            buttonText = 'See 2 examples';
+                        } else if (examples.length > 2) {
+                            buttonText = 'See examples';
+                        }
+                        
+                        // Button and hidden container
+                        exampleHtml = `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">
+                            ${escapeHtml(buttonText)}
+                        </button>`;
+                        exampleHtml += `<div class="dictionary-popup-examples-container mt-2" style="display: none;">
+                            ${examplesContent}
+                        </div>`;
                     }
                 }
                 
@@ -1098,9 +1333,141 @@ function showDictionary() {
     modal.show();
 }
 
+// Show AI Help modal
 function showAIHelp() {
-    alert('AI Help feature - to be implemented');
+    const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
+    modal.show();
+    
+    // Clear previous response
+    document.getElementById('ai-response').style.display = 'none';
+    document.getElementById('ai-question').value = '';
+    
+    // Set focus on question input
+    setTimeout(() => {
+        document.getElementById('ai-question').focus();
+    }, 500);
 }
+
+// Ask AI for help
+function askAI() {
+    const question = document.getElementById('ai-question').value.trim();
+    
+    if (!question) {
+        alert('Please enter a question first.');
+        return;
+    }
+    
+    const token = getAuthToken();
+    if (!token) {
+        alert('Please log in to use AI Help.');
+        window.location.href = '/login';
+        return;
+    }
+    
+    // Get selected interaction type
+    const interactionTypeInput = document.querySelector('input[name="ai-interaction-type"]:checked');
+    const interactionType = interactionTypeInput ? interactionTypeInput.value : 'chat';
+    
+    // Get current section context
+    const currentSection = currentPageSections[currentSectionIndex];
+    const sectionContent = currentSection ? (currentSection.content || '').substring(0, 500) : ''; // First 500 chars for context
+    const sectionID = currentSection ? currentSection.id : null;
+    
+    // Prepare context string
+    let context = `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.`;
+    if (sectionContent) {
+        context += `\n\nCurrent section text (for context): ${sectionContent}...`;
+    }
+    
+    // Show loading state
+    const askButton = document.getElementById('ai-ask-button');
+    const loadingSpinner = document.getElementById('ai-loading-spinner');
+    const responseDiv = document.getElementById('ai-response');
+    const responseContent = document.getElementById('ai-response-content');
+    
+    askButton.disabled = true;
+    loadingSpinner.classList.remove('d-none');
+    askButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Asking AI...';
+    responseDiv.style.display = 'none';
+    
+    // Call AI API
+    fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            book_id: bookId,
+            interaction_type: interactionType,
+            question: question,
+            section_id: sectionID,
+            context: context
+        })
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        // Show response
+        responseContent.textContent = data.response || 'No response from AI.';
+        responseContent.className = 'alert alert-success'; // Success styling
+        responseDiv.style.display = 'block';
+        
+        // Track activity
+        trackActivity('AI_HELP', {
+            interaction_type: interactionType,
+            question: question.substring(0, 100) // Truncate for logging
+        });
+        
+        // Scroll to response
+        responseDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(err => {
+        console.error('Error asking AI:', err);
+        
+        // Show error message
+        let errorMsg = 'Failed to get AI response. ';
+        
+        if (err.message.includes('503') || err.message.includes('Service Unavailable')) {
+            errorMsg += 'AI service is currently unavailable. Please try again later.';
+        } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            errorMsg += 'Authentication failed. Please log in again.';
+        } else if (err.message.includes('not configured')) {
+            errorMsg += 'AI service is not configured. Please contact support.';
+        } else {
+            errorMsg += `Error: ${err.message}`;
+        }
+        
+        responseContent.textContent = errorMsg;
+        responseContent.className = 'alert alert-danger';
+        responseDiv.style.display = 'block';
+        responseDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .finally(() => {
+        // Reset button state
+        askButton.disabled = false;
+        loadingSpinner.classList.add('d-none');
+        askButton.innerHTML = 'Ask AI';
+    });
+}
+
+// Allow Enter key to submit (Shift+Enter for new line)
+document.addEventListener('DOMContentLoaded', function() {
+    const aiQuestionInput = document.getElementById('ai-question');
+    if (aiQuestionInput) {
+        aiQuestionInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                askAI();
+            }
+        });
+    }
+});
 
 function requestHelp() {
     const content = prompt('What do you need help with?');
