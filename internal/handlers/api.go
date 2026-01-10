@@ -663,11 +663,16 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 
 	interaction, err := aiService.AskAI(userID, req.BookID, interactionType, req.Question, req.SectionID, req.Context)
 	if err != nil {
+		// Log the actual error for debugging
+		log.Printf("Error in HandleAskAI: %v", err)
+		log.Printf("Request details - UserID: %s, BookID: %s, Type: %s, Question: %s", userID, req.BookID, interactionType, req.Question)
+		
 		if err == services.ErrAIServiceUnavailable {
-			http.Error(w, "AI service unavailable", http.StatusServiceUnavailable)
+			http.Error(w, fmt.Sprintf("AI service unavailable: %v", err), http.StatusServiceUnavailable)
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// Return the actual error message for debugging (in production, you might want to hide this)
+		http.Error(w, fmt.Sprintf("Internal server error: %v", err), http.StatusInternalServerError)
 		return
 	}
 

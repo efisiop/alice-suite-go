@@ -51,9 +51,21 @@ else
     exit 1
 fi
 
-# Step 5: Start the server
+# Step 5: Check for AI API key (optional, for Tier 2 features)
 echo ""
-echo "3. Starting server on port 8080..."
+echo "3. Checking environment setup..."
+if [ -z "$GEMINI_API_KEY" ] && [ -z "$MOONSHOT_API_KEY" ]; then
+    echo "   ⚠️  Warning: GEMINI_API_KEY or MOONSHOT_API_KEY not set"
+    echo "   AI Help feature will not work. Set with:"
+    echo "   export GEMINI_API_KEY=\"your-api-key-here\""
+    echo "   See LOCAL_SETUP_AI.md for details"
+else
+    echo "   ✅ AI API key configured"
+fi
+
+# Step 6: Start the server
+echo ""
+echo "4. Starting server on port 8080..."
 echo "   Access at: http://127.0.0.1:8080/reader/login"
 echo "   Press Ctrl+C to stop"
 echo ""
