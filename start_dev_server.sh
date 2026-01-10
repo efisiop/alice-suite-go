@@ -68,12 +68,10 @@ if [ -z "$AI_PROVIDER" ]; then
     echo "   ✅ AI_PROVIDER set to 'gemini'"
 fi
 
-# Remove incorrect Moonshot URL if set
+# Remove incorrect Moonshot URL if set (always remove it since we use Gemini)
 if [ -n "$ANTHROPIC_BASE_URL" ]; then
-    if [[ "$ANTHROPIC_BASE_URL" == *"moonshot.ai"* ]] || [[ "$ANTHROPIC_BASE_URL" == *"/anthropic"* ]]; then
-        unset ANTHROPIC_BASE_URL
-        echo "   ✅ Removed incorrect ANTHROPIC_BASE_URL"
-    fi
+    unset ANTHROPIC_BASE_URL
+    echo "   ✅ Removed ANTHROPIC_BASE_URL (using Gemini instead)"
 fi
 
 echo "   ✅ AI environment configured"
