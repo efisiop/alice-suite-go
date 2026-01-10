@@ -2307,34 +2307,57 @@ let pencilStartY = 0;
 let dragThreshold = 5; // pixels to move before considering it a drag
 
 // Initialize draggable pencil button
+let pencilInitAttempts = 0;
+const MAX_PENCIL_INIT_ATTEMPTS = 10;
+
 function initDraggablePencil() {
-    const btn = document.getElementById('text-selection-btn');
-    if (!btn) return;
-    
-    // Load saved position from localStorage
-    const savedPos = localStorage.getItem('pencilButtonPosition');
-    if (savedPos) {
+    try {
+        const btn = document.getElementById('text-selection-btn');
+        if (!btn) {
+            // Button not found yet, try again later (but limit attempts)
+            pencilInitAttempts++;
+            if (pencilInitAttempts < MAX_PENCIL_INIT_ATTEMPTS) {
+                setTimeout(initDraggablePencil, 100);
+            }
+            return;
+        }
+        
+        // Reset counter on success
+        pencilInitAttempts = 0;
+        
+        // Load saved position from localStorage
         try {
-            const pos = JSON.parse(savedPos);
-            if (pos.top !== undefined && pos.right !== undefined) {
-                btn.style.top = pos.top;
-                btn.style.right = pos.right;
-                btn.style.left = 'auto';
-                btn.style.bottom = 'auto';
+            const savedPos = localStorage.getItem('pencilButtonPosition');
+            if (savedPos) {
+                const pos = JSON.parse(savedPos);
+                if (pos && (pos.top !== undefined || pos.left !== undefined)) {
+                    if (pos.top !== undefined) btn.style.top = pos.top;
+                    if (pos.left !== undefined) {
+                        btn.style.left = pos.left;
+                        btn.style.right = 'auto';
+                    }
+                    if (pos.right !== undefined && !pos.left) {
+                        btn.style.right = pos.right;
+                        btn.style.left = 'auto';
+                    }
+                    if (pos.bottom !== undefined) btn.style.bottom = pos.bottom;
+                }
             }
         } catch (e) {
             console.log('Error loading pencil position:', e);
         }
+        
+        // Mouse events for desktop
+        btn.addEventListener('mousedown', startDragPencil);
+        
+        // Touch events for mobile
+        btn.addEventListener('touchstart', startDragPencilTouch, { passive: false });
+        
+        // Click handler (only if not dragging)
+        btn.addEventListener('click', handlePencilClick);
+    } catch (e) {
+        console.error('Error initializing draggable pencil:', e);
     }
-    
-    // Mouse events for desktop
-    btn.addEventListener('mousedown', startDragPencil);
-    
-    // Touch events for mobile
-    btn.addEventListener('touchstart', startDragPencilTouch, { passive: false });
-    
-    // Click handler (only if not dragging)
-    btn.addEventListener('click', handlePencilClick);
 }
 
 // Start dragging (mouse)
