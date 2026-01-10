@@ -2300,11 +2300,11 @@ function toggleTextSelection() {
 
 // Draggable Pencil Button
 let isDraggingPencil = false;
-let dragStartX = 0;
-let dragStartY = 0;
+let pencilDragStartX = 0;
+let pencilDragStartY = 0;
 let pencilStartX = 0;
 let pencilStartY = 0;
-let dragThreshold = 5; // pixels to move before considering it a drag
+let pencilDragThreshold = 5; // pixels to move before considering it a drag
 
 // Initialize draggable pencil button
 let pencilInitAttempts = 0;
@@ -2369,8 +2369,8 @@ function startDragPencil(e) {
     if (!btn) return;
     
     isDraggingPencil = false;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
+    pencilDragStartX = e.clientX;
+    pencilDragStartY = e.clientY;
     
     const rect = btn.getBoundingClientRect();
     pencilStartX = rect.left;
@@ -2392,8 +2392,8 @@ function startDragPencilTouch(e) {
     
     isDraggingPencil = false;
     const touch = e.touches[0];
-    dragStartX = touch.clientX;
-    dragStartY = touch.clientY;
+    pencilDragStartX = touch.clientX;
+    pencilDragStartY = touch.clientY;
     
     const rect = btn.getBoundingClientRect();
     pencilStartX = rect.left;
@@ -2408,11 +2408,11 @@ function startDragPencilTouch(e) {
 // Drag (mouse)
 function dragPencil(e) {
     if (!isDraggingPencil) {
-        const deltaX = Math.abs(e.clientX - dragStartX);
-        const deltaY = Math.abs(e.clientY - dragStartY);
+        const deltaX = Math.abs(e.clientX - pencilDragStartX);
+        const deltaY = Math.abs(e.clientY - pencilDragStartY);
         
         // Only start dragging if moved more than threshold
-        if (deltaX > dragThreshold || deltaY > dragThreshold) {
+        if (deltaX > pencilDragThreshold || deltaY > pencilDragThreshold) {
             isDraggingPencil = true;
         } else {
             return;
@@ -2427,8 +2427,8 @@ function dragPencil(e) {
     if (!container) return;
     
     const containerRect = container.getBoundingClientRect();
-    const deltaX = e.clientX - dragStartX;
-    const deltaY = e.clientY - dragStartY;
+    const deltaX = e.clientX - pencilDragStartX;
+    const deltaY = e.clientY - pencilDragStartY;
     
     let newX = pencilStartX + deltaX - containerRect.left;
     let newY = pencilStartY + deltaY - containerRect.top;
@@ -2449,10 +2449,10 @@ function dragPencil(e) {
 function dragPencilTouch(e) {
     if (!isDraggingPencil) {
         const touch = e.touches[0];
-        const deltaX = Math.abs(touch.clientX - dragStartX);
-        const deltaY = Math.abs(touch.clientY - dragStartY);
+        const deltaX = Math.abs(touch.clientX - pencilDragStartX);
+        const deltaY = Math.abs(touch.clientY - pencilDragStartY);
         
-        if (deltaX > dragThreshold || deltaY > dragThreshold) {
+        if (deltaX > pencilDragThreshold || deltaY > pencilDragThreshold) {
             isDraggingPencil = true;
         } else {
             return;
@@ -2468,8 +2468,8 @@ function dragPencilTouch(e) {
     
     const touch = e.touches[0];
     const containerRect = container.getBoundingClientRect();
-    const deltaX = touch.clientX - dragStartX;
-    const deltaY = touch.clientY - dragStartY;
+    const deltaX = touch.clientX - pencilDragStartX;
+    const deltaY = touch.clientY - pencilDragStartY;
     
     let newX = pencilStartX + deltaX - containerRect.left;
     let newY = pencilStartY + deltaY - containerRect.top;
