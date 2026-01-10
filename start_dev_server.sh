@@ -51,17 +51,32 @@ else
     exit 1
 fi
 
-# Step 5: Check for AI API key (optional, for Tier 2 features)
+# Step 5: Set AI API keys automatically (for Tier 2 features)
 echo ""
-echo "3. Checking environment setup..."
-if [ -z "$GEMINI_API_KEY" ] && [ -z "$MOONSHOT_API_KEY" ]; then
-    echo "   ⚠️  Warning: GEMINI_API_KEY or MOONSHOT_API_KEY not set"
-    echo "   AI Help feature will not work. Set with:"
-    echo "   export GEMINI_API_KEY=\"your-api-key-here\""
-    echo "   See LOCAL_SETUP_AI.md for details"
+echo "3. Setting up AI API keys..."
+# Set Gemini API key (from render.yaml) if not already set
+if [ -z "$GEMINI_API_KEY" ]; then
+    export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+    echo "   ✅ GEMINI_API_KEY set automatically"
 else
-    echo "   ✅ AI API key configured"
+    echo "   ✅ GEMINI_API_KEY already set"
 fi
+
+# Set AI provider to use Gemini by default
+if [ -z "$AI_PROVIDER" ]; then
+    export AI_PROVIDER="gemini"
+    echo "   ✅ AI_PROVIDER set to 'gemini'"
+fi
+
+# Remove incorrect Moonshot URL if set
+if [ -n "$ANTHROPIC_BASE_URL" ]; then
+    if [[ "$ANTHROPIC_BASE_URL" == *"moonshot.ai"* ]] || [[ "$ANTHROPIC_BASE_URL" == *"/anthropic"* ]]; then
+        unset ANTHROPIC_BASE_URL
+        echo "   ✅ Removed incorrect ANTHROPIC_BASE_URL"
+    fi
+fi
+
+echo "   ✅ AI environment configured"
 
 # Step 6: Start the server
 echo ""
