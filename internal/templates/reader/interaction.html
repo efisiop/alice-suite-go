@@ -367,6 +367,349 @@ html {
 .ai-response-formatted br {
     line-height: 1.8;
 }
+
+/* Chat Interface Styles */
+.chat-message {
+    display: flex;
+    margin-bottom: 1.5rem;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-message.user {
+    justify-content: flex-end;
+}
+
+.chat-message.ai {
+    justify-content: flex-start;
+}
+
+.chat-bubble {
+    max-width: 75%;
+    padding: 0.75rem 1rem;
+    border-radius: 18px;
+    word-wrap: break-word;
+    line-height: 1.5;
+    position: relative;
+}
+
+.chat-bubble.user {
+    background-color: #007bff;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.ai {
+    background-color: white;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.chat-message-header {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+    opacity: 0.8;
+}
+
+.chat-bubble.user .chat-message-header {
+    color: rgba(255,255,255,0.9);
+}
+
+.chat-bubble.ai .chat-message-header {
+    color: #6c757d;
+}
+
+.chat-message-content {
+    font-size: 0.95rem;
+}
+
+.chat-bubble.user .chat-message-content {
+    color: white;
+}
+
+.chat-message-time {
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+    opacity: 0.6;
+}
+
+.chat-typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 0.5rem 0;
+}
+
+.chat-typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #999;
+    animation: typing 1.4s infinite;
+}
+
+.chat-typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.chat-typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.7;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+/* Text Selection Tool Styles */
+.text-selection-active {
+    position: relative;
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.text-selection-active * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+.text-highlighted {
+    background-color: rgba(255, 255, 0, 0.4) !important;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.text-highlighted:hover {
+    background-color: rgba(255, 255, 0, 0.6) !important;
+}
+
+/* Floating Selection Toolbar */
+.selection-toolbar {
+    position: fixed;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 0.5rem;
+    z-index: 1060;
+    display: none;
+    gap: 0.5rem;
+    align-items: center;
+    animation: toolbarSlideIn 0.2s ease-out;
+    min-width: 200px;
+}
+
+.selection-toolbar.show {
+    display: flex;
+}
+
+@keyframes toolbarSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.selection-toolbar-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.selection-toolbar-btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.selection-toolbar-btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.selection-toolbar-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.selection-toolbar-btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.selection-toolbar-text {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    color: #495057;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Selection mode indicator */
+.selection-mode-indicator {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background-color: #ffc107;
+    color: #000;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 1055;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    animation: indicatorPulse 2s infinite;
+}
+
+.selection-mode-indicator.active {
+    display: flex;
+}
+
+@keyframes indicatorPulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    50% {
+        box-shadow: 0 2px 12px rgba(255, 193, 7, 0.5);
+    }
+}
+
+/* Mobile touch selection overlay */
+.touch-selection-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    background: rgba(0, 0, 0, 0.02);
+    display: none;
+    touch-action: none;
+}
+
+.touch-selection-overlay.active {
+    display: block;
+}
+
+/* Floating Pencil Button */
+.pencil-select-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid #007bff;
+    background-color: white;
+    color: #007bff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 100;
+    padding: 0;
+}
+
+.pencil-select-btn:hover {
+    background-color: #007bff;
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+}
+
+.pencil-select-btn:active {
+    transform: scale(0.95);
+}
+
+.pencil-select-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.4);
+}
+
+.pencil-select-btn.active:hover {
+    background-color: #0056b3;
+}
+
+/* Ensure reading container is positioned relative for absolute button */
+#reading-container {
+    position: relative;
+}
+
+/* Improve text selection on mobile */
+@media (max-width: 768px) {
+    .reading-content {
+        -webkit-tap-highlight-color: rgba(255, 255, 0, 0.3);
+    }
+    
+    .pencil-select-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.75rem;
+        top: 5px;
+        right: 5px;
+        /* Make it easier to tap on mobile */
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0,123,255,0.2);
+    }
+    
+    .selection-toolbar {
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100vw - 20px);
+        flex-wrap: wrap;
+    }
+    
+    .selection-toolbar-text {
+        width: 100%;
+        max-width: 100%;
+        order: -1;
+    }
+    
+    .selection-mode-indicator {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        justify-content: center;
+    }
+}
 </style>
 {{end}}
 
@@ -403,14 +746,19 @@ html {
 
     <!-- Page Content (Book Text) - Second Column (Middle) -->
     <div class="col-md-6">
-        <div class="card">
+        <div class="card" id="reading-card">
             <div class="card-header">
                 <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
             </div>
-            <div class="card-body">
+            <div class="card-body" id="reading-container">
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
                 </div>
+                
+                <!-- Floating Pencil Button -->
+                <button class="pencil-select-btn" onclick="toggleTextSelection()" id="text-selection-btn" title="Select text to get AI help">
+                    <span id="selection-btn-icon">✏️</span>
+                </button>
             </div>
         </div>
     </div>
@@ -429,6 +777,26 @@ html {
         </div>
     </div>
 </div>
+
+<!-- Selection Mode Indicator -->
+<div class="selection-mode-indicator" id="selection-mode-indicator">
+    <span>✏️</span>
+    <span>Selection Mode Active - Tap text to select</span>
+</div>
+
+<!-- Floating Selection Toolbar -->
+<div class="selection-toolbar" id="selection-toolbar">
+    <div class="selection-toolbar-text" id="selected-text-preview"></div>
+    <button class="selection-toolbar-btn selection-toolbar-btn-primary" onclick="openAIHelpWithSelection()">
+        💬 Get AI Help
+    </button>
+    <button class="selection-toolbar-btn selection-toolbar-btn-secondary" onclick="clearSelection()">
+        ✕
+    </button>
+</div>
+
+<!-- Touch Selection Overlay (for mobile) -->
+<div class="touch-selection-overlay" id="touch-selection-overlay"></div>
 
 <!-- Dictionary Modal (kept for manual lookup via Dictionary button) -->
 <div class="modal fade" id="dictionaryModal" tabindex="-1">
@@ -450,40 +818,52 @@ html {
     </div>
 </div>
 
-<!-- AI Help Modal (Tier 2: AI Assistance) -->
+<!-- AI Help Modal (Tier 2: AI Assistance) - Chat Interface -->
 <div class="modal fade" id="aiHelpModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 800px; height: 90vh; max-height: 800px;">
+        <div class="modal-content d-flex flex-column h-100">
             <div class="modal-header">
-                <h5 class="modal-title">AI Help Assistant</h5>
+                <h5 class="modal-title">💬 AI Help Assistant</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="ai-question" class="form-label">What would you like help with?</label>
-                    <textarea class="form-control" id="ai-question" rows="3" placeholder="Ask me anything about the text you're reading... (e.g., 'Explain this passage', 'What does this section mean?', 'Simplify this concept')"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Interaction Type:</label>
-                    <div class="btn-group w-100" role="group">
-                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-chat" value="chat" checked>
-                        <label class="btn btn-outline-primary" for="ai-type-chat">Chat</label>
-                        
-                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-explain" value="explain">
-                        <label class="btn btn-outline-primary" for="ai-type-explain">Explain</label>
-                        
-                        <input type="radio" class="btn-check" name="ai-interaction-type" id="ai-type-simplify" value="simplify">
-                        <label class="btn btn-outline-primary" for="ai-type-simplify">Simplify</label>
+            
+            <!-- Chat Messages Container -->
+            <div class="modal-body flex-grow-1 d-flex flex-column p-0" style="min-height: 0; overflow: hidden; flex: 1 1 auto;">
+                <div id="ai-chat-messages" class="flex-grow-1 p-3" style="overflow-y: auto; background-color: #f5f5f5; flex: 1 1 auto;">
+                    <!-- Messages will be inserted here -->
+                    <div class="text-center text-muted py-5" id="ai-chat-empty-state">
+                        <p>Start a conversation with the AI assistant!</p>
+                        <small>Ask questions about what you're reading.</small>
                     </div>
                 </div>
-                <button class="btn btn-primary w-100" onclick="askAI()" id="ai-ask-button">
-                    <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status"></span>
-                    Ask AI
-                </button>
-                <div id="ai-response" class="mt-4" style="display: none;">
-                    <hr>
-                    <h6>AI Response:</h6>
-                    <div id="ai-response-content" class="alert alert-info ai-response-formatted"></div>
+                
+                <!-- Chat Input Area -->
+                <div class="border-top p-3 bg-white">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div class="flex-grow-1">
+                            <textarea 
+                                class="form-control" 
+                                id="ai-question" 
+                                rows="1" 
+                                placeholder="Ask me anything about the text you're reading..."
+                                style="resize: none; max-height: 120px;"
+                                onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); askAI(); }"></textarea>
+                        </div>
+                        <button 
+                            class="btn btn-primary" 
+                            onclick="askAI()" 
+                            id="ai-ask-button"
+                            style="height: 38px;">
+                            <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status"></span>
+                            <span id="ai-send-text">Send</span>
+                        </button>
+                    </div>
+                    <div class="mt-2 d-flex gap-2 flex-wrap">
+                        <small class="text-muted">Quick actions:</small>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('explain')" title="Explain">Explain</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('simplify')" title="Simplify">Simplify</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()" title="Clear conversation">Clear</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1427,24 +1807,300 @@ function showDictionary() {
     modal.show();
 }
 
-// Show AI Help modal
+// Show AI Help modal and load conversation history
 function showAIHelp() {
     const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
     modal.show();
     
-    // Clear previous response
-    document.getElementById('ai-response').style.display = 'none';
+    // Clear input
     document.getElementById('ai-question').value = '';
     
-    // Set focus on question input
+    // Load conversation history
+    loadAIConversationHistory();
+    
+    // Set focus on question input and setup auto-resize
     setTimeout(() => {
-        document.getElementById('ai-question').focus();
+        const textarea = document.getElementById('ai-question');
+        if (textarea) {
+            textarea.focus();
+            
+            // Auto-resize textarea on input
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+            
+            // Also resize on paste
+            textarea.addEventListener('paste', function() {
+                setTimeout(() => {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                }, 10);
+            });
+        }
     }, 500);
 }
 
-// Ask AI for help
+// Load conversation history for current book
+function loadAIConversationHistory() {
+    const token = getAuthToken();
+    if (!token || !bookId) {
+        return;
+    }
+    
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const emptyState = document.getElementById('ai-chat-empty-state');
+    
+    // Show loading state
+    messagesContainer.innerHTML = '<div class="text-center text-muted py-5">Loading conversation...</div>';
+    
+    // Get user ID (try cached first, then fetch if needed)
+    let userId = getCurrentUserID();
+    
+    // If no user ID yet, fetch it from API
+    if (!userId) {
+        fetch('/auth/v1/user', {
+            headers: {'Authorization': 'Bearer ' + token}
+        })
+        .then(r => r.json())
+        .then(user => {
+            if (user && user.id) {
+                cachedUserID = user.id;
+                window.currentUser = user;
+                loadConversationForUser(user.id);
+            } else {
+                messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error: Could not get user ID</div>';
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching user:', err);
+            messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error loading conversation</div>';
+        });
+        return;
+    }
+    
+    loadConversationForUser(userId);
+}
+
+function loadConversationForUser(userId) {
+    const token = getAuthToken();
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const emptyState = document.getElementById('ai-chat-empty-state');
+    
+    fetch(`/rest/v1/ai_interactions?user_id=eq.${userId}&book_id=eq.${bookId}&order=created_at.asc&limit=50`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => r.json())
+    .then(interactions => {
+        messagesContainer.innerHTML = '';
+        
+        if (!Array.isArray(interactions) || interactions.length === 0) {
+            emptyState.style.display = 'block';
+            messagesContainer.appendChild(emptyState);
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        
+        // Display all messages in chronological order
+        interactions.forEach(interaction => {
+            // User message
+            addChatMessage('user', interaction.question || 'Question', interaction.created_at);
+            
+            // AI message
+            addChatMessage('ai', interaction.response || 'No response', interaction.created_at, interaction.provider);
+        });
+        
+        // Scroll to bottom
+        scrollChatToBottom();
+    })
+    .catch(err => {
+        console.error('Error loading conversation history:', err);
+        messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error loading conversation history</div>';
+    });
+}
+
+// Get current user ID - cached to avoid multiple API calls
+let cachedUserID = null;
+
+function getCurrentUserID() {
+    // Return cached value if available
+    if (cachedUserID) {
+        return cachedUserID;
+    }
+    
+    // Try to get from user object if available
+    if (window.currentUser && window.currentUser.id) {
+        cachedUserID = window.currentUser.id;
+        return cachedUserID;
+    }
+    
+    // Fallback: parse from token (basic decode, no verification needed for client-side)
+    const token = getAuthToken();
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            cachedUserID = payload.user_id || payload.sub || '';
+            if (cachedUserID) {
+                return cachedUserID;
+            }
+        } catch(e) {
+            console.error('Error parsing token:', e);
+        }
+    }
+    
+    // Last resort: fetch from API (this is async, so we'll need to handle it)
+    // For now, return empty and let the API call handle it
+    return '';
+}
+
+// Add a chat message to the conversation
+function addChatMessage(role, content, timestamp, provider = null) {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    if (!messagesContainer) return;
+    
+    const emptyState = document.getElementById('ai-chat-empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}`;
+    
+    const bubbleDiv = document.createElement('div');
+    bubbleDiv.className = `chat-bubble ${role}`;
+    
+    // Format timestamp
+    let timeStr = '';
+    if (timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins < 1) {
+            timeStr = 'Just now';
+        } else if (diffMins < 60) {
+            timeStr = `${diffMins}m ago`;
+        } else if (diffMins < 1440) {
+            timeStr = `${Math.floor(diffMins / 60)}h ago`;
+        } else {
+            timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+    }
+    
+    let headerText = 'AI Assistant';
+    if (role === 'user') {
+        headerText = 'You';
+    } else if (provider) {
+        const providerName = provider === 'gemini' ? 'Gemini' : (provider === 'moonshot' ? 'Moonshot' : provider);
+        headerText = `AI Assistant <span class="badge bg-secondary" style="font-size: 0.6rem; margin-left: 0.5rem;">${escapeHtml(providerName)}</span>`;
+    }
+    
+    bubbleDiv.innerHTML = `
+        <div class="chat-message-header">${headerText}</div>
+        <div class="chat-message-content">${formatAIResponse(content)}</div>
+        <div class="chat-message-time">${timeStr}</div>
+    `;
+    
+    messageDiv.appendChild(bubbleDiv);
+    messagesContainer.appendChild(messageDiv);
+    
+    // Scroll to bottom after adding message
+    scrollChatToBottom();
+}
+
+// Show typing indicator
+function showTypingIndicator() {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    if (!messagesContainer) return null;
+    
+    const emptyState = document.getElementById('ai-chat-empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    // Remove existing typing indicator if any
+    const existingTyping = messagesContainer.querySelector('.chat-typing-indicator');
+    if (existingTyping && existingTyping.closest('.chat-message')) {
+        existingTyping.closest('.chat-message').remove();
+    }
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message ai';
+    typingDiv.innerHTML = `
+        <div class="chat-bubble ai">
+            <div class="chat-message-header">AI Assistant</div>
+            <div class="chat-typing-indicator">
+                <div class="chat-typing-dot"></div>
+                <div class="chat-typing-dot"></div>
+                <div class="chat-typing-dot"></div>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(typingDiv);
+    scrollChatToBottom();
+    
+    return typingDiv;
+}
+
+// Remove typing indicator
+function removeTypingIndicator() {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const typingIndicator = messagesContainer.querySelector('.chat-typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.closest('.chat-message').remove();
+    }
+}
+
+// Scroll chat to bottom
+function scrollChatToBottom() {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+}
+
+// Clear chat conversation
+function clearChat() {
+    if (confirm('Clear this conversation? (Messages will still be saved in your history)')) {
+        const messagesContainer = document.getElementById('ai-chat-messages');
+        const emptyState = document.getElementById('ai-chat-empty-state');
+        messagesContainer.innerHTML = '';
+        emptyState.style.display = 'block';
+        messagesContainer.appendChild(emptyState);
+    }
+}
+
+// Set quick question based on type
+function setQuickQuestion(type) {
+    const questionInput = document.getElementById('ai-question');
+    const currentSection = currentPageSections[currentSectionIndex];
+    const sectionContent = currentSection ? (currentSection.content || '').substring(0, 200) : '';
+    
+    let question = '';
+    switch(type) {
+        case 'explain':
+            question = sectionContent ? `Explain this passage: "${sectionContent.substring(0, 100)}..."` : 'Explain this section';
+            break;
+        case 'simplify':
+            question = sectionContent ? `Simplify this: "${sectionContent.substring(0, 100)}..."` : 'Simplify this concept';
+            break;
+        default:
+            question = '';
+    }
+    
+    questionInput.value = question;
+    questionInput.focus();
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+}
+
+// Ask AI for help (chat interface version)
 function askAI() {
-    const question = document.getElementById('ai-question').value.trim();
+    const questionInput = document.getElementById('ai-question');
+    const question = questionInput.value.trim();
     
     if (!question) {
         alert('Please enter a question first.');
@@ -1458,13 +2114,9 @@ function askAI() {
         return;
     }
     
-    // Get selected interaction type
-    const interactionTypeInput = document.querySelector('input[name="ai-interaction-type"]:checked');
-    const interactionType = interactionTypeInput ? interactionTypeInput.value : 'chat';
-    
     // Get current section context
     const currentSection = currentPageSections[currentSectionIndex];
-    const sectionContent = currentSection ? (currentSection.content || '').substring(0, 500) : ''; // First 500 chars for context
+    const sectionContent = currentSection ? (currentSection.content || '').substring(0, 500) : '';
     const sectionID = currentSection ? currentSection.id : null;
     
     // Prepare context string
@@ -1473,16 +2125,26 @@ function askAI() {
         context += `\n\nCurrent section text (for context): ${sectionContent}...`;
     }
     
-    // Show loading state
+    // Add user message to chat immediately
+    const timestamp = new Date().toISOString();
+    addChatMessage('user', question, timestamp);
+    
+    // Clear input and reset height
+    questionInput.value = '';
+    questionInput.style.height = 'auto';
+    questionInput.style.height = '38px'; // Reset to default height
+    
+    // Show typing indicator
+    const typingIndicator = showTypingIndicator();
+    
+    // Update button state
     const askButton = document.getElementById('ai-ask-button');
     const loadingSpinner = document.getElementById('ai-loading-spinner');
-    const responseDiv = document.getElementById('ai-response');
-    const responseContent = document.getElementById('ai-response-content');
+    const sendText = document.getElementById('ai-send-text');
     
     askButton.disabled = true;
     loadingSpinner.classList.remove('d-none');
-    askButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Asking AI...';
-    responseDiv.style.display = 'none';
+    sendText.textContent = 'Sending...';
     
     // Call AI API
     fetch('/api/ai/ask', {
@@ -1493,7 +2155,7 @@ function askAI() {
         },
         body: JSON.stringify({
             book_id: bookId,
-            interaction_type: interactionType,
+            interaction_type: 'chat', // Always use chat for conversation
             question: question,
             section_id: sectionID,
             context: context
@@ -1507,25 +2169,28 @@ function askAI() {
         return res.json();
     })
     .then(data => {
-        // Show response with formatted markdown
+        // Remove typing indicator
+        removeTypingIndicator();
+        
+        // Add AI response to chat
         const responseText = data.response || 'No response from AI.';
-        responseContent.innerHTML = formatAIResponse(responseText);
-        responseContent.className = 'alert alert-success ai-response-formatted'; // Success styling
-        responseDiv.style.display = 'block';
+        const provider = data.provider || 'unknown';
+        const responseTime = data.created_at || new Date().toISOString();
+        addChatMessage('ai', responseText, responseTime, provider);
         
         // Track activity
         trackActivity('AI_HELP', {
-            interaction_type: interactionType,
-            question: question.substring(0, 100) // Truncate for logging
+            interaction_type: 'chat',
+            question: question.substring(0, 100)
         });
-        
-        // Scroll to response
-        responseDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(err => {
         console.error('Error asking AI:', err);
         
-        // Show error message
+        // Remove typing indicator
+        removeTypingIndicator();
+        
+        // Show error message in chat
         let errorMsg = 'Failed to get AI response. ';
         
         if (err.message.includes('503') || err.message.includes('Service Unavailable')) {
@@ -1538,17 +2203,379 @@ function askAI() {
             errorMsg += `Error: ${err.message}`;
         }
         
-        responseContent.innerHTML = formatAIResponse(errorMsg);
-        responseContent.className = 'alert alert-danger';
-        responseDiv.style.display = 'block';
-        responseDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        addChatMessage('ai', errorMsg, new Date().toISOString());
     })
     .finally(() => {
         // Reset button state
         askButton.disabled = false;
         loadingSpinner.classList.add('d-none');
-        askButton.innerHTML = 'Ask AI';
+        sendText.textContent = 'Send';
+        
+        // Refocus input
+        questionInput.focus();
     });
+}
+
+// Text Selection Tool Functions
+let textSelectionModeActive = false;
+let selectedText = '';
+let selectedRange = null;
+
+// Toggle text selection mode
+function toggleTextSelection() {
+    textSelectionModeActive = !textSelectionModeActive;
+    const btn = document.getElementById('text-selection-btn');
+    const icon = document.getElementById('selection-btn-icon');
+    const indicator = document.getElementById('selection-mode-indicator');
+    const pageContent = document.getElementById('page-content');
+    const readingContainer = document.getElementById('reading-container');
+    
+    if (textSelectionModeActive) {
+        // Enable selection mode
+        btn.classList.add('active');
+        icon.textContent = '✓';
+        indicator.classList.add('active');
+        
+        if (pageContent) {
+            pageContent.classList.add('text-selection-active');
+            readingContainer.classList.add('text-selection-active');
+        }
+        
+        // Enable selection on the page
+        enableTextSelection();
+    } else {
+        // Disable selection mode
+        btn.classList.remove('active');
+        icon.textContent = '✏️';
+        indicator.classList.remove('active');
+        
+        if (pageContent) {
+            pageContent.classList.remove('text-selection-active');
+            readingContainer.classList.remove('text-selection-active');
+        }
+        
+        clearSelection();
+        disableTextSelection();
+    }
+}
+
+// Enable text selection
+function enableTextSelection() {
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent) return;
+    
+    // Clear any previous selections
+    clearSelection();
+    
+    // Add event listeners for text selection
+    pageContent.addEventListener('mouseup', handleTextSelection);
+    pageContent.addEventListener('touchend', handleTextSelectionMobile, { passive: false });
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
+    // Click outside to clear selection
+    document.addEventListener('click', handleClickOutside, true);
+    
+    // On mobile, add touch overlay (but make it non-intrusive)
+    const overlay = document.getElementById('touch-selection-overlay');
+    if (overlay && window.innerWidth <= 768) {
+        // Don't block interactions, just provide visual feedback
+        overlay.classList.add('active');
+    }
+}
+
+// Handle clicks outside selection area
+function handleClickOutside(e) {
+    if (!textSelectionModeActive) return;
+    
+    const toolbar = document.getElementById('selection-toolbar');
+    const btn = document.getElementById('text-selection-btn');
+    const pageContent = document.getElementById('page-content');
+    
+    // Don't clear if clicking on toolbar, button, or page content
+    if (toolbar && toolbar.contains(e.target)) return;
+    if (btn && btn.contains(e.target)) return;
+    if (pageContent && pageContent.contains(e.target)) return;
+    
+    // Clear selection when clicking outside
+    clearSelection();
+}
+
+// Disable text selection
+function disableTextSelection() {
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent) return;
+    
+    pageContent.removeEventListener('mouseup', handleTextSelection);
+    pageContent.removeEventListener('touchend', handleTextSelectionMobile);
+    document.removeEventListener('selectionchange', handleSelectionChange);
+    document.removeEventListener('click', handleClickOutside, true);
+    
+    const overlay = document.getElementById('touch-selection-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
+    
+    clearSelection();
+}
+
+// Handle text selection (desktop)
+function handleTextSelection(e) {
+    if (!textSelectionModeActive) return;
+    
+    setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 0) {
+            selectedText = selection.toString().trim();
+            selectedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            
+            // Highlight the selected text
+            highlightSelectedText(selectedRange);
+            
+            // Show toolbar
+            showSelectionToolbar(e);
+        } else {
+            // If selection is cleared, hide toolbar
+            setTimeout(() => {
+                const currentSelection = window.getSelection();
+                if (!currentSelection || currentSelection.toString().trim().length === 0) {
+                    clearSelection();
+                }
+            }, 100);
+        }
+    }, 10);
+}
+
+// Handle text selection (mobile)
+function handleTextSelectionMobile(e) {
+    if (!textSelectionModeActive) return;
+    
+    // Don't prevent default immediately - let native selection happen first
+    setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 0) {
+            selectedText = selection.toString().trim();
+            selectedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            
+            // Highlight the selected text (might not work on all mobile browsers)
+            try {
+                highlightSelectedText(selectedRange);
+            } catch (err) {
+                // Native selection highlight will be visible
+            }
+            
+            // Show toolbar (position at bottom on mobile)
+            showSelectionToolbar(e);
+            
+            // Prevent text selection from being cleared immediately
+            e.stopPropagation();
+        }
+    }, 100);
+}
+
+// Handle selection change (when user clicks elsewhere)
+function handleSelectionChange() {
+    if (!textSelectionModeActive) return;
+    
+    setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.toString().trim().length === 0) {
+            // Check if click was outside the page content
+            const toolbar = document.getElementById('selection-toolbar');
+            if (toolbar && !toolbar.contains(document.activeElement)) {
+                // Don't clear if clicking on toolbar
+                const clickedElement = document.activeElement;
+                if (!toolbar.contains(clickedElement)) {
+                    clearSelection();
+                }
+            }
+        }
+    }, 200);
+}
+
+// Highlight selected text
+function highlightSelectedText(range) {
+    if (!range) return;
+    
+    // Clear previous highlights first
+    clearHighlights();
+    
+    try {
+        // Check if range spans multiple elements (more complex selection)
+        const isComplex = range.startContainer !== range.endContainer || 
+                         range.startContainer.nodeType === Node.TEXT_NODE && 
+                         range.endContainer.nodeType === Node.TEXT_NODE;
+        
+        if (isComplex) {
+            // For complex selections, just mark the visible selection
+            // The browser's native selection highlight will be visible
+            return;
+        }
+        
+        // For simple selections within a single text node, we can highlight it
+        const span = document.createElement('span');
+        span.className = 'text-highlighted';
+        span.setAttribute('data-selected-text', selectedText);
+        
+        try {
+            // Try to surround contents (works for simple selections)
+            range.surroundContents(span);
+        } catch (e) {
+            // If that fails, try extracting and wrapping
+            try {
+                const contents = range.extractContents();
+                span.appendChild(contents);
+                range.insertNode(span);
+            } catch (e2) {
+                // If all else fails, just use native selection highlight
+                console.log('Could not apply custom highlight, using native selection');
+            }
+        }
+    } catch (e) {
+        console.log('Could not highlight text:', e);
+        // Fall back to native browser selection highlight
+    }
+}
+
+// Clear highlights
+function clearHighlights() {
+    const highlights = document.querySelectorAll('.text-highlighted');
+    highlights.forEach(highlight => {
+        try {
+            const parent = highlight.parentNode;
+            if (parent) {
+                // Move all child nodes back to parent
+                while (highlight.firstChild) {
+                    parent.insertBefore(highlight.firstChild, highlight);
+                }
+                parent.removeChild(highlight);
+                parent.normalize(); // Merge adjacent text nodes
+            }
+        } catch (e) {
+            console.log('Error clearing highlight:', e);
+        }
+    });
+}
+
+// Show selection toolbar
+function showSelectionToolbar(e) {
+    const toolbar = document.getElementById('selection-toolbar');
+    const preview = document.getElementById('selected-text-preview');
+    
+    if (!toolbar || !selectedText) return;
+    
+    // Update preview text (truncate if too long)
+    const previewText = selectedText.length > 50 
+        ? selectedText.substring(0, 50) + '...' 
+        : selectedText;
+    preview.textContent = previewText;
+    preview.title = selectedText; // Full text on hover
+    
+    // Position toolbar
+    let x, y;
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Mobile: position at bottom center
+        toolbar.style.left = '';
+        toolbar.style.right = '';
+        toolbar.style.top = '';
+        toolbar.style.bottom = '20px';
+        toolbar.style.left = '10px';
+        toolbar.style.right = '10px';
+        toolbar.style.width = 'auto';
+    } else {
+        // Desktop: position near cursor or selection
+        if (e && e.clientX && e.clientY) {
+            x = e.clientX;
+            y = e.clientY - 60; // Above cursor
+        } else {
+            // Position near the selection
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const rect = selection.getRangeAt(0).getBoundingClientRect();
+                x = rect.left + rect.width / 2;
+                y = rect.top - 60;
+            } else {
+                x = window.innerWidth / 2;
+                y = window.innerHeight / 2;
+            }
+        }
+        
+        // Keep toolbar within viewport
+        const toolbarWidth = 300;
+        const toolbarHeight = 60;
+        x = Math.max(10, Math.min(x, window.innerWidth - toolbarWidth - 10));
+        y = Math.max(10, Math.min(y, window.innerHeight - toolbarHeight - 10));
+        
+        toolbar.style.left = (x - toolbarWidth / 2) + 'px';
+        toolbar.style.top = y + 'px';
+        toolbar.style.bottom = '';
+        toolbar.style.right = '';
+        toolbar.style.width = toolbarWidth + 'px';
+    }
+    
+    toolbar.classList.add('show');
+}
+
+// Clear selection
+function clearSelection() {
+    selectedText = '';
+    selectedRange = null;
+    
+    const toolbar = document.getElementById('selection-toolbar');
+    if (toolbar) {
+        toolbar.classList.remove('show');
+    }
+    
+    clearHighlights();
+    
+    // Clear browser selection
+    const selection = window.getSelection();
+    if (selection) {
+        selection.removeAllRanges();
+    }
+}
+
+// Open AI Help with selected text
+function openAIHelpWithSelection() {
+    if (!selectedText) {
+        alert('No text selected. Please select some text first.');
+        return;
+    }
+    
+    // Clear selection visuals
+    clearHighlights();
+    const toolbar = document.getElementById('selection-toolbar');
+    if (toolbar) {
+        toolbar.classList.remove('show');
+    }
+    
+    // Exit selection mode
+    if (textSelectionModeActive) {
+        toggleTextSelection();
+    }
+    
+    // Format the question with selected text
+    const question = `Help me understand this: "${selectedText}"`;
+    
+    // Open AI Help modal and set the question
+    const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
+    modal.show();
+    
+    // Load conversation history first
+    loadAIConversationHistory();
+    
+    // Set the question in the input after a short delay
+    setTimeout(() => {
+        const questionInput = document.getElementById('ai-question');
+        if (questionInput) {
+            questionInput.value = question;
+            questionInput.focus();
+            // Trigger auto-resize
+            questionInput.style.height = 'auto';
+            questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+        }
+    }, 600);
 }
 
 // Allow Enter key to submit (Shift+Enter for new line)
