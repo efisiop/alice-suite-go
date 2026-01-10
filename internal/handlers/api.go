@@ -22,6 +22,9 @@ var (
 
 // SetupAPIRoutes sets up REST API routes (Supabase-compatible)
 func SetupAPIRoutes(mux *http.ServeMux) {
+	// System status endpoint
+	mux.HandleFunc("/api/status", HandleStatus)
+	
 	// Generic REST endpoint for all tables
 	// This will catch /rest/v1/:table and /rest/v1/:table/ paths
 	mux.HandleFunc("/rest/v1/", HandleRESTTable)

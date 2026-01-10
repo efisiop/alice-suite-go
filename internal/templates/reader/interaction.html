@@ -339,6 +339,34 @@ html {
     color: #666;
     padding: 1rem;
 }
+
+/* AI Response Formatting */
+.ai-response-formatted {
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.ai-response-formatted p {
+    margin-bottom: 1rem;
+}
+
+.ai-response-formatted p:last-child {
+    margin-bottom: 0;
+}
+
+.ai-response-formatted strong {
+    font-weight: 600;
+    color: #0056b3;
+}
+
+.ai-response-formatted em {
+    font-style: italic;
+    color: #6c757d;
+}
+
+.ai-response-formatted br {
+    line-height: 1.8;
+}
 </style>
 {{end}}
 
@@ -455,7 +483,7 @@ html {
                 <div id="ai-response" class="mt-4" style="display: none;">
                     <hr>
                     <h6>AI Response:</h6>
-                    <div id="ai-response-content" class="alert alert-info" style="white-space: pre-wrap;"></div>
+                    <div id="ai-response-content" class="alert alert-info ai-response-formatted"></div>
                 </div>
             </div>
         </div>
@@ -793,6 +821,72 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Clean and format AI response text
+function formatAIResponse(text) {
+    if (!text) return '';
+    
+    // First, escape HTML to prevent XSS
+    let formatted = escapeHtml(text);
+    
+    // Remove incomplete markdown at the end (like trailing *, **, ", etc.)
+    formatted = formatted.trim();
+    
+    // Remove trailing incomplete markdown patterns
+    formatted = formatted.replace(/[\*"]+\s*$/, ''); // Remove trailing asterisks or quotes
+    formatted = formatted.replace(/\s+$/, ''); // Remove trailing whitespace
+    
+    // Remove incomplete list items at the end (like "*   " or "-   ")
+    formatted = formatted.replace(/[\*\-\+\d\.]\s*$/, '');
+    
+    // Fix incomplete markdown patterns - remove incomplete bold/italic
+    // If response ends with ** or * and no matching close, remove it
+    if (formatted.endsWith('**') && (formatted.match(/\*\*/g) || []).length % 2 !== 0) {
+        formatted = formatted.slice(0, -2).trim();
+    } else if (formatted.endsWith('*') && !formatted.endsWith('**')) {
+        // Check if it's an incomplete italic marker
+        const allStars = formatted.match(/\*/g) || [];
+        if (allStars.length % 2 !== 0) {
+            formatted = formatted.slice(0, -1).trim();
+        }
+    }
+    
+    // Remove incomplete quote at end (if odd number of quotes, remove last one)
+    const quoteCount = (formatted.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0 && formatted.endsWith('"')) {
+        formatted = formatted.slice(0, -1).trim();
+    }
+    
+    // Now format markdown to HTML
+    // Convert **bold** to <strong>bold</strong> (handle multiple per line)
+    formatted = formatted.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert *italic* to <em>italic</em> (but be careful not to match **bold**)
+    // This regex matches *word* but not **word** by using negative lookahead/lookbehind
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    
+    // Convert line breaks to <br> tags, but preserve double line breaks as paragraphs
+    // Split by double line breaks first
+    const paragraphs = formatted.split(/\n\n+/);
+    formatted = paragraphs.map(para => {
+        // Replace single line breaks with <br>
+        para = para.replace(/\n/g, '<br>');
+        // Wrap in <p> tags if there's content
+        return para.trim() ? '<p>' + para.trim() + '</p>' : '';
+    }).filter(p => p).join('');
+    
+    // If no paragraphs were created (no double line breaks), wrap the whole thing
+    if (!formatted.includes('<p>')) {
+        formatted = '<p>' + formatted + '</p>';
+    }
+    
+    // Clean up any empty tags or double wrappings
+    formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+    formatted = formatted.replace(/<p><p>/g, '<p>');
+    formatted = formatted.replace(/<\/p><\/p>/g, '</p>');
+    
+    return formatted;
 }
 
 // Drag state for dictionary popup
@@ -1413,9 +1507,10 @@ function askAI() {
         return res.json();
     })
     .then(data => {
-        // Show response
-        responseContent.textContent = data.response || 'No response from AI.';
-        responseContent.className = 'alert alert-success'; // Success styling
+        // Show response with formatted markdown
+        const responseText = data.response || 'No response from AI.';
+        responseContent.innerHTML = formatAIResponse(responseText);
+        responseContent.className = 'alert alert-success ai-response-formatted'; // Success styling
         responseDiv.style.display = 'block';
         
         // Track activity
@@ -1443,7 +1538,7 @@ function askAI() {
             errorMsg += `Error: ${err.message}`;
         }
         
-        responseContent.textContent = errorMsg;
+        responseContent.innerHTML = formatAIResponse(errorMsg);
         responseContent.className = 'alert alert-danger';
         responseDiv.style.display = 'block';
         responseDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

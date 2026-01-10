@@ -14,7 +14,7 @@
     <a class="nav-link active" href="#" id="reader-inspector-link">Reader Inspector</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="#" id="logout-link">Logout</a>
+    <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
 
@@ -94,6 +94,34 @@
 
 .back-button {
     margin-bottom: 1.5rem;
+}
+
+/* AI Response Formatting */
+.ai-response-content {
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.ai-response-content p {
+    margin-bottom: 1rem;
+}
+
+.ai-response-content p:last-child {
+    margin-bottom: 0;
+}
+
+.ai-response-content strong {
+    font-weight: 600;
+    color: #0056b3;
+}
+
+.ai-response-content em {
+    font-style: italic;
+    color: #6c757d;
+}
+
+.ai-response-content br {
+    line-height: 1.8;
 }
 </style>
 {{end}}
@@ -211,12 +239,77 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI Interactions Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🤖 AI Interactions</h5>
+                <button class="btn btn-sm btn-light" onclick="loadAIInteractions()">Refresh</button>
+            </div>
+            <div class="card-body">
+                <div id="aiInteractionsContainer" style="max-height: 600px; overflow-y: auto;">
+                    <p class="text-muted">Loading AI interactions...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Requests Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🆘 Help Requests</h5>
+                <button class="btn btn-sm btn-light" onclick="loadHelpRequests()">Refresh</button>
+            </div>
+            <div class="card-body">
+                <div id="helpRequestsContainer" style="max-height: 600px; overflow-y: auto;">
+                    <p class="text-muted">Loading help requests...</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {{end}}
 
 {{define "scripts"}}
 <script>
+// Consultant logout function
+(function() {
+    // Store consultant logout function separately to prevent override
+    window.consultantLogout = function() {
+        console.log('[consultant-logout] Consultant logout called');
+        
+        // Hide user info immediately
+        const userInfoNav = document.getElementById('user-info-nav');
+        if (userInfoNav) {
+            userInfoNav.style.display = 'none';
+        }
+        
+        // Hide name in navbar brand as well
+        const userNameBrand = document.getElementById('user-name-brand');
+        if (userNameBrand) {
+            userNameBrand.style.display = 'none';
+            userNameBrand.textContent = '';
+        }
+        
+        sessionStorage.removeItem('auth_token');
+        // Clear auth cookie
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+        
+        // Close SSE connection if exists
+        if (window.sseConnection) {
+            try {
+                window.sseConnection.close();
+            } catch(e) {}
+            window.sseConnection = null;
+        }
+        
+        // Always redirect to consultant login
+        window.location.href = '/consultant/login';
+    };
+    
+    // Override window.logout for consultant pages
+    window.logout = window.consultantLogout;
+})();
+
 const readerId = '{{.ReaderID}}';
 
 // Ensure getAuthToken is available
@@ -235,16 +328,28 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutLink) {
         logoutLink.addEventListener('click', function(e) {
             e.preventDefault();
-            if (window.logout) {
-                window.logout();
-            } else if (window.consultantLogout) {
+            console.log('[reader-inspector] Logout clicked, available functions:', {
+                hasConsultantLogout: typeof window.consultantLogout === 'function',
+                hasLogout: typeof window.logout === 'function'
+            });
+            if (window.consultantLogout) {
                 window.consultantLogout();
+            } else if (window.logout) {
+                window.logout();
+            } else {
+                // Fallback: direct logout
+                console.log('[reader-inspector] Using fallback logout');
+                sessionStorage.removeItem('auth_token');
+                document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+                window.location.href = '/consultant/login';
             }
         });
     }
     
     loadConsultantUserInfo();
     loadReaderDetails();
+    // Note: loadAIInteractions() and loadHelpRequests() are called from loadReaderDetails()
+    // after bookId is determined, so we don't call them here
     
     // Start auto-refresh every 30 seconds
     startAutoRefresh();
@@ -283,6 +388,8 @@ document.addEventListener('visibilitychange', function() {
 function refreshAll() {
     refreshStats();
     loadActivities();
+    loadAIInteractions();
+    loadHelpRequests();
 }
 
 // Load reading progress for the current reader
@@ -435,7 +542,11 @@ function loadReaderDetails() {
             );
         }
         
-        return Promise.all(promises);
+        return Promise.all(promises).then(results => {
+            // Store bookId globally for other functions
+            window.readerBookId = bookId;
+            return results;
+        });
     })
     .then((results) => {
         const users = results[0];
@@ -452,8 +563,14 @@ function loadReaderDetails() {
             return;
         }
         
-        // Store book_id globally for save function
+        // Store book_id globally for save function and other uses
         window.readerBookId = currentBookId;
+        
+        // Load AI interactions and help requests now that we have bookId
+        if (currentBookId) {
+            loadAIInteractions();
+        }
+        loadHelpRequests(); // Help requests don't require bookId
         
         // Set basic info
         const fullName = `${reader.first_name || ''} ${reader.last_name || ''}`.trim() || 'Unknown';
@@ -717,12 +834,312 @@ function savePurchaseDate() {
     });
 }
 
+// Load AI Interactions
+function loadAIInteractions() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        console.log('loadAIInteractions: Missing token or readerId', { token: !!token, readerId });
+        return;
+    }
+    
+    console.log('loadAIInteractions: Starting, readerId:', readerId);
+    
+    // Get book_id (we'll use the stored one or fetch first book)
+    let bookId = window.readerBookId;
+    if (!bookId) {
+        console.log('loadAIInteractions: No bookId in window.readerBookId, fetching first book');
+        // Try to get first book
+        fetch(`/rest/v1/books?limit=1`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        })
+        .then(r => r.json())
+        .then(books => {
+            if (Array.isArray(books) && books.length > 0) {
+                bookId = books[0].id;
+                window.readerBookId = bookId;
+                loadAIInteractionsWithBookId(bookId, token);
+            } else {
+                document.getElementById('aiInteractionsContainer').innerHTML = '<p class="text-muted">No book assigned to reader.</p>';
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching books:', err);
+            document.getElementById('aiInteractionsContainer').innerHTML = '<p class="text-danger">Error loading books.</p>';
+        });
+        return;
+    }
+    
+    loadAIInteractionsWithBookId(bookId, token);
+}
+
+function loadAIInteractionsWithBookId(bookId, token) {
+    console.log('loadAIInteractionsWithBookId: bookId:', bookId);
+    
+    const url = `/rest/v1/ai_interactions?user_id=eq.${readerId}&book_id=eq.${bookId}&order=created_at.desc&limit=50`;
+    console.log('Fetching:', url);
+    
+    fetch(url, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => {
+        console.log('AI Interactions response status:', r.status);
+        if (!r.ok) {
+            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+        }
+        return r.json();
+    })
+    .then(interactions => {
+        console.log('AI Interactions received:', interactions);
+        const container = document.getElementById('aiInteractionsContainer');
+        if (!container) {
+            console.error('aiInteractionsContainer element not found!');
+            return;
+        }
+        if (!Array.isArray(interactions) || interactions.length === 0) {
+            container.innerHTML = '<p class="text-muted">No AI interactions found.</p>';
+            return;
+        }
+        
+        let html = '';
+        interactions.forEach(interaction => {
+            const date = new Date(interaction.created_at);
+            const timeStr = date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Get provider badge
+            const provider = interaction.provider || 'unknown';
+            let providerBadge = '';
+            if (provider === 'gemini') {
+                providerBadge = '<span class="badge bg-primary">Gemini</span>';
+            } else if (provider === 'moonshot') {
+                providerBadge = '<span class="badge bg-warning text-dark">Moonshot</span>';
+            } else {
+                providerBadge = '<span class="badge bg-secondary">Unknown</span>';
+            }
+            
+            // Interaction type badge
+            const interactionType = interaction.interaction_type || 'chat';
+            const typeLabels = {
+                'explain': 'Explain',
+                'quiz': 'Quiz',
+                'simplify': 'Simplify',
+                'definition': 'Definition',
+                'chat': 'Chat'
+            };
+            const typeLabel = typeLabels[interactionType] || interactionType;
+            
+            html += `
+                <div class="card mb-3" style="border-left: 4px solid #007bff;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-info me-2">${escapeHtml(typeLabel)}</span>
+                            ${providerBadge}
+                        </div>
+                        <small class="text-muted">${timeStr}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Question:</strong>
+                            <p class="mb-1" style="white-space: pre-wrap;">${escapeHtml(interaction.question || 'N/A')}</p>
+                        </div>
+                        <div>
+                            <strong>AI Response:</strong>
+                            <div class="mb-0 ai-response-content" style="background-color: #f8f9fa; padding: 0.75rem; border-radius: 4px; line-height: 1.6;">${formatAIResponse(interaction.response || 'N/A')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading AI interactions:', err);
+        const container = document.getElementById('aiInteractionsContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-danger">Error loading AI interactions: ' + escapeHtml(err.message) + '</p>';
+        }
+    });
+}
+
+// Load Help Requests
+function loadHelpRequests() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        console.log('loadHelpRequests: Missing token or readerId', { token: !!token, readerId });
+        return;
+    }
+    
+    console.log('loadHelpRequests: Starting, readerId:', readerId);
+    const url = `/rest/v1/help_requests?user_id=eq.${readerId}&order=created_at.desc&limit=50`;
+    console.log('Fetching:', url);
+    
+    fetch(url, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => {
+        console.log('Help Requests response status:', r.status);
+        if (!r.ok) {
+            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+        }
+        return r.json();
+    })
+    .then(requests => {
+        console.log('Help Requests received:', requests);
+        const container = document.getElementById('helpRequestsContainer');
+        if (!container) {
+            console.error('helpRequestsContainer element not found!');
+            return;
+        }
+        if (!Array.isArray(requests) || requests.length === 0) {
+            container.innerHTML = '<p class="text-muted">No help requests found.</p>';
+            return;
+        }
+        
+        let html = '';
+        requests.forEach(request => {
+            const date = new Date(request.created_at);
+            const timeStr = date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Status badge
+            const status = request.status || 'pending';
+            let statusBadge = '';
+            if (status === 'resolved') {
+                statusBadge = '<span class="badge bg-success">Resolved</span>';
+            } else if (status === 'assigned') {
+                statusBadge = '<span class="badge bg-warning text-dark">Assigned</span>';
+            } else {
+                statusBadge = '<span class="badge bg-secondary">Pending</span>';
+            }
+            
+            html += `
+                <div class="card mb-3" style="border-left: 4px solid #28a745;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            ${statusBadge}
+                        </div>
+                        <small class="text-muted">${timeStr}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Request:</strong>
+                            <p class="mb-1" style="white-space: pre-wrap;">${escapeHtml(request.content || 'N/A')}</p>
+                        </div>
+                        ${request.context ? `
+                        <div class="mb-2">
+                            <strong>Context:</strong>
+                            <p class="mb-1 text-muted small" style="white-space: pre-wrap;">${escapeHtml(request.context)}</p>
+                        </div>
+                        ` : ''}
+                        ${request.response ? `
+                        <div class="mt-2 pt-2 border-top">
+                            <strong>Response:</strong>
+                            <p class="mb-0" style="white-space: pre-wrap; background-color: #d4edda; padding: 0.75rem; border-radius: 4px;">${escapeHtml(request.response)}</p>
+                        </div>
+                        ` : ''}
+                        ${request.resolved_at ? `
+                        <div class="mt-2">
+                            <small class="text-muted">Resolved: ${new Date(request.resolved_at).toLocaleString('en-US')}</small>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading help requests:', err);
+        const container = document.getElementById('helpRequestsContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-danger">Error loading help requests: ' + escapeHtml(err.message) + '</p>';
+        }
+    });
+}
+
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Clean and format AI response text
+function formatAIResponse(text) {
+    if (!text) return '';
+    
+    // First, escape HTML to prevent XSS
+    let formatted = escapeHtml(text);
+    
+    // Remove incomplete markdown at the end (like trailing *, **, ", etc.)
+    formatted = formatted.trim();
+    
+    // Remove incomplete list items at the end (like "*   " or "-   ")
+    formatted = formatted.replace(/[\*\-\+\d\.]\s*$/, '');
+    
+    // Remove trailing incomplete markdown patterns
+    formatted = formatted.replace(/[\*"]+\s*$/, ''); // Remove trailing asterisks or quotes
+    formatted = formatted.replace(/\s+$/, ''); // Remove trailing whitespace
+    
+    // Remove incomplete quote at end (if odd number of quotes, remove last one)
+    const quoteCount = (formatted.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0 && formatted.endsWith('"')) {
+        formatted = formatted.slice(0, -1).trim();
+    }
+    
+    // Fix incomplete markdown patterns - remove incomplete bold/italic
+    // If response ends with ** or * and no matching close, remove it
+    if (formatted.endsWith('**') && (formatted.match(/\*\*/g) || []).length % 2 !== 0) {
+        formatted = formatted.slice(0, -2).trim();
+    } else if (formatted.endsWith('*') && !formatted.endsWith('**')) {
+        // Check if it's an incomplete italic marker
+        const singleStars = formatted.match(/\*(?:\*\*)/g);
+        const allStars = formatted.match(/\*/g) || [];
+        if (allStars.length % 2 !== 0) {
+            formatted = formatted.slice(0, -1).trim();
+        }
+    }
+    
+    // Now format markdown to HTML
+    // Convert **bold** to <strong>bold</strong> (handle multiple per line)
+    formatted = formatted.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert *italic* to <em>italic</em> (but be careful not to match **bold**)
+    // This regex matches *word* but not **word** by using negative lookahead/lookbehind
+    formatted = formatted.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    
+    // Convert line breaks to <br> tags, but preserve double line breaks as paragraphs
+    // Split by double line breaks first
+    const paragraphs = formatted.split(/\n\n+/);
+    formatted = paragraphs.map(para => {
+        // Replace single line breaks with <br>
+        para = para.replace(/\n/g, '<br>');
+        // Wrap in <p> tags if there's content
+        return para.trim() ? '<p>' + para.trim() + '</p>' : '';
+    }).filter(p => p).join('');
+    
+    // If no paragraphs were created (no double line breaks), wrap the whole thing
+    if (!formatted.includes('<p>')) {
+        formatted = '<p>' + formatted + '</p>';
+    }
+    
+    // Clean up any empty tags or double wrappings
+    formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+    formatted = formatted.replace(/<p><p>/g, '<p>');
+    formatted = formatted.replace(/<\/p><\/p>/g, '</p>');
+    
+    return formatted;
 }
 </script>
 {{end}}

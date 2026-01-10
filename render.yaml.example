@@ -15,11 +15,12 @@ services:
       - key: DB_PATH
         value: data/alice-suite.db
       # AI Provider Configuration
-      # IMPORTANT: Set these as environment variables in Render Dashboard (not here!)
+      # IMPORTANT: Set GEMINI_API_KEY and MOONSHOT_API_KEY in Render Dashboard!
       # Go to: https://dashboard.render.com → Your Service → Environment → Add Environment Variable
-      # - key: GEMINI_API_KEY
-      #   sync: false  # Set this in Render Dashboard instead
-      # - key: MOONSHOT_API_KEY
-      #   sync: false  # Set this in Render Dashboard instead
+      # Do NOT commit API keys to git - they will be leaked and revoked!
+      - key: GEMINI_API_KEY
+        sync: false  # Set this in Render Dashboard instead of here
+      - key: MOONSHOT_API_KEY
+        sync: false  # Set this in Render Dashboard instead of here
       - key: AI_PROVIDER
         value: auto  # Options: "auto" (try Gemini first, fallback to Moonshot), "gemini", or "moonshot"

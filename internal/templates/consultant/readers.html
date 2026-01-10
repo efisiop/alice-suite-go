@@ -215,7 +215,7 @@
     <a class="nav-link active" href="/consultant/readers">Readers</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="#" id="logout-link">Logout</a>
+    <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
 
@@ -280,6 +280,45 @@
 
 {{define "scripts"}}
 <script>
+// Consultant logout function
+(function() {
+    // Store consultant logout function separately to prevent override
+    window.consultantLogout = function() {
+        console.log('[consultant-logout] Consultant logout called');
+        
+        // Hide user info immediately
+        const userInfoNav = document.getElementById('user-info-nav');
+        if (userInfoNav) {
+            userInfoNav.style.display = 'none';
+        }
+        
+        // Hide name in navbar brand as well
+        const userNameBrand = document.getElementById('user-name-brand');
+        if (userNameBrand) {
+            userNameBrand.style.display = 'none';
+            userNameBrand.textContent = '';
+        }
+        
+        sessionStorage.removeItem('auth_token');
+        // Clear auth cookie
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+        
+        // Close SSE connection if exists
+        if (window.sseConnection) {
+            try {
+                window.sseConnection.close();
+            } catch(e) {}
+            window.sseConnection = null;
+        }
+        
+        // Always redirect to consultant login
+        window.location.href = '/consultant/login';
+    };
+    
+    // Override window.logout for consultant pages
+    window.logout = window.consultantLogout;
+})();
+
 // Store activity data globally for calendar navigation
 const readerActivityData = {};
 
@@ -299,10 +338,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutLink) {
         logoutLink.addEventListener('click', function(e) {
             e.preventDefault();
-            if (window.logout) {
-                window.logout();
-            } else if (window.consultantLogout) {
+            if (window.consultantLogout) {
                 window.consultantLogout();
+            } else if (window.logout) {
+                window.logout();
+            } else {
+                // Fallback: direct logout
+                sessionStorage.removeItem('auth_token');
+                document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+                window.location.href = '/consultant/login';
             }
         });
     }

@@ -118,6 +118,7 @@ type AIInteraction struct {
 	Prompt         string    `json:"prompt"`
 	Response       string    `json:"response"`
 	Context        string    `json:"context"`
+	Provider       string    `json:"provider"` // "gemini", "moonshot", or empty for old records
 	CreatedAt      time.Time `json:"created_at"`
 }
 

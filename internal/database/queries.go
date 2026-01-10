@@ -649,21 +649,40 @@ func GetVocabularyLookups(userID, bookID string) ([]*models.VocabularyLookup, er
 // CreateAIInteraction creates an AI interaction record
 func CreateAIInteraction(interaction *models.AIInteraction) error {
 	interaction.ID = uuid.New().String()
-	query := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	// Try with provider field first, fallback to old schema if column doesn't exist
+	query := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, provider, created_at)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := DB.Exec(query, interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
 		interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
-		interaction.Context, time.Now())
+		interaction.Context, interaction.Provider, time.Now())
+	if err != nil {
+		// Fallback to old schema without provider field
+		queryOld := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = DB.Exec(queryOld, interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
+			interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
+			interaction.Context, time.Now())
+	}
 	return err
 }
 
 // GetAIInteractions retrieves AI interactions for a user
 func GetAIInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
-	query := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at
+	// Try to select with provider field first
+	query := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, provider, created_at
 	          FROM ai_interactions WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
 	rows, err := DB.Query(query, userID, bookID)
+	hasProviderColumn := true
+	
 	if err != nil {
-		return nil, err
+		// If that fails, try without provider column (old schema)
+		queryOld := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at
+		          FROM ai_interactions WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
+		rows, err = DB.Query(queryOld, userID, bookID)
+		hasProviderColumn = false
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rows.Close()
 
@@ -671,13 +690,34 @@ func GetAIInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 	for rows.Next() {
 		interaction := &models.AIInteraction{}
 		var sectionID sql.NullString
-		err := rows.Scan(
-			&interaction.ID, &interaction.UserID, &interaction.BookID, &sectionID,
-			&interaction.InteractionType, &interaction.Question, &interaction.Prompt,
-			&interaction.Response, &interaction.Context, &interaction.CreatedAt,
-		)
-		if err != nil {
-			return nil, err
+		var provider sql.NullString
+		
+		if hasProviderColumn {
+			// Scan with provider field
+			err := rows.Scan(
+				&interaction.ID, &interaction.UserID, &interaction.BookID, &sectionID,
+				&interaction.InteractionType, &interaction.Question, &interaction.Prompt,
+				&interaction.Response, &interaction.Context, &provider, &interaction.CreatedAt,
+			)
+			if err != nil {
+				return nil, err
+			}
+			if provider.Valid {
+				interaction.Provider = provider.String
+			} else {
+				interaction.Provider = ""
+			}
+		} else {
+			// Scan without provider field (old schema)
+			err := rows.Scan(
+				&interaction.ID, &interaction.UserID, &interaction.BookID, &sectionID,
+				&interaction.InteractionType, &interaction.Question, &interaction.Prompt,
+				&interaction.Response, &interaction.Context, &interaction.CreatedAt,
+			)
+			if err != nil {
+				return nil, err
+			}
+			interaction.Provider = "" // Empty for old records
 		}
 		if sectionID.Valid {
 			interaction.SectionID = &sectionID.String

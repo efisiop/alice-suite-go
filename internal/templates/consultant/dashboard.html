@@ -346,7 +346,7 @@ window.isConsultantDashboard = true;
     <a class="nav-link" href="/consultant/readers">Readers</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="#" id="logout-link">Logout</a>
+    <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
 
@@ -377,6 +377,16 @@ window.isConsultantDashboard = true;
                     <div class="card-body">
                         <h5 class="card-title">Today's Activity</h5>
                         <h2 id="today-activity">-</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">AI Provider</h5>
+                        <div id="ai-provider-status">
+                            <small class="text-muted">Loading...</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -584,6 +594,9 @@ function initializeDashboard() {
     // Load logged-in readers count
     loadLoggedInReaders();
     
+    // Load AI provider status
+    loadAIProviderStatus();
+    
     // Connect to SSE for real-time updates
     connectConsultantSSE(token);
     
@@ -618,6 +631,13 @@ function initializeDashboard() {
         setTimeout(refreshLoggedInReaders, smartPolling());
     }
     setTimeout(refreshLoggedInReaders, smartPolling());
+    
+    // Refresh AI provider status (less frequently - every 2 minutes)
+    function refreshAIProviderStatus() {
+        loadAIProviderStatus();
+        setTimeout(refreshAIProviderStatus, 120000); // 2 minutes
+    }
+    setTimeout(refreshAIProviderStatus, 120000);
 }
 
 function connectConsultantSSE(token) {
@@ -1602,6 +1622,48 @@ function loadLoggedInReaders() {
         // On error, keep current count instead of resetting to 0
         // This prevents the count from jumping to 0 on network hiccups
         console.log('Keeping current logged-in count due to error');
+    });
+}
+
+function loadAIProviderStatus() {
+    fetch('/api/status')
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        const aiStatus = data.services?.ai;
+        if (aiStatus) {
+            const statusElement = document.getElementById('ai-provider-status');
+            const activeProvider = aiStatus.active_provider || 'Unknown';
+            
+            // Display the active provider with color coding
+            let badgeClass = 'badge bg-info';
+            if (activeProvider.toLowerCase().includes('gemini')) {
+                badgeClass = 'badge bg-primary';
+            } else if (activeProvider.toLowerCase().includes('moonshot')) {
+                badgeClass = 'badge bg-warning text-dark';
+            } else if (activeProvider.toLowerCase().includes('none')) {
+                badgeClass = 'badge bg-danger';
+            }
+            
+            statusElement.innerHTML = `
+                <span class="${badgeClass}" style="font-size: 0.75rem; white-space: normal; word-wrap: break-word;">
+                    ${activeProvider.replace(' (auto mode - will try moonshot if gemini fails)', '').replace(' (auto mode - gemini not configured)', '')}
+                </span>
+                <br>
+                <small class="text-muted" style="font-size: 0.65rem;">
+                    ${aiStatus.configured_provider || 'auto'}
+                </small>
+            `;
+        }
+    })
+    .catch(err => {
+        console.error('Error loading AI provider status:', err);
+        document.getElementById('ai-provider-status').innerHTML = 
+            '<small class="text-danger">Error loading</small>';
     });
 }
 

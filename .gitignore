@@ -28,6 +28,10 @@ data/*.db-wal
 .env.local
 *.local
 
+# Configuration files with secrets (use .example versions instead)
+render.yaml
+!render.yaml.example
+
 # Build
 dist/
 build/

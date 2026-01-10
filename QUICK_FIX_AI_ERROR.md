@@ -12,7 +12,7 @@ Your local environment has:
 
 ```bash
 # Set Gemini API key (from your render.yaml)
-export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+export GEMINI_API_KEY="your-new-gemini-api-key-here"
 
 # Unset the incorrect Moonshot URL
 unset ANTHROPIC_BASE_URL
@@ -45,7 +45,7 @@ Add to your `~/.zshrc` (or `~/.bashrc`):
 
 ```bash
 # Add these lines
-export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+export GEMINI_API_KEY="your-new-gemini-api-key-here"
 unset ANTHROPIC_BASE_URL  # Remove incorrect URL
 
 # Then reload

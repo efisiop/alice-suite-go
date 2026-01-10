@@ -15,7 +15,7 @@ You're getting: `tls: failed to parse certificate from server: x509: negative se
 **Set GEMINI_API_KEY so it uses Gemini instead of Moonshot:**
 
 ```bash
-export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+export GEMINI_API_KEY="your-new-gemini-api-key-here"
 ```
 
 **Restart your server:**
@@ -50,7 +50,7 @@ export MOONSHOT_SKIP_TLS_VERIFY="true"
 Set AI_PROVIDER to only use Gemini:
 
 ```bash
-export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+export GEMINI_API_KEY="your-new-gemini-api-key-here"
 export AI_PROVIDER="gemini"  # Only use Gemini, never Moonshot
 ```
 
@@ -85,7 +85,7 @@ export AI_PROVIDER="gemini"  # Only use Gemini, never Moonshot
 Add to your `~/.zshrc` (or `~/.bashrc`):
 
 ```bash
-export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+export GEMINI_API_KEY="your-new-gemini-api-key-here"
 export AI_PROVIDER="gemini"  # Optional: force Gemini only
 # Don't set MOONSHOT_SKIP_TLS_VERIFY unless you really need Moonshot
 ```

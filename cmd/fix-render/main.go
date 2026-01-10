@@ -40,7 +40,7 @@ func main() {
 
 	hasSectionsTable := err == nil
 	isNewStructure := false
-	
+
 	if hasSectionsTable {
 		// Check structure
 		isNewStructure = strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")

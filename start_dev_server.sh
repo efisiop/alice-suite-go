@@ -56,7 +56,8 @@ echo ""
 echo "3. Setting up AI API keys..."
 # Set Gemini API key (from render.yaml) if not already set
 if [ -z "$GEMINI_API_KEY" ]; then
-    export GEMINI_API_KEY="AIzaSyB2RpUVMID-JJTLL4PakpZHDCqZuI_OZio"
+    # GEMINI_API_KEY should be set as environment variable, not hardcoded here
+    # export GEMINI_API_KEY="your-key-here"
     echo "   ✅ GEMINI_API_KEY set automatically"
 else
     echo "   ✅ GEMINI_API_KEY already set"

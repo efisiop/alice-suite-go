@@ -129,7 +129,7 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 	prompt := s.buildPrompt(interactionType, question, context)
 
 	// Call AI API (with automatic fallback if using "auto" provider)
-	response, err := s.callAI(prompt)
+	response, providerUsed, err := s.callAI(prompt)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAIServiceUnavailable, err)
 	}
@@ -144,6 +144,7 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 		Prompt:         prompt,
 		Response:       response,
 		Context:        context,
+		Provider:       string(providerUsed),
 	}
 
 	// Save to database
@@ -160,40 +161,42 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 func (s *AIService) buildPrompt(interactionType InteractionType, question, context string) string {
 	basePrompt := "You are a helpful reading assistant for Alice's Adventures in Wonderland. "
 	basePrompt += "This is a physical book companion app - users read from their physical book and use this app for assistance.\n\n"
+	basePrompt += "IMPORTANT: Please provide complete, finished answers. Do not cut off mid-sentence or leave incomplete thoughts.\n\n"
 
 	switch interactionType {
 	case InteractionExplain:
-		return basePrompt + fmt.Sprintf("Please explain the following passage or concept: %s\n\nContext: %s", question, context)
+		return basePrompt + fmt.Sprintf("Please provide a complete explanation of the following passage or concept: %s\n\nContext: %s\n\nMake sure your explanation is thorough and complete.", question, context)
 	case InteractionQuiz:
-		return basePrompt + fmt.Sprintf("Create a quiz question about: %s\n\nContext: %s", question, context)
+		return basePrompt + fmt.Sprintf("Create a complete quiz question about: %s\n\nContext: %s\n\nInclude the question, answer options, and the correct answer.", question, context)
 	case InteractionSimplify:
-		return basePrompt + fmt.Sprintf("Please simplify or rephrase the following: %s\n\nContext: %s", question, context)
+		return basePrompt + fmt.Sprintf("Please provide a complete, simplified version or rephrasing of: %s\n\nContext: %s\n\nMake sure your simplification is complete and clear.", question, context)
 	case InteractionDefinition:
-		return basePrompt + fmt.Sprintf("Please provide a definition for: %s\n\nContext: %s", question, context)
+		return basePrompt + fmt.Sprintf("Please provide a complete definition for: %s\n\nContext: %s\n\nMake sure your definition is comprehensive and finished.", question, context)
 	case InteractionChat:
-		return basePrompt + fmt.Sprintf("Question: %s\n\nContext: %s", question, context)
+		return basePrompt + fmt.Sprintf("Question: %s\n\nContext: %s\n\nPlease provide a complete, helpful answer to the question.", question, context)
 	default:
-		return basePrompt + question
+		return basePrompt + fmt.Sprintf("Question: %s\n\nPlease provide a complete, helpful answer.", question)
 	}
 }
 
 // callAI calls the AI API (Gemini or Moonshot) with automatic fallback
-func (s *AIService) callAI(prompt string) (string, error) {
+// Returns: response, provider used, error
+func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 	// Determine which provider(s) to try based on configured keys
 	var providers []AIProvider
 	
 	switch s.provider {
-	case ProviderGemini:
+		case ProviderGemini:
 		if s.geminiKey != "" {
 			providers = []AIProvider{ProviderGemini}
 		} else {
-			return "", errors.New("GEMINI_API_KEY not set but provider is set to 'gemini'")
+			return "", "", errors.New("GEMINI_API_KEY not set but provider is set to 'gemini'")
 		}
 	case ProviderMoonshot:
 		if s.moonshotKey != "" {
 			providers = []AIProvider{ProviderMoonshot}
 		} else {
-			return "", errors.New("MOONSHOT_API_KEY not set but provider is set to 'moonshot'")
+			return "", "", errors.New("MOONSHOT_API_KEY not set but provider is set to 'moonshot'")
 		}
 	case ProviderAuto:
 		// Try Gemini first if key is available, then Moonshot if key is available
@@ -205,7 +208,7 @@ func (s *AIService) callAI(prompt string) (string, error) {
 		}
 		// If neither key is set, return error
 		if len(providers) == 0 {
-			return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
 		}
 	default:
 		// Default to auto behavior
@@ -216,7 +219,7 @@ func (s *AIService) callAI(prompt string) (string, error) {
 			providers = append(providers, ProviderMoonshot)
 		}
 		if len(providers) == 0 {
-			return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
 		}
 	}
 
@@ -245,17 +248,17 @@ func (s *AIService) callAI(prompt string) (string, error) {
 		
 		if err == nil && response != "" {
 			log.Printf("AI API call successful using %s", provider)
-			return response, nil
+			return response, provider, nil
 		}
 		lastErr = err
 	}
 
 	// All providers failed
 	if lastErr != nil {
-		return "", fmt.Errorf("all AI providers failed. Last error: %w", lastErr)
+		return "", "", fmt.Errorf("all AI providers failed. Last error: %w", lastErr)
 	}
 	
-	return "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+	return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
 }
 
 // callGemini calls the Google Gemini API
@@ -264,8 +267,42 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 		return "", errors.New("GEMINI_API_KEY not set")
 	}
 
-	// Gemini API endpoint (using gemini-1.5-flash for faster responses and free tier)
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=%s", s.geminiKey)
+	// First, try to get available models from the API
+	availableModels, err := s.listGeminiModels()
+	if err != nil {
+		log.Printf("Warning: Could not list available Gemini models: %v. Using fallback model list.", err)
+	}
+
+	// Try multiple model names in order (fallback if one doesn't work)
+	// Start with models from the API if available, then fallback to known models
+	modelNames := []string{}
+	
+	// Add available models first
+	for _, model := range availableModels {
+		modelNames = append(modelNames, model)
+	}
+	
+	// Add fallback models
+	fallbackModels := []string{
+		"gemini-1.5-flash-001",
+		"gemini-1.5-pro-002",
+		"gemini-1.5-pro-001",
+		"gemini-1.5-flash",
+		"gemini-1.5-pro",
+	}
+	for _, model := range fallbackModels {
+		// Only add if not already in the list
+		found := false
+		for _, existing := range modelNames {
+			if existing == model {
+				found = true
+				break
+			}
+		}
+		if !found {
+			modelNames = append(modelNames, model)
+		}
+	}
 
 	// Gemini uses a different request format
 	payload := map[string]interface{}{
@@ -280,7 +317,7 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 		},
 		"generationConfig": map[string]interface{}{
 			"temperature": 0.7,
-			"maxOutputTokens": 1000,
+			"maxOutputTokens": 4096, // Increased from 1000 to allow complete responses
 		},
 	}
 
@@ -289,31 +326,119 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 		return "", fmt.Errorf("failed to marshal Gemini request: %w", err)
 	}
 
-	// Create request
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("failed to create Gemini request: %w", err)
+	// Try each model name until one works
+	var lastErr error
+	for _, modelName := range modelNames {
+		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s", modelName, s.geminiKey)
+
+		// Create request
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			lastErr = fmt.Errorf("failed to create Gemini request: %w", err)
+			continue
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		// Send request
+		resp, err := s.client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("Gemini API request failed: %w", err)
+			continue
+		}
+
+		// Read response
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = fmt.Errorf("failed to read Gemini response: %w", err)
+			continue
+		}
+
+		// If successful, parse and return
+		if resp.StatusCode == http.StatusOK {
+			return s.parseGeminiResponse(body)
+		}
+
+		// If 404, try next model; otherwise return error
+		if resp.StatusCode != http.StatusNotFound {
+			return "", fmt.Errorf("Gemini API error (status %d): %s", resp.StatusCode, string(body))
+		}
+
+		lastErr = fmt.Errorf("Gemini API error (status %d): %s", resp.StatusCode, string(body))
+		log.Printf("Model %s not available, trying next model...", modelName)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	// All models failed
+	return "", fmt.Errorf("all Gemini models failed. Last error: %w", lastErr)
+}
 
-	// Send request
+// listGeminiModels queries the Gemini API to get a list of available models
+func (s *AIService) listGeminiModels() ([]string, error) {
+	if s.geminiKey == "" {
+		return nil, errors.New("GEMINI_API_KEY not set")
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models?key=%s", s.geminiKey)
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Gemini API request failed: %w", err)
+		return nil, fmt.Errorf("failed to list models: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read Gemini response: %w", err)
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Gemini API error (status %d): %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("failed to list models (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	var modelsResponse struct {
+		Models []struct {
+			Name         string   `json:"name"`
+			SupportedMethods []string `json:"supportedGenerationMethods"`
+		} `json:"models"`
+	}
+
+	err = json.Unmarshal(body, &modelsResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse models response: %w", err)
+	}
+
+	var availableModels []string
+	for _, model := range modelsResponse.Models {
+		// Check if model supports generateContent
+		supportsGenerateContent := false
+		for _, method := range model.SupportedMethods {
+			if method == "generateContent" {
+				supportsGenerateContent = true
+				break
+			}
+		}
+		
+		if supportsGenerateContent {
+			// Extract just the model name (format is "models/gemini-1.5-pro")
+			parts := strings.Split(model.Name, "/")
+			if len(parts) > 0 {
+				modelName := parts[len(parts)-1]
+				availableModels = append(availableModels, modelName)
+			}
+		}
+	}
+
+	return availableModels, nil
+}
+
+// parseGeminiResponse parses the Gemini API response
+func (s *AIService) parseGeminiResponse(body []byte) (string, error) {
 	// Parse Gemini response (different structure)
 	var geminiResponse struct {
 		Candidates []struct {
@@ -322,13 +447,14 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 					Text string `json:"text"`
 				} `json:"parts"`
 			} `json:"content"`
+			FinishReason string `json:"finishReason"` // "STOP", "MAX_TOKENS", "SAFETY", etc.
 		} `json:"candidates"`
 		Error *struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 
-	err = json.Unmarshal(body, &geminiResponse)
+	err := json.Unmarshal(body, &geminiResponse)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Gemini response: %w", err)
 	}
@@ -341,7 +467,16 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 		return "", errors.New("no response from Gemini API")
 	}
 
-	return geminiResponse.Candidates[0].Content.Parts[0].Text, nil
+	responseText := geminiResponse.Candidates[0].Content.Parts[0].Text
+	
+	// Check if response was truncated due to token limit
+	if geminiResponse.Candidates[0].FinishReason == "MAX_TOKENS" {
+		log.Printf("Warning: Gemini response may be incomplete (MAX_TOKENS finish reason)")
+		// Optionally append a note or try to extend the response
+		// For now, just log it - the response should still be useful
+	}
+	
+	return responseText, nil
 }
 
 // callMoonshot calls the Moonshot/Kimi API
@@ -363,7 +498,7 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 			},
 		},
 		"temperature": 0.7,
-		"max_tokens":  1000,
+		"max_tokens":  4096, // Increased from 1000 to allow complete responses
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -403,6 +538,7 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 			Message struct {
 				Content string `json:"content"`
 			} `json:"message"`
+			FinishReason string `json:"finish_reason"` // "stop", "length", "content_filter", etc.
 		} `json:"choices"`
 		Error *struct {
 			Message string `json:"message"`
@@ -422,12 +558,76 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 		return "", errors.New("no response from Moonshot API")
 	}
 
-	return moonshotResponse.Choices[0].Message.Content, nil
+	responseText := moonshotResponse.Choices[0].Message.Content
+	
+	// Check if response was truncated due to token limit
+	if moonshotResponse.Choices[0].FinishReason == "length" {
+		log.Printf("Warning: Moonshot response may be incomplete (length finish reason)")
+		// The response should still be useful, just log it
+	}
+	
+	return responseText, nil
 }
 
 // GetUserInteractions retrieves AI interactions for a user
 func (s *AIService) GetUserInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 	return database.GetAIInteractions(userID, bookID)
+}
+
+// GetProviderStatus returns information about the current AI provider configuration
+func (s *AIService) GetProviderStatus() map[string]interface{} {
+	status := map[string]interface{}{
+		"configured_provider": string(s.provider),
+		"gemini_configured":   s.geminiKey != "",
+		"moonshot_configured": s.moonshotKey != "",
+	}
+
+	// Determine which providers are available
+	var availableProviders []string
+	if s.geminiKey != "" {
+		availableProviders = append(availableProviders, "gemini")
+	}
+	if s.moonshotKey != "" {
+		availableProviders = append(availableProviders, "moonshot")
+	}
+	status["available_providers"] = availableProviders
+
+	// Determine which provider will be used based on configuration
+	var activeProvider string
+	switch s.provider {
+	case ProviderGemini:
+		if s.geminiKey != "" {
+			activeProvider = "gemini"
+		} else {
+			activeProvider = "none (gemini key not set)"
+		}
+	case ProviderMoonshot:
+		if s.moonshotKey != "" {
+			activeProvider = "moonshot"
+		} else {
+			activeProvider = "none (moonshot key not set)"
+		}
+	case ProviderAuto:
+		if s.geminiKey != "" {
+			activeProvider = "gemini (auto mode - will try moonshot if gemini fails)"
+		} else if s.moonshotKey != "" {
+			activeProvider = "moonshot (auto mode - gemini not configured)"
+		} else {
+			activeProvider = "none (no API keys configured)"
+		}
+	default:
+		// Default to auto behavior
+		if s.geminiKey != "" {
+			activeProvider = "gemini (auto mode - will try moonshot if gemini fails)"
+		} else if s.moonshotKey != "" {
+			activeProvider = "moonshot (auto mode - gemini not configured)"
+		} else {
+			activeProvider = "none (no API keys configured)"
+		}
+	}
+	status["active_provider"] = activeProvider
+
+	return status
 }
 
 
