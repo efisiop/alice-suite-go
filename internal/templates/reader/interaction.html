@@ -628,21 +628,24 @@ html {
     position: absolute;
     top: 10px;
     right: 10px;
-    width: 45px;
-    height: 45px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: 2px solid #007bff;
     background-color: white;
     color: #007bff;
-    font-size: 1.5rem;
-    cursor: pointer;
+    font-size: 1.2rem;
+    cursor: move;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     z-index: 100;
     padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
 }
 
 .pencil-select-btn:hover {
@@ -653,7 +656,7 @@ html {
 }
 
 .pencil-select-btn:active {
-    transform: scale(0.95);
+    cursor: grabbing;
 }
 
 .pencil-select-btn.active {
@@ -665,6 +668,17 @@ html {
 
 .pencil-select-btn.active:hover {
     background-color: #0056b3;
+}
+
+.pencil-select-btn.dragging {
+    opacity: 0.8;
+    cursor: grabbing;
+    transform: scale(1.15);
+    z-index: 101;
+}
+
+.pencil-select-btn.dragging:hover {
+    transform: scale(1.15);
 }
 
 /* Ensure reading container is positioned relative for absolute button */
@@ -679,13 +693,11 @@ html {
     }
     
     .pencil-select-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 1.75rem;
-        top: 5px;
-        right: 5px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
         /* Make it easier to tap on mobile */
-        touch-action: manipulation;
+        touch-action: none;
         -webkit-tap-highlight-color: rgba(0,123,255,0.2);
     }
     
@@ -756,7 +768,7 @@ html {
                 </div>
                 
                 <!-- Floating Pencil Button -->
-                <button class="pencil-select-btn" onclick="toggleTextSelection()" id="text-selection-btn" title="Select text to get AI help">
+                <button class="pencil-select-btn" id="text-selection-btn" title="Drag to move, click to toggle selection mode">
                     <span id="selection-btn-icon">✏️</span>
                 </button>
             </div>
@@ -2257,6 +2269,245 @@ function toggleTextSelection() {
         clearSelection();
         disableTextSelection();
     }
+}
+
+// Draggable Pencil Button
+let isDraggingPencil = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let pencilStartX = 0;
+let pencilStartY = 0;
+let dragThreshold = 5; // pixels to move before considering it a drag
+
+// Initialize draggable pencil button
+function initDraggablePencil() {
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
+    
+    // Load saved position from localStorage
+    const savedPos = localStorage.getItem('pencilButtonPosition');
+    if (savedPos) {
+        try {
+            const pos = JSON.parse(savedPos);
+            if (pos.top !== undefined && pos.right !== undefined) {
+                btn.style.top = pos.top;
+                btn.style.right = pos.right;
+                btn.style.left = 'auto';
+                btn.style.bottom = 'auto';
+            }
+        } catch (e) {
+            console.log('Error loading pencil position:', e);
+        }
+    }
+    
+    // Mouse events for desktop
+    btn.addEventListener('mousedown', startDragPencil);
+    
+    // Touch events for mobile
+    btn.addEventListener('touchstart', startDragPencilTouch, { passive: false });
+    
+    // Click handler (only if not dragging)
+    btn.addEventListener('click', handlePencilClick);
+}
+
+// Start dragging (mouse)
+function startDragPencil(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
+    
+    isDraggingPencil = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    
+    const rect = btn.getBoundingClientRect();
+    pencilStartX = rect.left;
+    pencilStartY = rect.top;
+    
+    btn.classList.add('dragging');
+    
+    document.addEventListener('mousemove', dragPencil);
+    document.addEventListener('mouseup', stopDragPencil);
+}
+
+// Start dragging (touch)
+function startDragPencilTouch(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
+    
+    isDraggingPencil = false;
+    const touch = e.touches[0];
+    dragStartX = touch.clientX;
+    dragStartY = touch.clientY;
+    
+    const rect = btn.getBoundingClientRect();
+    pencilStartX = rect.left;
+    pencilStartY = rect.top;
+    
+    btn.classList.add('dragging');
+    
+    document.addEventListener('touchmove', dragPencilTouch, { passive: false });
+    document.addEventListener('touchend', stopDragPencilTouch);
+}
+
+// Drag (mouse)
+function dragPencil(e) {
+    if (!isDraggingPencil) {
+        const deltaX = Math.abs(e.clientX - dragStartX);
+        const deltaY = Math.abs(e.clientY - dragStartY);
+        
+        // Only start dragging if moved more than threshold
+        if (deltaX > dragThreshold || deltaY > dragThreshold) {
+            isDraggingPencil = true;
+        } else {
+            return;
+        }
+    }
+    
+    e.preventDefault();
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
+    
+    const container = document.getElementById('reading-container');
+    if (!container) return;
+    
+    const containerRect = container.getBoundingClientRect();
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+    
+    let newX = pencilStartX + deltaX - containerRect.left;
+    let newY = pencilStartY + deltaY - containerRect.top;
+    
+    // Keep button within container bounds
+    const btnWidth = btn.offsetWidth;
+    const btnHeight = btn.offsetHeight;
+    newX = Math.max(0, Math.min(newX, containerRect.width - btnWidth));
+    newY = Math.max(0, Math.min(newY, containerRect.height - btnHeight));
+    
+    btn.style.left = newX + 'px';
+    btn.style.top = newY + 'px';
+    btn.style.right = 'auto';
+    btn.style.bottom = 'auto';
+}
+
+// Drag (touch)
+function dragPencilTouch(e) {
+    if (!isDraggingPencil) {
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - dragStartX);
+        const deltaY = Math.abs(touch.clientY - dragStartY);
+        
+        if (deltaX > dragThreshold || deltaY > dragThreshold) {
+            isDraggingPencil = true;
+        } else {
+            return;
+        }
+    }
+    
+    e.preventDefault();
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
+    
+    const container = document.getElementById('reading-container');
+    if (!container) return;
+    
+    const touch = e.touches[0];
+    const containerRect = container.getBoundingClientRect();
+    const deltaX = touch.clientX - dragStartX;
+    const deltaY = touch.clientY - dragStartY;
+    
+    let newX = pencilStartX + deltaX - containerRect.left;
+    let newY = pencilStartY + deltaY - containerRect.top;
+    
+    const btnWidth = btn.offsetWidth;
+    const btnHeight = btn.offsetHeight;
+    newX = Math.max(0, Math.min(newX, containerRect.width - btnWidth));
+    newY = Math.max(0, Math.min(newY, containerRect.height - btnHeight));
+    
+    btn.style.left = newX + 'px';
+    btn.style.top = newY + 'px';
+    btn.style.right = 'auto';
+    btn.style.bottom = 'auto';
+}
+
+// Stop dragging (mouse)
+function stopDragPencil(e) {
+    const btn = document.getElementById('text-selection-btn');
+    if (btn) {
+        btn.classList.remove('dragging');
+        
+        // Save position
+        if (isDraggingPencil) {
+            const container = document.getElementById('reading-container');
+            if (container) {
+                const containerRect = container.getBoundingClientRect();
+                const btnRect = btn.getBoundingClientRect();
+                const pos = {
+                    top: (btnRect.top - containerRect.top) + 'px',
+                    right: 'auto',
+                    left: (btnRect.left - containerRect.left) + 'px',
+                    bottom: 'auto'
+                };
+                localStorage.setItem('pencilButtonPosition', JSON.stringify(pos));
+            }
+        }
+    }
+    
+    document.removeEventListener('mousemove', dragPencil);
+    document.removeEventListener('mouseup', stopDragPencil);
+}
+
+// Stop dragging (touch)
+function stopDragPencilTouch(e) {
+    const btn = document.getElementById('text-selection-btn');
+    if (btn) {
+        btn.classList.remove('dragging');
+        
+        if (isDraggingPencil) {
+            const container = document.getElementById('reading-container');
+            if (container) {
+                const containerRect = container.getBoundingClientRect();
+                const btnRect = btn.getBoundingClientRect();
+                const pos = {
+                    top: (btnRect.top - containerRect.top) + 'px',
+                    right: 'auto',
+                    left: (btnRect.left - containerRect.left) + 'px',
+                    bottom: 'auto'
+                };
+                localStorage.setItem('pencilButtonPosition', JSON.stringify(pos));
+            }
+        }
+    }
+    
+    document.removeEventListener('touchmove', dragPencilTouch);
+    document.removeEventListener('touchend', stopDragPencilTouch);
+}
+
+// Handle click (only if not dragging)
+function handlePencilClick(e) {
+    // Small delay to check if it was a drag
+    setTimeout(() => {
+        if (!isDraggingPencil) {
+            toggleTextSelection();
+        }
+        // Reset drag flag after a bit longer to distinguish click from drag
+        setTimeout(() => {
+            isDraggingPencil = false;
+        }, 50);
+    }, 150);
+}
+
+// Initialize draggable pencil on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDraggablePencil);
+} else {
+    // DOM already loaded
+    initDraggablePencil();
 }
 
 // Enable text selection
