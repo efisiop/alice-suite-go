@@ -2305,6 +2305,7 @@ let pencilDragStartY = 0;
 let pencilStartX = 0;
 let pencilStartY = 0;
 let pencilDragThreshold = 5; // pixels to move before considering it a drag
+let pencilTouchStartTime = 0; // Track touch start time for tap detection
 
 // Initialize draggable pencil button
 let pencilInitAttempts = 0;
@@ -2350,10 +2351,10 @@ function initDraggablePencil() {
         // Mouse events for desktop
         btn.addEventListener('mousedown', startDragPencil);
         
-        // Touch events for mobile
+        // Touch events for mobile (tap to toggle, drag to move)
         btn.addEventListener('touchstart', startDragPencilTouch, { passive: false });
         
-        // Click handler (only if not dragging)
+        // Click handler for desktop (only if not dragging)
         btn.addEventListener('click', handlePencilClick);
     } catch (e) {
         console.error('Error initializing draggable pencil:', e);
@@ -2384,14 +2385,15 @@ function startDragPencil(e) {
 
 // Start dragging (touch)
 function startDragPencilTouch(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
     const btn = document.getElementById('text-selection-btn');
     if (!btn) return;
     
+    // Don't prevent default immediately - we need to detect tap vs drag
     isDraggingPencil = false;
+    pencilTouchStartTime = Date.now();
     const touch = e.touches[0];
+    if (!touch) return;
+    
     pencilDragStartX = touch.clientX;
     pencilDragStartY = touch.clientY;
     
@@ -2399,10 +2401,29 @@ function startDragPencilTouch(e) {
     pencilStartX = rect.left;
     pencilStartY = rect.top;
     
-    btn.classList.add('dragging');
+    document.addEventListener('touchmove', handlePencilTouchMove, { passive: false });
+    document.addEventListener('touchend', stopDragPencilTouch, { once: true });
+}
+
+// Handle touch move to detect drag
+function handlePencilTouchMove(e) {
+    const btn = document.getElementById('text-selection-btn');
+    if (!btn) return;
     
-    document.addEventListener('touchmove', dragPencilTouch, { passive: false });
-    document.addEventListener('touchend', stopDragPencilTouch);
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - pencilDragStartX);
+    const deltaY = Math.abs(touch.clientY - pencilDragStartY);
+    
+    // If moved more than threshold, it's a drag
+    if (deltaX > pencilDragThreshold || deltaY > pencilDragThreshold) {
+        isDraggingPencil = true;
+        e.preventDefault();
+        btn.classList.add('dragging');
+        // Switch to drag handler
+        document.removeEventListener('touchmove', handlePencilTouchMove);
+        document.addEventListener('touchmove', dragPencilTouch, { passive: false });
+        dragPencilTouch(e); // Start dragging
+    }
 }
 
 // Drag (mouse)
@@ -2515,27 +2536,40 @@ function stopDragPencil(e) {
 // Stop dragging (touch)
 function stopDragPencilTouch(e) {
     const btn = document.getElementById('text-selection-btn');
-    if (btn) {
+    if (!btn) return;
+    
+    // Remove drag listeners
+    document.removeEventListener('touchmove', dragPencilTouch);
+    document.removeEventListener('touchmove', handlePencilTouchMove);
+    
+    const touchDuration = Date.now() - pencilTouchStartTime;
+    const wasDrag = isDraggingPencil;
+    
+    if (wasDrag) {
+        // Was dragging - save position
         btn.classList.remove('dragging');
-        
-        if (isDraggingPencil) {
-            const container = document.getElementById('reading-container');
-            if (container) {
-                const containerRect = container.getBoundingClientRect();
-                const btnRect = btn.getBoundingClientRect();
-                const pos = {
-                    top: (btnRect.top - containerRect.top) + 'px',
-                    right: 'auto',
-                    left: (btnRect.left - containerRect.left) + 'px',
-                    bottom: 'auto'
-                };
-                localStorage.setItem('pencilButtonPosition', JSON.stringify(pos));
-            }
+        const container = document.getElementById('reading-container');
+        if (container) {
+            const containerRect = container.getBoundingClientRect();
+            const btnRect = btn.getBoundingClientRect();
+            const pos = {
+                top: (btnRect.top - containerRect.top) + 'px',
+                right: 'auto',
+                left: (btnRect.left - containerRect.left) + 'px',
+                bottom: 'auto'
+            };
+            localStorage.setItem('pencilButtonPosition', JSON.stringify(pos));
+        }
+    } else {
+        // Was a tap - toggle selection mode
+        // Only if it was quick (< 300ms) and no significant movement
+        if (touchDuration < 300) {
+            toggleTextSelection();
         }
     }
     
-    document.removeEventListener('touchmove', dragPencilTouch);
-    document.removeEventListener('touchend', stopDragPencilTouch);
+    // Reset drag flag
+    isDraggingPencil = false;
 }
 
 // Handle click (only if not dragging)
