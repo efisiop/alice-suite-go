@@ -1879,16 +1879,13 @@ function showDictionary() {
     modal.show();
 }
 
-// Show AI Help modal and load conversation history
+// Show AI Help modal
 function showAIHelp() {
     const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
     modal.show();
     
     // Clear input
     document.getElementById('ai-question').value = '';
-    
-    // Load conversation history
-    loadAIConversationHistory();
     
     // Set focus on question input and setup auto-resize
     setTimeout(() => {
@@ -1987,8 +1984,13 @@ function loadConversationForUser(userId) {
         scrollChatToBottom();
     })
     .catch(err => {
+        // Silently fail - don't show error message
         console.error('Error loading conversation history:', err);
-        messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error loading conversation history</div>';
+        // Just show empty state
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            messagesContainer.appendChild(emptyState);
+        }
     });
 }
 
@@ -2734,11 +2736,47 @@ function handleTextSelection(e) {
     setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
-            selectedText = selection.toString().trim();
-            selectedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+            // Expand selection to complete words
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                
+                // Expand to word boundaries using Selection API modify method
+                try {
+                    // Use Selection.modify() if available (Chrome, Firefox, Safari)
+                    if (selection.modify) {
+                        // Store current selection
+                        const originalText = selection.toString();
+                        
+                        // Expand to word boundaries
+                        selection.modify('extend', 'backward', 'word');
+                        selection.modify('extend', 'forward', 'word');
+                        
+                        // Get the expanded range
+                        if (selection.rangeCount > 0) {
+                            selectedRange = selection.getRangeAt(0).cloneRange();
+                        }
+                    } else {
+                        // Fallback: manually expand to word boundaries
+                        expandRangeToWords(range);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        selectedRange = range.cloneRange();
+                    }
+                } catch (err) {
+                    // If modify fails, use fallback
+                    console.log('Selection.modify not available, using fallback:', err);
+                    expandRangeToWords(range);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    selectedRange = range.cloneRange();
+                }
+            }
             
-            // Highlight the selected text
-            highlightSelectedText(selectedRange);
+            selectedText = selection.toString().trim();
+            
+            // Don't apply custom highlight on desktop - use native browser selection
+            // Native selection already has yellow highlight via CSS ::selection
+            // Custom highlighting causes layout issues with extra spacing
             
             // Show toolbar
             showSelectionToolbar(e);
@@ -2752,6 +2790,95 @@ function handleTextSelection(e) {
             }, 100);
         }
     }, 10);
+}
+
+// Expand range to word boundaries (fallback method)
+function expandRangeToWords(range) {
+    try {
+        // Get the full text content of the range's common ancestor
+        const container = range.commonAncestorContainer;
+        let text = '';
+        let startOffset = range.startOffset;
+        let endOffset = range.endOffset;
+        
+        // If container is a text node, use it directly
+        if (container.nodeType === Node.TEXT_NODE) {
+            text = container.textContent || '';
+        } else {
+            // If container is an element, get all text content
+            text = container.textContent || '';
+            
+            // For element containers, we need to find text nodes
+            // Simple approach: use the range's text content and expand within it
+            const rangeText = range.toString();
+            const containerText = container.textContent || '';
+            
+            // Find the range text in the container text
+            const rangeStart = containerText.indexOf(rangeText);
+            if (rangeStart !== -1) {
+                startOffset = rangeStart;
+                endOffset = rangeStart + rangeText.length;
+            }
+        }
+        
+        // Expand start backwards to word boundary
+        while (startOffset > 0 && /\w/.test(text[startOffset - 1])) {
+            startOffset--;
+        }
+        
+        // Expand end forwards to word boundary  
+        while (endOffset < text.length && /\w/.test(text[endOffset])) {
+            endOffset++;
+        }
+        
+        // Try to set the range - need to handle text nodes properly
+        if (container.nodeType === Node.TEXT_NODE) {
+            range.setStart(container, startOffset);
+            range.setEnd(container, endOffset);
+        } else {
+            // For element containers, find the text node
+            const walker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT,
+                null
+            );
+            
+            let textNode = walker.nextNode();
+            let charCount = 0;
+            let startNode = null;
+            let endNode = null;
+            let startNodeOffset = 0;
+            let endNodeOffset = 0;
+            
+            while (textNode) {
+                const nodeLength = textNode.textContent.length;
+                const nodeStart = charCount;
+                const nodeEnd = charCount + nodeLength;
+                
+                if (!startNode && startOffset >= nodeStart && startOffset <= nodeEnd) {
+                    startNode = textNode;
+                    startNodeOffset = startOffset - nodeStart;
+                }
+                
+                if (!endNode && endOffset >= nodeStart && endOffset <= nodeEnd) {
+                    endNode = textNode;
+                    endNodeOffset = endOffset - nodeStart;
+                }
+                
+                if (startNode && endNode) break;
+                
+                charCount += nodeLength;
+                textNode = walker.nextNode();
+            }
+            
+            if (startNode && endNode) {
+                range.setStart(startNode, startNodeOffset);
+                range.setEnd(endNode, endNodeOffset);
+            }
+        }
+    } catch (err) {
+        console.log('Error expanding to words:', err);
+    }
 }
 
 // Handle text selection (mobile)
@@ -2979,9 +3106,6 @@ function openAIHelpWithSelection() {
     // Open AI Help modal and set the question
     const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
     modal.show();
-    
-    // Load conversation history first
-    loadAIConversationHistory();
     
     // Set the question in the input after a short delay
     setTimeout(() => {
