@@ -489,6 +489,25 @@ html {
 .text-selection-active * {
     user-select: text !important;
     -webkit-user-select: text !important;
+    cursor: text !important;
+}
+
+/* When selection mode is active, allow text selection */
+.text-selection-active .reading-content,
+.text-selection-active .section-content {
+    -webkit-touch-callout: default !important;
+    touch-callout: default !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+}
+
+.text-selection-active .reading-content *,
+.text-selection-active .section-content * {
+    -webkit-touch-callout: default !important;
+    touch-callout: default !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    cursor: text !important;
 }
 
 .text-highlighted {
@@ -713,10 +732,24 @@ html {
         -webkit-touch-callout: default;
     }
     
-    .text-selection-active .reading-content * {
+    /* When selection mode is active, remove all restrictions */
+    .text-selection-active {
+        touch-action: auto !important;
+    }
+    
+    .text-selection-active .reading-content,
+    .text-selection-active .section-content,
+    .text-selection-active .reading-content *,
+    .text-selection-active .section-content * {
         -webkit-user-select: text !important;
         user-select: text !important;
         -webkit-touch-callout: default !important;
+        touch-callout: default !important;
+        touch-action: auto !important;
+        -webkit-tap-highlight-color: rgba(255, 255, 0, 0.3) !important;
+        cursor: text !important;
+        /* Increase line height for easier selection */
+        line-height: 1.8 !important;
     }
     
     .pencil-select-btn {
@@ -2597,6 +2630,7 @@ if (document.readyState === 'loading') {
 // Enable text selection
 function enableTextSelection() {
     const pageContent = document.getElementById('page-content');
+    const readingContent = pageContent ? pageContent.querySelector('.reading-content, .section-content') : null;
     if (!pageContent) return;
     
     // Clear any previous selections
@@ -2604,7 +2638,7 @@ function enableTextSelection() {
     
     // Add event listeners for text selection
     pageContent.addEventListener('mouseup', handleTextSelection);
-    // For mobile, use touchend with passive: false to allow preventDefault if needed
+    // For mobile, use touchend with passive: true to allow native selection
     pageContent.addEventListener('touchend', handleTextSelectionMobile, { passive: true });
     // Also listen for selection changes
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -2614,12 +2648,23 @@ function enableTextSelection() {
     // Also for touch
     document.addEventListener('touchend', handleClickOutsideTouch, true);
     
-    // On mobile, make text more selectable
+    // On mobile, make text more selectable by removing restrictions
     if (window.innerWidth <= 768) {
-        pageContent.style.webkitUserSelect = 'text';
-        pageContent.style.userSelect = 'text';
-        // Enable touch callout on iOS
-        pageContent.style.webkitTouchCallout = 'default';
+        // Remove all touch-action restrictions
+        if (readingContent) {
+            readingContent.style.touchAction = 'auto';
+            readingContent.style.webkitTouchCallout = 'default';
+            readingContent.style.touchCallout = 'default';
+        }
+        
+        // Make sure all child elements allow selection
+        const allElements = pageContent.querySelectorAll('*');
+        allElements.forEach(el => {
+            el.style.webkitUserSelect = 'text';
+            el.style.userSelect = 'text';
+            el.style.touchAction = 'auto';
+            el.style.webkitTouchCallout = 'default';
+        });
     }
 }
 
@@ -2713,7 +2758,8 @@ function handleTextSelection(e) {
 function handleTextSelectionMobile(e) {
     if (!textSelectionModeActive) return;
     
-    // Allow native selection to happen first, then process
+    // Don't prevent default - let native selection work
+    // Wait for native selection to complete
     setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
@@ -2721,19 +2767,17 @@ function handleTextSelectionMobile(e) {
             
             // Get the range and clone it before modifying
             if (selection.rangeCount > 0) {
-                selectedRange = selection.getRangeAt(0).cloneRange();
-                
-                // Highlight the selected text
                 try {
-                    highlightSelectedText(selectedRange);
+                    selectedRange = selection.getRangeAt(0).cloneRange();
+                    
+                    // Don't highlight on mobile - native selection is better
+                    // The yellow highlight will be from CSS ::selection
                 } catch (err) {
-                    console.log('Highlight error:', err);
-                    // Native selection highlight will still be visible
+                    console.log('Range error:', err);
                 }
             }
             
             // Show toolbar (position at bottom on mobile)
-            // Use touch position if available
             const touch = e.changedTouches && e.changedTouches[0];
             const eventForToolbar = touch ? {
                 clientX: touch.clientX,
@@ -2741,7 +2785,7 @@ function handleTextSelectionMobile(e) {
             } : e;
             showSelectionToolbar(eventForToolbar);
         }
-    }, 150); // Slightly longer delay for mobile to ensure selection is complete
+    }, 200); // Longer delay for mobile to ensure selection is complete
 }
 
 // Handle selection change (when user clicks elsewhere)
