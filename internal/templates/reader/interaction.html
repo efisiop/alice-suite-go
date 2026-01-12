@@ -164,6 +164,21 @@ html {
     background-color: #e9ecef;
 }
 
+/* AI Help Modal - Draggable and smaller */
+#aiHelpModalDialog {
+    position: absolute !important;
+}
+
+#aiHelpModalDragHandle {
+    cursor: move;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#aiHelpModalDragHandle:active {
+    cursor: grabbing;
+}
+
 .dictionary-popup-content-inner {
     padding: 1rem;
 }
@@ -526,16 +541,22 @@ html {
     background-color: rgba(255, 255, 0, 0.85) !important;
 }
 
-/* Better selection styling for mobile */
+/* Better selection styling - more visible when selection mode is active */
 ::selection {
-    background-color: #ffff00;
     background-color: rgba(255, 255, 0, 0.7);
     color: inherit;
 }
 
 ::-moz-selection {
-    background-color: #ffff00;
     background-color: rgba(255, 255, 0, 0.7);
+    color: inherit;
+}
+
+/* Enhanced selection visibility when selection mode is active */
+.text-selection-active ::selection,
+.text-selection-active ::-moz-selection {
+    background-color: #ffeb3b !important;
+    background-color: rgba(255, 235, 59, 0.9) !important;
     color: inherit;
 }
 
@@ -827,10 +848,6 @@ html {
                     <p class="text-muted">Loading page content...</p>
                 </div>
                 
-                <!-- Floating Pencil Button -->
-                <button class="pencil-select-btn" id="text-selection-btn" title="Drag to move, click to toggle selection mode">
-                    <span id="selection-btn-icon">✏️</span>
-                </button>
             </div>
         </div>
     </div>
@@ -892,9 +909,9 @@ html {
 
 <!-- AI Help Modal (Tier 2: AI Assistance) - Chat Interface -->
 <div class="modal fade" id="aiHelpModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 800px; height: 90vh; max-height: 800px;">
+    <div class="modal-dialog" id="aiHelpModalDialog" style="max-width: 520px; width: 520px; height: 500px; max-height: 500px; margin: 50px auto; position: absolute; left: 50%; top: 50px; transform: translateX(-50%);">
         <div class="modal-content d-flex flex-column h-100">
-            <div class="modal-header">
+            <div class="modal-header" id="aiHelpModalDragHandle" style="cursor: move; user-select: none;">
                 <h5 class="modal-title">💬 AI Help Assistant</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -911,6 +928,18 @@ html {
                 
                 <!-- Chat Input Area -->
                 <div class="border-top p-3 bg-white">
+                    <!-- Select Text Button -->
+                    <div class="mb-2">
+                        <button 
+                            class="btn btn-outline-primary btn-sm w-100" 
+                            id="ai-select-text-btn"
+                            onclick="activateTextSelectionMode()" 
+                            style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <span>✏️</span>
+                            <span>Select the text you want to clarify</span>
+                        </button>
+                    </div>
+                    
                     <div class="d-flex gap-2 align-items-end">
                         <div class="flex-grow-1">
                             <textarea 
@@ -919,7 +948,7 @@ html {
                                 rows="1" 
                                 placeholder="Ask me anything about the text you're reading..."
                                 style="resize: none; max-height: 120px;"
-                                onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); askAI(); }"></textarea>
+                                onkeydown="handleChatInputKeydown(event)"></textarea>
                         </div>
                         <button 
                             class="btn btn-primary" 
@@ -930,11 +959,15 @@ html {
                             <span id="ai-send-text">Send</span>
                         </button>
                     </div>
-                    <div class="mt-2 d-flex gap-2 flex-wrap">
+                    <div class="mt-2 d-flex gap-2 flex-wrap align-items-center">
                         <small class="text-muted">Quick actions:</small>
                         <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('explain')" title="Explain">Explain</button>
                         <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('simplify')" title="Simplify">Simplify</button>
                         <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()" title="Clear conversation">Clear</button>
+                        <!-- Selection status indicator -->
+                        <div id="ai-chat-selection-status" class="ms-auto text-success small fw-bold" style="display: none;">
+                            <span id="ai-chat-selection-status-text">Text selected - Press Enter to add to chat</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1879,10 +1912,131 @@ function showDictionary() {
     modal.show();
 }
 
+// Variables for AI modal dragging
+let isDraggingAIModal = false;
+let aiModalDragStartX = 0;
+let aiModalDragStartY = 0;
+let aiModalStartX = 0;
+let aiModalStartY = 0;
+
+// Initialize drag functionality for AI Help modal
+function initAIHelpModalDrag() {
+    const modalDialog = document.getElementById('aiHelpModalDialog');
+    const dragHandle = document.getElementById('aiHelpModalDragHandle');
+    
+    if (!modalDialog || !dragHandle) return;
+    
+    // Remove old event listeners by cloning (clean slate)
+    const dragHandleClone = dragHandle.cloneNode(true);
+    dragHandle.parentNode.replaceChild(dragHandleClone, dragHandle);
+    
+    // Mouse events
+    dragHandleClone.addEventListener('mousedown', function(e) {
+        startAIModalDrag(e, modalDialog, dragHandleClone);
+    });
+    
+    // Touch events for mobile
+    dragHandleClone.addEventListener('touchstart', function(e) {
+        startAIModalDragTouch(e, modalDialog);
+    }, { passive: false });
+    
+    function startAIModalDrag(e, dialog, handle) {
+        if (e.target.classList.contains('btn-close')) {
+            return; // Don't start drag if clicking close button
+        }
+        isDraggingAIModal = true;
+        aiModalDragStartX = e.clientX;
+        aiModalDragStartY = e.clientY;
+        const rect = dialog.getBoundingClientRect();
+        aiModalStartX = rect.left;
+        aiModalStartY = rect.top;
+        handle.style.cursor = 'grabbing';
+        e.preventDefault();
+        
+        document.addEventListener('mousemove', dragAIModalHandler);
+        document.addEventListener('mouseup', stopAIModalDragHandler);
+    }
+    
+    function startAIModalDragTouch(e, dialog) {
+        if (e.target.classList.contains('btn-close')) {
+            return;
+        }
+        const touch = e.touches[0];
+        isDraggingAIModal = true;
+        aiModalDragStartX = touch.clientX;
+        aiModalDragStartY = touch.clientY;
+        const rect = dialog.getBoundingClientRect();
+        aiModalStartX = rect.left;
+        aiModalStartY = rect.top;
+        e.preventDefault();
+        
+        document.addEventListener('touchmove', dragAIModalTouchHandler, { passive: false });
+        document.addEventListener('touchend', stopAIModalDragHandler);
+    }
+    
+    function dragAIModalHandler(e) {
+        if (!isDraggingAIModal) return;
+        const deltaX = e.clientX - aiModalDragStartX;
+        const deltaY = e.clientY - aiModalDragStartY;
+        modalDialog.style.left = (aiModalStartX + deltaX) + 'px';
+        modalDialog.style.top = (aiModalStartY + deltaY) + 'px';
+        modalDialog.style.transform = 'none';
+        modalDialog.style.margin = '0';
+        e.preventDefault();
+    }
+    
+    function dragAIModalTouchHandler(e) {
+        if (!isDraggingAIModal) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - aiModalDragStartX;
+        const deltaY = touch.clientY - aiModalDragStartY;
+        modalDialog.style.left = (aiModalStartX + deltaX) + 'px';
+        modalDialog.style.top = (aiModalStartY + deltaY) + 'px';
+        modalDialog.style.transform = 'none';
+        modalDialog.style.margin = '0';
+        e.preventDefault();
+    }
+    
+    function stopAIModalDragHandler() {
+        if (isDraggingAIModal) {
+            isDraggingAIModal = false;
+            const handle = document.getElementById('aiHelpModalDragHandle');
+            if (handle) handle.style.cursor = 'move';
+            document.removeEventListener('mousemove', dragAIModalHandler);
+            document.removeEventListener('mouseup', stopAIModalDragHandler);
+            document.removeEventListener('touchmove', dragAIModalTouchHandler);
+            document.removeEventListener('touchend', stopAIModalDragHandler);
+        }
+    }
+}
+
+// Store modal instance globally to prevent closing on backdrop click
+let aiHelpModalInstance = null;
+
 // Show AI Help modal
 function showAIHelp() {
-    const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
-    modal.show();
+    const modalElement = document.getElementById('aiHelpModal');
+    
+    // Create modal with backdrop: 'static' to prevent closing on backdrop click
+    aiHelpModalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static',
+        keyboard: true  // Still allow ESC key to close
+    });
+    
+    // Listen for modal close event
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        disableAIChatTextSelection();
+        aiHelpModalInstance = null;
+    }, { once: false });
+    
+    aiHelpModalInstance.show();
+    
+    // Don't automatically enable selection - user must click the button
+    
+    // Initialize drag functionality after modal is shown
+    setTimeout(() => {
+        initAIHelpModalDrag();
+    }, 300);
     
     // Clear input
     document.getElementById('ai-question').value = '';
@@ -1908,6 +2062,111 @@ function showAIHelp() {
             });
         }
     }, 500);
+}
+
+// Activate text selection mode (called by button click)
+function activateTextSelectionMode() {
+    aiChatSelectionModeActive = true;
+    textSelectionModeActive = true;
+    
+    // Update button appearance
+    const selectBtn = document.getElementById('ai-select-text-btn');
+    if (selectBtn) {
+        selectBtn.disabled = true;
+        selectBtn.classList.remove('btn-outline-primary');
+        selectBtn.classList.add('btn-primary');
+        selectBtn.innerHTML = '<span>✓</span> <span>Selection mode active - Select text and press Enter</span>';
+    }
+    
+    // Hide selection status (will show when text is selected)
+    const statusDiv = document.getElementById('ai-chat-selection-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+    }
+    
+    const pageContent = document.getElementById('page-content');
+    const readingContainer = document.getElementById('reading-container');
+    
+    if (pageContent) {
+        pageContent.classList.add('text-selection-active');
+        readingContainer.classList.add('text-selection-active');
+    }
+    
+    // Make modal backdrop allow interaction with page behind it
+    const adjustBackdrop = () => {
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.style.pointerEvents = 'none';
+            backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
+        } else {
+            // If backdrop doesn't exist yet, try again
+            setTimeout(adjustBackdrop, 50);
+        }
+    };
+    adjustBackdrop();
+    
+    // Enable selection on the page
+    enableTextSelection();
+    
+    // Add global Enter key handler to copy selected text
+    document.addEventListener('keydown', handleGlobalEnterKey, true);
+    
+    // Scroll to page content to help user see where to select
+    if (pageContent) {
+        setTimeout(() => {
+            pageContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }
+}
+
+// Enable text selection when AI chat modal is open (automatic - not used anymore)
+function enableAIChatTextSelection() {
+    // This function is no longer automatically called
+    // Selection is now activated via button click only
+}
+
+// Disable text selection when AI chat modal closes or selection completes
+function disableAIChatTextSelection() {
+    aiChatSelectionModeActive = false;
+    textSelectionModeActive = false;
+    
+    // Reset button appearance
+    const selectBtn = document.getElementById('ai-select-text-btn');
+    if (selectBtn) {
+        selectBtn.disabled = false;
+        selectBtn.classList.remove('btn-primary');
+        selectBtn.classList.add('btn-outline-primary');
+        selectBtn.innerHTML = '<span>✏️</span> <span>Select the text you want to clarify</span>';
+    }
+    
+    // Hide selection status
+    const statusDiv = document.getElementById('ai-chat-selection-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+    }
+    
+    const pageContent = document.getElementById('page-content');
+    const readingContainer = document.getElementById('reading-container');
+    
+    if (pageContent) {
+        pageContent.classList.remove('text-selection-active');
+        readingContainer.classList.remove('text-selection-active');
+    }
+    
+    // Restore modal backdrop (if modal is still open)
+    setTimeout(() => {
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.style.pointerEvents = 'auto';
+            backdrop.style.backgroundColor = '';
+        }
+    }, 100);
+    
+    clearSelection();
+    disableTextSelection();
+    
+    // Remove global Enter key handler
+    document.removeEventListener('keydown', handleGlobalEnterKey, true);
 }
 
 // Load conversation history for current book
@@ -2294,43 +2553,109 @@ function askAI() {
 let textSelectionModeActive = false;
 let selectedText = '';
 let selectedRange = null;
+let aiChatSelectionModeActive = false; // Track if selection mode is active from AI chat
 
-// Toggle text selection mode
-function toggleTextSelection() {
-    textSelectionModeActive = !textSelectionModeActive;
-    const btn = document.getElementById('text-selection-btn');
-    const icon = document.getElementById('selection-btn-icon');
-    const indicator = document.getElementById('selection-mode-indicator');
+// Toggle text selection mode (for AI chat modal)
+function toggleAIChatSelectionMode() {
+    aiChatSelectionModeActive = !aiChatSelectionModeActive;
+    textSelectionModeActive = aiChatSelectionModeActive;
+    
+    const btn = document.getElementById('ai-chat-pencil-btn');
+    const icon = document.getElementById('ai-chat-pencil-icon');
+    const statusText = document.getElementById('ai-chat-selection-status');
+    const statusDiv = document.getElementById('ai-chat-selection-status');
     const pageContent = document.getElementById('page-content');
     const readingContainer = document.getElementById('reading-container');
+    const modal = document.getElementById('aiHelpModal');
     
-    if (textSelectionModeActive) {
+    if (aiChatSelectionModeActive) {
         // Enable selection mode
-        btn.classList.add('active');
+        btn.classList.add('active', 'btn-primary');
+        btn.classList.remove('btn-outline-secondary');
         icon.textContent = '✓';
-        indicator.classList.add('active');
+        
+        if (statusDiv) {
+            statusDiv.style.display = 'block';
+        }
         
         if (pageContent) {
             pageContent.classList.add('text-selection-active');
             readingContainer.classList.add('text-selection-active');
         }
         
+        // Make modal backdrop allow interaction with page behind it
+        // Bootstrap creates backdrop dynamically, so we need to wait for it
+        const adjustBackdrop = () => {
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.style.pointerEvents = 'none';
+                backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
+            } else {
+                // If backdrop doesn't exist yet, try again
+                setTimeout(adjustBackdrop, 50);
+            }
+        };
+        adjustBackdrop();
+        
         // Enable selection on the page
         enableTextSelection();
+        
+        // Add global Enter key handler to copy selected text
+        document.addEventListener('keydown', handleGlobalEnterKey, true);
     } else {
         // Disable selection mode
-        btn.classList.remove('active');
+        btn.classList.remove('active', 'btn-primary');
+        btn.classList.add('btn-outline-secondary');
         icon.textContent = '✏️';
-        indicator.classList.remove('active');
+        
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
         
         if (pageContent) {
             pageContent.classList.remove('text-selection-active');
             readingContainer.classList.remove('text-selection-active');
         }
         
+        // Restore modal backdrop
+        setTimeout(() => {
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.style.pointerEvents = 'auto';
+                backdrop.style.backgroundColor = ''; // Reset to default
+            }
+        }, 100);
+        
         clearSelection();
         disableTextSelection();
+        
+        // Remove global Enter key handler
+        document.removeEventListener('keydown', handleGlobalEnterKey, true);
     }
+}
+
+// Handle global Enter key press (when selection mode is active)
+function handleGlobalEnterKey(e) {
+    // Only handle if selection mode is active and Enter is pressed (not in input fields)
+    if (aiChatSelectionModeActive && e.key === 'Enter' && selectedText) {
+        const target = e.target;
+        // Don't interfere if user is typing in an input/textarea
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            // If it's the chat input, handle it in handleChatInputKeydown
+            return;
+        }
+        
+        // Copy selected text to chat input
+        e.preventDefault();
+        e.stopPropagation();
+        copySelectedTextToChatInput();
+    }
+}
+
+// Toggle text selection mode (old function - kept for backwards compatibility if needed)
+function toggleTextSelection() {
+    // This function is no longer used, but keeping it for reference
+    toggleAIChatSelectionMode();
 }
 
 // Draggable Pencil Button
@@ -2621,13 +2946,7 @@ function handlePencilClick(e) {
     }, 150);
 }
 
-// Initialize draggable pencil on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDraggablePencil);
-} else {
-    // DOM already loaded
-    initDraggablePencil();
-}
+// Old draggable pencil initialization removed - pencil is now inside AI chat modal
 
 // Enable text selection
 function enableTextSelection() {
@@ -2675,16 +2994,18 @@ function handleClickOutside(e) {
     if (!textSelectionModeActive) return;
     
     const toolbar = document.getElementById('selection-toolbar');
-    const btn = document.getElementById('text-selection-btn');
     const pageContent = document.getElementById('page-content');
+    const modal = document.getElementById('aiHelpModal');
     
-    // Don't clear if clicking on toolbar, button, or page content
+    // Don't clear if clicking on toolbar, modal, or page content
     if (toolbar && toolbar.contains(e.target)) return;
-    if (btn && btn.contains(e.target)) return;
+    if (modal && modal.contains(e.target)) return;
     if (pageContent && pageContent.contains(e.target)) return;
     
-    // Clear selection when clicking outside
-    clearSelection();
+    // Clear selection when clicking outside (but not when in AI chat selection mode)
+    if (!aiChatSelectionModeActive) {
+        clearSelection();
+    }
 }
 
 // Handle touch outside selection area (mobile)
@@ -2692,20 +3013,22 @@ function handleClickOutsideTouch(e) {
     if (!textSelectionModeActive) return;
     
     const toolbar = document.getElementById('selection-toolbar');
-    const btn = document.getElementById('text-selection-btn');
     const pageContent = document.getElementById('page-content');
+    const modal = document.getElementById('aiHelpModal');
     const target = e.target;
     
-    // Don't clear if touching toolbar, button, or page content
+    // Don't clear if touching toolbar, modal, or page content
     if (toolbar && toolbar.contains(target)) return;
-    if (btn && btn.contains(target)) return;
+    if (modal && modal.contains(target)) return;
     if (pageContent && pageContent.contains(target)) return;
     
     // Small delay to avoid clearing selection while user is selecting
     setTimeout(() => {
         const selection = window.getSelection();
         if (!selection || selection.toString().trim().length === 0) {
-            clearSelection();
+            if (!aiChatSelectionModeActive) {
+                clearSelection();
+            }
         }
     }, 200);
 }
@@ -2736,40 +3059,16 @@ function handleTextSelection(e) {
     setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
-            // Expand selection to complete words
+            // Expand selection to complete words only (not sentences)
             if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
+                const range = selection.getRangeAt(0).cloneRange();
                 
-                // Expand to word boundaries using Selection API modify method
-                try {
-                    // Use Selection.modify() if available (Chrome, Firefox, Safari)
-                    if (selection.modify) {
-                        // Store current selection
-                        const originalText = selection.toString();
-                        
-                        // Expand to word boundaries
-                        selection.modify('extend', 'backward', 'word');
-                        selection.modify('extend', 'forward', 'word');
-                        
-                        // Get the expanded range
-                        if (selection.rangeCount > 0) {
-                            selectedRange = selection.getRangeAt(0).cloneRange();
-                        }
-                    } else {
-                        // Fallback: manually expand to word boundaries
-                        expandRangeToWords(range);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                        selectedRange = range.cloneRange();
-                    }
-                } catch (err) {
-                    // If modify fails, use fallback
-                    console.log('Selection.modify not available, using fallback:', err);
-                    expandRangeToWords(range);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                    selectedRange = range.cloneRange();
-                }
+                // Use manual expansion to word boundaries only (not sentences)
+                // This gives us precise control and prevents sentence expansion
+                expandRangeToWords(range);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                selectedRange = range.cloneRange();
             }
             
             selectedText = selection.toString().trim();
@@ -2778,8 +3077,14 @@ function handleTextSelection(e) {
             // Native selection already has yellow highlight via CSS ::selection
             // Custom highlighting causes layout issues with extra spacing
             
-            // Show toolbar
-            showSelectionToolbar(e);
+            // If selection mode is active from AI chat, show status indicator
+            if (aiChatSelectionModeActive) {
+                updateAIChatSelectionStatus(selectedText);
+            } else {
+                // Old behavior: show floating toolbar (kept for backwards compatibility)
+                // Hide toolbar when in AI chat mode
+                showSelectionToolbar(e);
+            }
         } else {
             // If selection is cleared, hide toolbar
             setTimeout(() => {
@@ -2890,27 +3195,31 @@ function handleTextSelectionMobile(e) {
     setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
-            selectedText = selection.toString().trim();
-            
-            // Get the range and clone it before modifying
+            // Expand selection to complete words only (not sentences)
             if (selection.rangeCount > 0) {
-                try {
-                    selectedRange = selection.getRangeAt(0).cloneRange();
-                    
-                    // Don't highlight on mobile - native selection is better
-                    // The yellow highlight will be from CSS ::selection
-                } catch (err) {
-                    console.log('Range error:', err);
-                }
+                const range = selection.getRangeAt(0).cloneRange();
+                
+                // Use manual expansion to word boundaries only (not sentences)
+                expandRangeToWords(range);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                selectedRange = range.cloneRange();
             }
             
-            // Show toolbar (position at bottom on mobile)
-            const touch = e.changedTouches && e.changedTouches[0];
-            const eventForToolbar = touch ? {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            } : e;
-            showSelectionToolbar(eventForToolbar);
+            selectedText = selection.toString().trim();
+            
+            // If selection mode is active from AI chat, show status indicator
+            if (aiChatSelectionModeActive) {
+                updateAIChatSelectionStatus(selectedText);
+            } else {
+                // Old behavior: show floating toolbar (kept for backwards compatibility)
+                const touch = e.changedTouches && e.changedTouches[0];
+                const eventForToolbar = touch ? {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                } : e;
+                showSelectionToolbar(eventForToolbar);
+            }
         }
     }, 200); // Longer delay for mobile to ensure selection is complete
 }
@@ -2922,6 +3231,12 @@ function handleSelectionChange() {
     setTimeout(() => {
         const selection = window.getSelection();
         if (!selection || selection.toString().trim().length === 0) {
+            // If in AI chat selection mode, don't clear automatically
+            if (aiChatSelectionModeActive) {
+                updateAIChatSelectionStatus('');
+                return;
+            }
+            
             // Check if click was outside the page content
             const toolbar = document.getElementById('selection-toolbar');
             if (toolbar && !toolbar.contains(document.activeElement)) {
@@ -3072,6 +3387,11 @@ function clearSelection() {
         toolbar.classList.remove('show');
     }
     
+    // Clear AI chat selection status
+    if (aiChatSelectionModeActive) {
+        updateAIChatSelectionStatus('');
+    }
+    
     clearHighlights();
     
     // Clear browser selection
@@ -3104,8 +3424,20 @@ function openAIHelpWithSelection() {
     const question = `Help me understand this: "${selectedText}"`;
     
     // Open AI Help modal and set the question
-    const modal = new bootstrap.Modal(document.getElementById('aiHelpModal'));
-    modal.show();
+    const modalElement = document.getElementById('aiHelpModal');
+    if (!aiHelpModalInstance) {
+        aiHelpModalInstance = new bootstrap.Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: true
+        });
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            disableAIChatTextSelection();
+            aiHelpModalInstance = null;
+        }, { once: false });
+    }
+    aiHelpModalInstance.show();
+    
+    // Don't automatically enable selection - user must click the button
     
     // Set the question in the input after a short delay
     setTimeout(() => {
@@ -3120,18 +3452,63 @@ function openAIHelpWithSelection() {
     }, 600);
 }
 
-// Allow Enter key to submit (Shift+Enter for new line)
-document.addEventListener('DOMContentLoaded', function() {
-    const aiQuestionInput = document.getElementById('ai-question');
-    if (aiQuestionInput) {
-        aiQuestionInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                askAI();
-            }
-        });
+// Handle chat input keyboard events
+function handleChatInputKeydown(e) {
+    // If selection mode is active and Enter is pressed, copy selected text to input
+    if (aiChatSelectionModeActive && e.key === 'Enter' && !e.shiftKey && selectedText) {
+        e.preventDefault();
+        copySelectedTextToChatInput();
+        return;
     }
-});
+    
+    // Otherwise, normal behavior: Enter sends message
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        askAI();
+    }
+}
+
+// Copy selected text to chat input field
+function copySelectedTextToChatInput() {
+    if (!selectedText) return;
+    
+    const questionInput = document.getElementById('ai-question');
+    if (!questionInput) return;
+    
+    // Set the selected text in the input
+    questionInput.value = selectedText;
+    
+    // Auto-resize textarea
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+    
+    // Clear selection and exit selection mode
+    clearSelection();
+    disableAIChatTextSelection(); // Turn off selection mode
+    
+    // Focus on input
+    questionInput.focus();
+    // Move cursor to end
+    questionInput.setSelectionRange(questionInput.value.length, questionInput.value.length);
+}
+
+// Update AI chat selection status indicator
+function updateAIChatSelectionStatus(text) {
+    const statusDiv = document.getElementById('ai-chat-selection-status');
+    const statusText = document.getElementById('ai-chat-selection-status-text');
+    
+    if (statusDiv && statusText) {
+        if (text && text.trim().length > 0) {
+            const previewText = text.length > 60 ? text.substring(0, 60) + '...' : text;
+            statusText.textContent = `Selected: "${previewText}" - Press Enter to add to chat`;
+            statusDiv.style.display = 'block';
+            statusDiv.classList.remove('text-muted');
+            statusDiv.classList.add('text-success', 'fw-bold');
+        } else {
+            statusDiv.style.display = 'none';
+        }
+    }
+}
 
 function requestHelp() {
     const content = prompt('What do you need help with?');
