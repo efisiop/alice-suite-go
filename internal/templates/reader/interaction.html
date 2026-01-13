@@ -179,6 +179,28 @@ html {
     cursor: grabbing;
 }
 
+/* AI Help Modal Resize Handle */
+#aiHelpModalResizeHandle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 0%, transparent 30%, #ccc 30%, #ccc 40%, transparent 40%, transparent 70%, #ccc 70%, #ccc 80%, transparent 80%);
+    z-index: 1000;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+#aiHelpModalResizeHandle:hover {
+    opacity: 1;
+}
+
+#aiHelpModalDialog {
+    resize: none; /* Disable default browser resize, we'll use custom */
+}
+
 .dictionary-popup-content-inner {
     padding: 1rem;
 }
@@ -223,6 +245,24 @@ html {
 
 .dictionary-popup-example:last-child {
     margin-bottom: 0;
+}
+
+/* Derivation container */
+.dictionary-popup-derivation-container {
+    margin-top: 0.5rem;
+    display: none; /* Hidden by default, shown when button is clicked */
+}
+
+.dictionary-popup-derivation {
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    border-left: 3px solid #007bff;
+    padding-left: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
 }
 
 /* See example button */
@@ -509,7 +549,8 @@ html {
 
 /* When selection mode is active, allow text selection */
 .text-selection-active .reading-content,
-.text-selection-active .section-content {
+.text-selection-active .section-content,
+.text-selection-active #ai-chat-messages {
     -webkit-touch-callout: default !important;
     touch-callout: default !important;
     -webkit-user-select: text !important;
@@ -517,7 +558,8 @@ html {
 }
 
 .text-selection-active .reading-content *,
-.text-selection-active .section-content * {
+.text-selection-active .section-content *,
+.text-selection-active #ai-chat-messages * {
     -webkit-touch-callout: default !important;
     touch-callout: default !important;
     -webkit-user-select: text !important;
@@ -760,8 +802,10 @@ html {
     
     .text-selection-active .reading-content,
     .text-selection-active .section-content,
+    .text-selection-active #ai-chat-messages,
     .text-selection-active .reading-content *,
-    .text-selection-active .section-content * {
+    .text-selection-active .section-content *,
+    .text-selection-active #ai-chat-messages * {
         -webkit-user-select: text !important;
         user-select: text !important;
         -webkit-touch-callout: default !important;
@@ -909,12 +953,14 @@ html {
 
 <!-- AI Help Modal (Tier 2: AI Assistance) - Chat Interface -->
 <div class="modal fade" id="aiHelpModal" tabindex="-1">
-    <div class="modal-dialog" id="aiHelpModalDialog" style="max-width: 520px; width: 520px; height: 500px; max-height: 500px; margin: 50px auto; position: absolute; left: 50%; top: 50px; transform: translateX(-50%);">
-        <div class="modal-content d-flex flex-column h-100">
+    <div class="modal-dialog" id="aiHelpModalDialog" style="max-width: 800px; min-width: 400px; width: 520px; height: 330px; min-height: 250px; max-height: 90vh; margin: 50px auto; position: absolute; left: 50%; top: 50px; transform: translateX(-50%); resize: both; overflow: hidden;">
+        <div class="modal-content d-flex flex-column h-100" style="position: relative;">
             <div class="modal-header" id="aiHelpModalDragHandle" style="cursor: move; user-select: none;">
                 <h5 class="modal-title">💬 AI Help Assistant</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+            <!-- Resize Handle -->
+            <div id="aiHelpModalResizeHandle" title="Drag to resize"></div>
             
             <!-- Chat Messages Container -->
             <div class="modal-body flex-grow-1 d-flex flex-column p-0" style="min-height: 0; overflow: hidden; flex: 1 1 auto;">
@@ -1551,55 +1597,25 @@ function lookupWordInline(word, popupContent) {
             let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
             
-            // Handle examples: Hidden by default, show with "See an example" button
+            // Add two buttons side by side: Derivation (left) and Examples (right)
+            const safeWordId = wordToLookup.replace(/[^a-zA-Z0-9]/g, '_');
+            html += `<div class="d-flex gap-2 mt-2 mb-2">
+                <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showDerivation('${escapeHtml(wordToLookup)}', this)" id="derivation-btn-${safeWordId}">
+                    Derivation
+                </button>
+                <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showExamplesPopup('${escapeHtml(wordToLookup)}', this)" id="examples-btn-${safeWordId}">
+                    Examples
+                </button>
+            </div>`;
+            
+            // Containers for derivation and examples (hidden initially)
+            html += `<div id="derivation-content-${safeWordId}" class="dictionary-popup-derivation-container" style="display: none;"></div>`;
+            html += `<div id="examples-content-${safeWordId}" class="dictionary-popup-examples-container" style="display: none;"></div>`;
+            
+            // Store examples data for later use
             if (data.example) {
-                // Split examples if there are multiple (using our special separator)
                 const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
-                
-                if (examples.length > 0) {
-                    // Build examples HTML (will be hidden initially)
-                    let examplesHtml = '';
-                    if (examples.length === 1) {
-                        // Single example
-                        examplesHtml = `<div class="dictionary-popup-example">${escapeHtml(examples[0])}</div>`;
-                    } else if (examples.length === 2) {
-                        // Two examples - show both when button is clicked
-                        examplesHtml = examples.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
-                    } else if (examples.length >= 3) {
-                        // Three or more examples - show first 2 when button is clicked, then option for more
-                        const firstTwo = examples.slice(0, 2);
-                        const rest = examples.slice(2);
-                        examplesHtml = firstTwo.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
-                        
-                        // Add button for additional examples if there are more than 2
-                        if (rest.length > 0) {
-                            examplesHtml += `<button class="dictionary-popup-more-examples" onclick="showMoreExamples(this)" style="margin-top: 0.5rem;">
-                                See ${rest.length} more example${rest.length > 1 ? 's' : ''}
-                            </button>`;
-                            examplesHtml += `<div class="dictionary-popup-additional-examples">
-                                ${rest.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('')}
-                            </div>`;
-                        }
-                    }
-                    
-                    // Determine button text
-                    let buttonText = 'See an example';
-                    if (examples.length === 2) {
-                        buttonText = 'See 2 examples';
-                    } else if (examples.length > 2) {
-                        buttonText = 'See examples';
-                    }
-                    
-                    // Button to show examples (hidden after click)
-                    html += `<button class="dictionary-popup-see-example" onclick="showExamples(this)">
-                        ${escapeHtml(buttonText)}
-                    </button>`;
-                    
-                    // Hidden container for examples
-                    html += `<div class="dictionary-popup-examples-container">
-                        ${examplesHtml}
-                    </div>`;
-                }
+                window[`examples_${safeWordId}`] = examples;
             }
             
             popupContent.innerHTML = html;
@@ -1631,7 +1647,7 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Show examples when "See an example" button is clicked
+// Show examples when "See an example" button is clicked (old function - kept for backwards compatibility)
 function showExamples(button) {
     if (!button) return;
     
@@ -1643,6 +1659,145 @@ function showExamples(button) {
         // Hide the "See an example" button
         button.style.display = 'none';
     }
+}
+
+// Show derivation (etymology) for a word
+function showDerivation(word, button) {
+    if (!word || !button) return;
+    
+    const safeWordId = word.replace(/[^a-zA-Z0-9]/g, '_');
+    const container = document.getElementById(`derivation-content-${safeWordId}`);
+    
+    if (!container) return;
+    
+    // If already shown, hide it
+    if (container.style.display !== 'none') {
+        container.style.display = 'none';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
+        return;
+    }
+    
+    // Show loading state
+    container.innerHTML = '<div class="dictionary-popup-loading">Loading derivation...</div>';
+    container.style.display = 'block';
+    button.classList.remove('btn-outline-primary');
+    button.classList.add('btn-primary');
+    
+    // Fetch derivation from Wiktionary API (free, no API key needed)
+    const normalizedWord = word.toLowerCase().trim();
+    fetch(`https://en.wiktionary.org/api/rest_v1/page/etymology/${encodeURIComponent(normalizedWord)}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Etymology not found');
+        }
+        return res.json();
+    })
+    .then(data => {
+        // Extract etymology text from Wiktionary API response
+        let etymologyText = '';
+        
+        // The API returns etymology in different formats, try to extract text
+        if (data.etymology_templates && data.etymology_templates.length > 0) {
+            // Has etymology templates
+            etymologyText = data.etymology_templates.map(t => t.text || '').join(' ');
+        } else if (typeof data === 'string') {
+            etymologyText = data;
+        } else if (data.text) {
+            etymologyText = data.text;
+        } else {
+            // Try to find etymology in the content
+            if (data.etymology) {
+                etymologyText = data.etymology;
+            }
+        }
+        
+        if (etymologyText && etymologyText.trim()) {
+            // Clean up HTML tags if present
+            etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
+            container.innerHTML = `<div class="dictionary-popup-derivation">${escapeHtml(etymologyText)}</div>`;
+        } else {
+            container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
+        }
+    })
+    .catch(err => {
+        console.error('Error fetching derivation:', err);
+        // Try alternative: fetch full page and parse etymology section
+        fetch(`https://en.wiktionary.org/api/rest_v1/page/html/${encodeURIComponent(normalizedWord)}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/html'
+            }
+        })
+        .then(res => res.text())
+        .then(html => {
+            // Simple parsing: look for etymology section
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const etymologySection = doc.querySelector('h2#Etymology, h3#Etymology, .etymology');
+            
+            if (etymologySection) {
+                let etymologyText = etymologySection.textContent || '';
+                const nextP = etymologySection.nextElementSibling;
+                if (nextP && nextP.tagName === 'P') {
+                    etymologyText += ' ' + nextP.textContent;
+                }
+                etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
+                
+                if (etymologyText) {
+                    container.innerHTML = `<div class="dictionary-popup-derivation">${escapeHtml(etymologyText)}</div>`;
+                } else {
+                    container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
+                }
+            } else {
+                container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
+            }
+        })
+        .catch(err2 => {
+            container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
+        });
+    });
+}
+
+// Show examples popup (2-3 examples)
+function showExamplesPopup(word, button) {
+    if (!word || !button) return;
+    
+    const safeWordId = word.replace(/[^a-zA-Z0-9]/g, '_');
+    const container = document.getElementById(`examples-content-${safeWordId}`);
+    
+    if (!container) return;
+    
+    // If already shown, hide it
+    if (container.style.display !== 'none') {
+        container.style.display = 'none';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
+        return;
+    }
+    
+    // Get stored examples
+    const examples = window[`examples_${safeWordId}`] || [];
+    
+    if (examples.length === 0) {
+        container.innerHTML = '<div class="dictionary-popup-loading text-muted">No examples available for this word.</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    // Show 2-3 examples
+    const examplesToShow = examples.slice(0, 3);
+    let examplesHtml = examplesToShow.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
+    
+    container.innerHTML = examplesHtml;
+    container.style.display = 'block';
+    button.classList.remove('btn-outline-primary');
+    button.classList.add('btn-primary');
 }
 
 // Show more examples when button is clicked (for inline popup - when 3+ examples)
@@ -1919,6 +2074,99 @@ let aiModalDragStartY = 0;
 let aiModalStartX = 0;
 let aiModalStartY = 0;
 
+// Variables for AI modal resizing
+let isResizingAIModal = false;
+let aiModalResizeStartX = 0;
+let aiModalResizeStartY = 0;
+let aiModalStartWidth = 0;
+let aiModalStartHeight = 0;
+
+// Initialize resize functionality for AI Help modal
+function initAIHelpModalResize() {
+    const modalDialog = document.getElementById('aiHelpModalDialog');
+    const resizeHandle = document.getElementById('aiHelpModalResizeHandle');
+    
+    if (!modalDialog || !resizeHandle) return;
+    
+    // Mouse events for resize
+    resizeHandle.addEventListener('mousedown', function(e) {
+        startAIModalResize(e, modalDialog);
+        e.stopPropagation();
+        e.preventDefault();
+    });
+    
+    // Touch events for mobile
+    resizeHandle.addEventListener('touchstart', function(e) {
+        startAIModalResizeTouch(e, modalDialog);
+        e.stopPropagation();
+        e.preventDefault();
+    }, { passive: false });
+    
+    function startAIModalResize(e, dialog) {
+        isResizingAIModal = true;
+        aiModalResizeStartX = e.clientX;
+        aiModalResizeStartY = e.clientY;
+        const rect = dialog.getBoundingClientRect();
+        aiModalStartWidth = rect.width;
+        aiModalStartHeight = rect.height;
+        
+        document.addEventListener('mousemove', resizeAIModalHandler);
+        document.addEventListener('mouseup', stopAIModalResizeHandler);
+    }
+    
+    function startAIModalResizeTouch(e, dialog) {
+        const touch = e.touches[0];
+        isResizingAIModal = true;
+        aiModalResizeStartX = touch.clientX;
+        aiModalResizeStartY = touch.clientY;
+        const rect = dialog.getBoundingClientRect();
+        aiModalStartWidth = rect.width;
+        aiModalStartHeight = rect.height;
+        
+        document.addEventListener('touchmove', resizeAIModalTouchHandler, { passive: false });
+        document.addEventListener('touchend', stopAIModalResizeHandler);
+    }
+    
+    function resizeAIModalHandler(e) {
+        if (!isResizingAIModal) return;
+        const deltaX = e.clientX - aiModalResizeStartX;
+        const deltaY = e.clientY - aiModalResizeStartY;
+        
+        const newWidth = Math.max(400, Math.min(800, aiModalStartWidth + deltaX));
+        const newHeight = Math.max(250, Math.min(window.innerHeight * 0.9, aiModalStartHeight + deltaY));
+        
+        modalDialog.style.width = newWidth + 'px';
+        modalDialog.style.height = newHeight + 'px';
+        
+        e.preventDefault();
+    }
+    
+    function resizeAIModalTouchHandler(e) {
+        if (!isResizingAIModal) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - aiModalResizeStartX;
+        const deltaY = touch.clientY - aiModalResizeStartY;
+        
+        const newWidth = Math.max(400, Math.min(800, aiModalStartWidth + deltaX));
+        const newHeight = Math.max(250, Math.min(window.innerHeight * 0.9, aiModalStartHeight + deltaY));
+        
+        modalDialog.style.width = newWidth + 'px';
+        modalDialog.style.height = newHeight + 'px';
+        
+        e.preventDefault();
+    }
+    
+    function stopAIModalResizeHandler() {
+        if (isResizingAIModal) {
+            isResizingAIModal = false;
+            document.removeEventListener('mousemove', resizeAIModalHandler);
+            document.removeEventListener('mouseup', stopAIModalResizeHandler);
+            document.removeEventListener('touchmove', resizeAIModalTouchHandler);
+            document.removeEventListener('touchend', stopAIModalResizeHandler);
+        }
+    }
+}
+
 // Initialize drag functionality for AI Help modal
 function initAIHelpModalDrag() {
     const modalDialog = document.getElementById('aiHelpModalDialog');
@@ -2031,11 +2279,19 @@ function showAIHelp() {
     
     aiHelpModalInstance.show();
     
+    // Reset modal to default size when opening
+    const modalDialog = document.getElementById('aiHelpModalDialog');
+    if (modalDialog) {
+        modalDialog.style.width = '520px';
+        modalDialog.style.height = '330px';
+    }
+    
     // Don't automatically enable selection - user must click the button
     
-    // Initialize drag functionality after modal is shown
+    // Initialize drag and resize functionality after modal is shown
     setTimeout(() => {
         initAIHelpModalDrag();
+        initAIHelpModalResize();
     }, 300);
     
     // Clear input
@@ -2086,37 +2342,72 @@ function activateTextSelectionMode() {
     
     const pageContent = document.getElementById('page-content');
     const readingContainer = document.getElementById('reading-container');
+    const chatMessages = document.getElementById('ai-chat-messages');
     
     if (pageContent) {
         pageContent.classList.add('text-selection-active');
         readingContainer.classList.add('text-selection-active');
     }
     
-    // Make modal backdrop allow interaction with page behind it
-    const adjustBackdrop = () => {
+    // Enable text selection on chat messages
+    if (chatMessages) {
+        chatMessages.classList.add('text-selection-active');
+        enableChatMessagesTextSelection();
+    }
+    
+    // Make modal backdrop and dialog allow interaction with page behind it
+    const adjustModalForSelection = () => {
         const backdrop = document.querySelector('.modal-backdrop');
+        const modalDialog = document.getElementById('aiHelpModalDialog');
+        const modal = document.getElementById('aiHelpModal');
+        
         if (backdrop) {
             backdrop.style.pointerEvents = 'none';
             backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
-        } else {
-            // If backdrop doesn't exist yet, try again
-            setTimeout(adjustBackdrop, 50);
+        }
+        
+        // Make modal element itself allow pointer events through (except where we explicitly enable)
+        if (modal) {
+            modal.style.pointerEvents = 'none';
+        }
+        
+        // Make modal dialog and content allow pointer events to pass through
+        if (modalDialog) {
+            modalDialog.style.pointerEvents = 'none';
+        }
+        
+        const modalContent = modalDialog ? modalDialog.querySelector('.modal-content') : null;
+        if (modalContent) {
+            // Make modal content allow pointer events through by default
+            modalContent.style.pointerEvents = 'none';
+            
+            // But allow interaction with specific interactive elements
+            const interactiveElements = modalContent.querySelectorAll(
+                'button, textarea, input, #ai-chat-messages, .chat-message, .chat-bubble, .modal-header, .modal-body, .border-top'
+            );
+            interactiveElements.forEach(el => {
+                el.style.pointerEvents = 'auto';
+            });
+            
+            // Also make sure the entire chat messages container is interactive
+            const chatMessages = document.getElementById('ai-chat-messages');
+            if (chatMessages) {
+                chatMessages.style.pointerEvents = 'auto';
+            }
+        }
+        
+        // If backdrop or dialog don't exist yet, try again
+        if (!backdrop || !modalDialog) {
+            setTimeout(adjustModalForSelection, 50);
         }
     };
-    adjustBackdrop();
+    adjustModalForSelection();
     
     // Enable selection on the page
     enableTextSelection();
     
     // Add global Enter key handler to copy selected text
     document.addEventListener('keydown', handleGlobalEnterKey, true);
-    
-    // Scroll to page content to help user see where to select
-    if (pageContent) {
-        setTimeout(() => {
-            pageContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
-    }
 }
 
 // Enable text selection when AI chat modal is open (automatic - not used anymore)
@@ -2147,18 +2438,49 @@ function disableAIChatTextSelection() {
     
     const pageContent = document.getElementById('page-content');
     const readingContainer = document.getElementById('reading-container');
+    const chatMessages = document.getElementById('ai-chat-messages');
     
     if (pageContent) {
         pageContent.classList.remove('text-selection-active');
         readingContainer.classList.remove('text-selection-active');
     }
     
-    // Restore modal backdrop (if modal is still open)
+    // Disable text selection on chat messages
+    if (chatMessages) {
+        chatMessages.classList.remove('text-selection-active');
+        disableChatMessagesTextSelection();
+    }
+    
+    // Restore modal backdrop and dialog (if modal is still open)
     setTimeout(() => {
         const backdrop = document.querySelector('.modal-backdrop');
+        const modalDialog = document.getElementById('aiHelpModalDialog');
+        const modal = document.getElementById('aiHelpModal');
+        const modalContent = modalDialog ? modalDialog.querySelector('.modal-content') : null;
+        
         if (backdrop) {
             backdrop.style.pointerEvents = 'auto';
             backdrop.style.backgroundColor = '';
+        }
+        
+        if (modal) {
+            modal.style.pointerEvents = 'auto';
+        }
+        
+        if (modalDialog) {
+            modalDialog.style.pointerEvents = 'auto';
+        }
+        
+        if (modalContent) {
+            modalContent.style.pointerEvents = 'auto';
+            
+            // Reset all interactive elements to default
+            const interactiveElements = modalContent.querySelectorAll(
+                'button, textarea, input, #ai-chat-messages, .chat-message, .chat-bubble, .modal-header, .modal-body, .border-top'
+            );
+            interactiveElements.forEach(el => {
+                el.style.pointerEvents = '';
+            });
         }
     }, 100);
     
@@ -2397,31 +2719,118 @@ function scrollChatToBottom() {
 
 // Clear chat conversation
 function clearChat() {
-    if (confirm('Clear this conversation? (Messages will still be saved in your history)')) {
-        const messagesContainer = document.getElementById('ai-chat-messages');
-        const emptyState = document.getElementById('ai-chat-empty-state');
-        messagesContainer.innerHTML = '';
-        emptyState.style.display = 'block';
-        messagesContainer.appendChild(emptyState);
+    // Clear chat messages
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    const emptyState = document.getElementById('ai-chat-empty-state');
+    messagesContainer.innerHTML = '';
+    emptyState.style.display = 'block';
+    messagesContainer.appendChild(emptyState);
+    
+    // Clear selected text
+    clearSelection();
+    
+    // Clear chat input field
+    const questionInput = document.getElementById('ai-question');
+    if (questionInput) {
+        questionInput.value = '';
+        questionInput.style.height = 'auto';
+        questionInput.style.height = '38px'; // Reset to default height
     }
+    
+    // Hide selection status indicator
+    const statusDiv = document.getElementById('ai-chat-selection-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+    }
+}
+
+// Helper function to complete cut-off words at the beginning and end of text
+function completeCutOffWords(text) {
+    if (!text || text.trim().length === 0) return text;
+    
+    // Find the original source text to complete cut-off words
+    // Try to find the text in the page content or chat messages
+    let sourceText = '';
+    
+    // First, try to find in page content
+    const pageContent = document.getElementById('page-content');
+    if (pageContent) {
+        sourceText = pageContent.textContent || '';
+    }
+    
+    // If not found, try chat messages
+    if (!sourceText || sourceText.indexOf(text.trim()) === -1) {
+        const chatMessages = document.getElementById('ai-chat-messages');
+        if (chatMessages) {
+            sourceText = chatMessages.textContent || '';
+        }
+    }
+    
+    // If we found the text in source, complete cut-off words
+    if (sourceText) {
+        const trimmedText = text.trim();
+        const index = sourceText.indexOf(trimmedText);
+        
+        if (index !== -1) {
+            let start = index;
+            let end = index + trimmedText.length;
+            
+            // Complete word at the beginning if cut off
+            while (start > 0 && /\w/.test(sourceText[start - 1])) {
+                start--;
+            }
+            
+            // Complete word at the end if cut off
+            while (end < sourceText.length && /\w/.test(sourceText[end])) {
+                end++;
+            }
+            
+            // If we expanded, return the expanded text
+            if (start < index || end > index + trimmedText.length) {
+                return sourceText.substring(start, end).trim();
+            }
+        }
+    }
+    
+    // If no source found or text not found in source, just return original
+    return text.trim();
 }
 
 // Set quick question based on type
 function setQuickQuestion(type) {
     const questionInput = document.getElementById('ai-question');
-    const currentSection = currentPageSections[currentSectionIndex];
-    const sectionContent = currentSection ? (currentSection.content || '').substring(0, 200) : '';
+    const currentText = questionInput.value.trim();
     
     let question = '';
-    switch(type) {
-        case 'explain':
-            question = sectionContent ? `Explain this passage: "${sectionContent.substring(0, 100)}..."` : 'Explain this section';
-            break;
-        case 'simplify':
-            question = sectionContent ? `Simplify this: "${sectionContent.substring(0, 100)}..."` : 'Simplify this concept';
-            break;
-        default:
-            question = '';
+    
+    // If there's already text in the input field, use that (only complete cut-off words)
+    if (currentText) {
+        const completedText = completeCutOffWords(currentText);
+        switch(type) {
+            case 'explain':
+                question = `Explain this: "${completedText}"`;
+                break;
+            case 'simplify':
+                question = `Simplify this: "${completedText}"`;
+                break;
+            default:
+                question = completedText;
+        }
+    } else {
+        // If no text in input, use section content as fallback
+        const currentSection = currentPageSections[currentSectionIndex];
+        const sectionContent = currentSection ? (currentSection.content || '').substring(0, 200) : '';
+        
+        switch(type) {
+            case 'explain':
+                question = sectionContent ? `Explain this passage: "${sectionContent.substring(0, 100)}..."` : 'Explain this section';
+                break;
+            case 'simplify':
+                question = sectionContent ? `Simplify this: "${sectionContent.substring(0, 100)}..."` : 'Simplify this concept';
+                break;
+            default:
+                question = '';
+        }
     }
     
     questionInput.value = question;
@@ -2583,15 +2992,50 @@ function toggleAIChatSelectionMode() {
             readingContainer.classList.add('text-selection-active');
         }
         
-        // Make modal backdrop allow interaction with page behind it
+        // Make modal backdrop and dialog allow interaction with page behind it
         // Bootstrap creates backdrop dynamically, so we need to wait for it
         const adjustBackdrop = () => {
             const backdrop = document.querySelector('.modal-backdrop');
+            const modalDialog = document.getElementById('aiHelpModalDialog');
+            const modal = document.getElementById('aiHelpModal');
+            
             if (backdrop) {
                 backdrop.style.pointerEvents = 'none';
                 backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
-            } else {
-                // If backdrop doesn't exist yet, try again
+            }
+            
+            // Make modal element itself allow pointer events through
+            if (modal) {
+                modal.style.pointerEvents = 'none';
+            }
+            
+            // Make modal dialog allow pointer events to pass through
+            if (modalDialog) {
+                modalDialog.style.pointerEvents = 'none';
+            }
+            
+            const modalContent = modalDialog ? modalDialog.querySelector('.modal-content') : null;
+            if (modalContent) {
+                // Make modal content allow pointer events through by default
+                modalContent.style.pointerEvents = 'none';
+                
+                // But allow interaction with specific interactive elements
+                const interactiveElements = modalContent.querySelectorAll(
+                    'button, textarea, input, #ai-chat-messages, .chat-message, .chat-bubble, .modal-header, .modal-body, .border-top'
+                );
+                interactiveElements.forEach(el => {
+                    el.style.pointerEvents = 'auto';
+                });
+                
+                // Also make sure the entire chat messages container is interactive
+                const chatMessages = document.getElementById('ai-chat-messages');
+                if (chatMessages) {
+                    chatMessages.style.pointerEvents = 'auto';
+                }
+            }
+            
+            // If backdrop or dialog don't exist yet, try again
+            if (!backdrop || !modalDialog) {
                 setTimeout(adjustBackdrop, 50);
             }
         };
@@ -2617,12 +3061,36 @@ function toggleAIChatSelectionMode() {
             readingContainer.classList.remove('text-selection-active');
         }
         
-        // Restore modal backdrop
+        // Restore modal backdrop and dialog
         setTimeout(() => {
             const backdrop = document.querySelector('.modal-backdrop');
+            const modalDialog = document.getElementById('aiHelpModalDialog');
+            const modal = document.getElementById('aiHelpModal');
+            const modalContent = modalDialog ? modalDialog.querySelector('.modal-content') : null;
+            
             if (backdrop) {
                 backdrop.style.pointerEvents = 'auto';
                 backdrop.style.backgroundColor = ''; // Reset to default
+            }
+            
+            if (modal) {
+                modal.style.pointerEvents = 'auto';
+            }
+            
+            if (modalDialog) {
+                modalDialog.style.pointerEvents = 'auto';
+            }
+            
+            if (modalContent) {
+                modalContent.style.pointerEvents = 'auto';
+                
+                // Reset all interactive elements to default
+                const interactiveElements = modalContent.querySelectorAll(
+                    'button, textarea, input, #ai-chat-messages, .chat-message, .chat-bubble, .modal-header, .modal-body, .border-top'
+                );
+                interactiveElements.forEach(el => {
+                    el.style.pointerEvents = '';
+                });
             }
         }, 100);
         
@@ -2989,6 +3457,37 @@ function enableTextSelection() {
     }
 }
 
+// Enable text selection on chat messages
+function enableChatMessagesTextSelection() {
+    const chatMessages = document.getElementById('ai-chat-messages');
+    if (!chatMessages) return;
+    
+    // Add event listeners for text selection on chat messages
+    chatMessages.addEventListener('mouseup', handleTextSelection);
+    chatMessages.addEventListener('touchend', handleTextSelectionMobile, { passive: true });
+    
+    // On mobile, make chat messages text more selectable
+    if (window.innerWidth <= 768) {
+        const allElements = chatMessages.querySelectorAll('*');
+        allElements.forEach(el => {
+            el.style.webkitUserSelect = 'text';
+            el.style.userSelect = 'text';
+            el.style.touchAction = 'auto';
+            el.style.webkitTouchCallout = 'default';
+        });
+    }
+}
+
+// Disable text selection on chat messages
+function disableChatMessagesTextSelection() {
+    const chatMessages = document.getElementById('ai-chat-messages');
+    if (!chatMessages) return;
+    
+    // Remove event listeners
+    chatMessages.removeEventListener('mouseup', handleTextSelection);
+    chatMessages.removeEventListener('touchend', handleTextSelectionMobile);
+}
+
 // Handle clicks outside selection area
 function handleClickOutside(e) {
     if (!textSelectionModeActive) return;
@@ -2996,11 +3495,13 @@ function handleClickOutside(e) {
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
+    const chatMessages = document.getElementById('ai-chat-messages');
     
-    // Don't clear if clicking on toolbar, modal, or page content
+    // Don't clear if clicking on toolbar, modal, page content, or chat messages
     if (toolbar && toolbar.contains(e.target)) return;
     if (modal && modal.contains(e.target)) return;
     if (pageContent && pageContent.contains(e.target)) return;
+    if (chatMessages && chatMessages.contains(e.target)) return;
     
     // Clear selection when clicking outside (but not when in AI chat selection mode)
     if (!aiChatSelectionModeActive) {
@@ -3015,12 +3516,14 @@ function handleClickOutsideTouch(e) {
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
+    const chatMessages = document.getElementById('ai-chat-messages');
     const target = e.target;
     
-    // Don't clear if touching toolbar, modal, or page content
+    // Don't clear if touching toolbar, modal, page content, or chat messages
     if (toolbar && toolbar.contains(target)) return;
     if (modal && modal.contains(target)) return;
     if (pageContent && pageContent.contains(target)) return;
+    if (chatMessages && chatMessages.contains(target)) return;
     
     // Small delay to avoid clearing selection while user is selecting
     setTimeout(() => {
@@ -3437,8 +3940,15 @@ function openAIHelpWithSelection() {
     }
     aiHelpModalInstance.show();
     
+    // Reset modal to default size when opening
+    const modalDialog2 = document.getElementById('aiHelpModalDialog');
+    if (modalDialog2) {
+        modalDialog2.style.width = '520px';
+        modalDialog2.style.height = '330px';
+    }
+
     // Don't automatically enable selection - user must click the button
-    
+
     // Set the question in the input after a short delay
     setTimeout(() => {
         const questionInput = document.getElementById('ai-question');
