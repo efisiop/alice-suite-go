@@ -613,6 +613,14 @@ html {
     gap: 0.35rem;
     align-items: center;
     animation: toolbarSlideIn 0.2s ease-out;
+    cursor: move;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.selection-toolbar.dragging {
+    cursor: grabbing;
 }
 
 .selection-toolbar.show {
@@ -639,10 +647,15 @@ html {
     border: none;
     width: 44px;
     height: 44px;
-    cursor: pointer;
+    cursor: move;
     transition: all 0.2s ease;
     flex-shrink: 0;
     padding: 0;
+    pointer-events: auto;
+}
+
+.selection-toolbar.dragging .selection-ai-btn {
+    cursor: grabbing;
 }
 
 .selection-ai-btn:hover {
@@ -679,8 +692,13 @@ html {
     font-size: 0.85rem;
     white-space: nowrap;
     animation: bubbleSlideIn 0.3s ease-out;
-    cursor: pointer;
+    cursor: move;
     transition: background-color 0.2s ease;
+    pointer-events: auto;
+}
+
+.selection-toolbar.dragging .selection-ai-bubble {
+    cursor: grabbing;
 }
 
 .selection-ai-bubble:hover {
@@ -728,6 +746,8 @@ html {
     border-radius: 50%;
     transition: all 0.2s ease;
     line-height: 1;
+    pointer-events: auto;
+    z-index: 10;
 }
 
 .selection-ai-close:hover {
@@ -998,7 +1018,7 @@ html {
 
 <!-- Floating Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
-    <button class="selection-ai-btn" onclick="openAIHelpWithSelection()" aria-label="Need AI assistance" title="Get AI help">
+    <button class="selection-ai-btn" aria-label="Need AI assistance" title="Get AI help">
         <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <linearGradient id="yellowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1015,9 +1035,9 @@ html {
             <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
         </svg>
     </button>
-    <div class="selection-ai-bubble" onclick="openAIHelpWithSelection()">
+    <div class="selection-ai-bubble">
         Need AI assistance?
-        <button class="selection-ai-close" onclick="event.stopPropagation(); clearSelection();" aria-label="Close">✕</button>
+        <button class="selection-ai-close" aria-label="Close">✕</button>
     </div>
 </div>
 
@@ -3971,6 +3991,164 @@ function showSelectionToolbar(e) {
     }
     
     toolbar.classList.add('show');
+    
+    // Initialize drag functionality
+    initSelectionToolbarDrag();
+}
+
+// Drag state for selection toolbar
+let isDraggingToolbar = false;
+let toolbarDragStartX = 0;
+let toolbarDragStartY = 0;
+let toolbarStartX = 0;
+let toolbarStartY = 0;
+let toolbarHasMoved = false;
+
+// Initialize drag functionality for selection toolbar
+function initSelectionToolbarDrag() {
+    const toolbar = document.getElementById('selection-toolbar');
+    if (!toolbar) return;
+    
+    // Check if already initialized
+    if (toolbar.dataset.dragInitialized === 'true') return;
+    toolbar.dataset.dragInitialized = 'true';
+    
+    // Make icon and bubble draggable (but not close button)
+    const aiBtn = toolbar.querySelector('.selection-ai-btn');
+    const aiBubble = toolbar.querySelector('.selection-ai-bubble');
+    const closeBtn = toolbar.querySelector('.selection-ai-close');
+    
+    // Add click handlers that check if we dragged
+    if (aiBtn) {
+        aiBtn.addEventListener('mousedown', startToolbarDrag);
+        aiBtn.addEventListener('touchstart', startToolbarDragTouch, { passive: false });
+        aiBtn.addEventListener('click', function(e) {
+            if (!toolbarHasMoved) {
+                openAIHelpWithSelection();
+            }
+        });
+    }
+    
+    if (aiBubble) {
+        aiBubble.addEventListener('mousedown', function(e) {
+            // Don't start drag if clicking close button
+            if (e.target.classList.contains('selection-ai-close') || e.target.closest('.selection-ai-close')) {
+                return;
+            }
+            startToolbarDrag(e);
+        });
+        aiBubble.addEventListener('touchstart', function(e) {
+            if (e.target.classList.contains('selection-ai-close') || e.target.closest('.selection-ai-close')) {
+                return;
+            }
+            startToolbarDragTouch(e);
+        }, { passive: false });
+        aiBubble.addEventListener('click', function(e) {
+            if (!toolbarHasMoved && !e.target.classList.contains('selection-ai-close') && !e.target.closest('.selection-ai-close')) {
+                openAIHelpWithSelection();
+            }
+        });
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            clearSelection();
+        });
+    }
+    
+    function startToolbarDrag(e) {
+        isDraggingToolbar = true;
+        toolbarHasMoved = false;
+        toolbarDragStartX = e.clientX;
+        toolbarDragStartY = e.clientY;
+        const rect = toolbar.getBoundingClientRect();
+        toolbarStartX = rect.left;
+        toolbarStartY = rect.top;
+        toolbar.classList.add('dragging');
+        // Don't preventDefault here - allow click if no movement
+        e.stopPropagation();
+        
+        document.addEventListener('mousemove', dragToolbar);
+        document.addEventListener('mouseup', stopToolbarDrag);
+    }
+    
+    function startToolbarDragTouch(e) {
+        const touch = e.touches[0];
+        isDraggingToolbar = true;
+        toolbarHasMoved = false;
+        toolbarDragStartX = touch.clientX;
+        toolbarDragStartY = touch.clientY;
+        const rect = toolbar.getBoundingClientRect();
+        toolbarStartX = rect.left;
+        toolbarStartY = rect.top;
+        toolbar.classList.add('dragging');
+        // Don't preventDefault here - allow click if no movement
+        e.stopPropagation();
+        
+        document.addEventListener('touchmove', dragToolbarTouch, { passive: false });
+        document.addEventListener('touchend', stopToolbarDrag);
+    }
+    
+    function dragToolbar(e) {
+        if (!isDraggingToolbar) return;
+        const deltaX = e.clientX - toolbarDragStartX;
+        const deltaY = e.clientY - toolbarDragStartY;
+        
+        // Check if moved more than 5px (to distinguish from click)
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            toolbarHasMoved = true;
+        }
+        
+        toolbar.style.left = (toolbarStartX + deltaX) + 'px';
+        toolbar.style.top = (toolbarStartY + deltaY) + 'px';
+        toolbar.style.bottom = '';
+        toolbar.style.right = '';
+        toolbar.style.width = '';
+        e.preventDefault();
+    }
+    
+    function dragToolbarTouch(e) {
+        if (!isDraggingToolbar) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - toolbarDragStartX;
+        const deltaY = touch.clientY - toolbarDragStartY;
+        
+        // Check if moved more than 5px
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            toolbarHasMoved = true;
+        }
+        
+        toolbar.style.left = (toolbarStartX + deltaX) + 'px';
+        toolbar.style.top = (toolbarStartY + deltaY) + 'px';
+        toolbar.style.bottom = '';
+        toolbar.style.right = '';
+        toolbar.style.width = '';
+        e.preventDefault();
+    }
+    
+    function stopToolbarDrag(e) {
+        if (isDraggingToolbar) {
+            const wasDragging = toolbarHasMoved;
+            isDraggingToolbar = false;
+            toolbar.classList.remove('dragging');
+            document.removeEventListener('mousemove', dragToolbar);
+            document.removeEventListener('mouseup', stopToolbarDrag);
+            document.removeEventListener('touchmove', dragToolbarTouch);
+            document.removeEventListener('touchend', stopToolbarDrag);
+            
+            // If we actually dragged, prevent the click event
+            if (wasDragging && e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Reset flag after a short delay to allow click handlers to check it
+            setTimeout(() => {
+                toolbarHasMoved = false;
+            }, 100);
+        }
+    }
 }
 
 // Clear selection
@@ -3981,6 +4159,8 @@ function clearSelection() {
     const toolbar = document.getElementById('selection-toolbar');
     if (toolbar) {
         toolbar.classList.remove('show');
+        // Reset drag initialization so it can be reinitialized next time
+        toolbar.dataset.dragInitialized = 'false';
     }
     
     // Clear AI chat selection status
