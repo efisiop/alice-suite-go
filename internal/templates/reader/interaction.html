@@ -674,6 +674,87 @@ html {
     white-space: nowrap;
 }
 
+/* AI quick-action in selection toolbar */
+.selection-ai-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.selection-ai-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+    flex-shrink: 0;
+}
+
+.selection-ai-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+}
+
+.selection-ai-icon {
+    font-size: 1.3rem;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
+.selection-ai-bubble {
+    position: relative;
+    background-color: white;
+    color: #333;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px 12px 12px 4px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    animation: bubbleSlideIn 0.3s ease-out;
+}
+
+.selection-ai-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: -8px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-right-color: white;
+    border-left: 0;
+}
+
+.selection-ai-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    left: -10px;
+    width: 0;
+    height: 0;
+    border: 7px solid transparent;
+    border-right-color: #e9ecef;
+    border-left: 0;
+    z-index: -1;
+}
+
+@keyframes bubbleSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 /* Selection mode indicator */
 .selection-mode-indicator {
     position: fixed;
@@ -840,6 +921,21 @@ html {
         order: -1;
     }
     
+    .selection-ai-container {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .selection-ai-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .selection-ai-bubble {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
     .selection-mode-indicator {
         top: 10px;
         right: 10px;
@@ -920,9 +1016,12 @@ html {
 <!-- Floating Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
     <div class="selection-toolbar-text" id="selected-text-preview"></div>
-    <button class="selection-toolbar-btn selection-toolbar-btn-primary" onclick="openAIHelpWithSelection()">
-        💬 Get AI Help
-    </button>
+    <div class="selection-ai-container">
+        <button class="selection-ai-btn" onclick="openAIHelpWithSelection()" aria-label="Need AI assistance" title="Get AI help">
+            <span class="selection-ai-icon">✨</span>
+        </button>
+        <div class="selection-ai-bubble">Need AI assistance?</div>
+    </div>
     <button class="selection-toolbar-btn selection-toolbar-btn-secondary" onclick="clearSelection()">
         ✕
     </button>
@@ -2419,7 +2518,7 @@ function enableAIChatTextSelection() {
 // Disable text selection when AI chat modal closes or selection completes
 function disableAIChatTextSelection() {
     aiChatSelectionModeActive = false;
-    textSelectionModeActive = false;
+    textSelectionModeActive = selectionToolbarAlwaysOn;
     
     // Reset button appearance
     const selectBtn = document.getElementById('ai-select-text-btn');
@@ -2960,6 +3059,7 @@ function askAI() {
 
 // Text Selection Tool Functions
 let textSelectionModeActive = false;
+let selectionToolbarAlwaysOn = true; // show AI spark on normal text selection
 let selectedText = '';
 let selectedRange = null;
 let aiChatSelectionModeActive = false; // Track if selection mode is active from AI chat
@@ -2967,7 +3067,7 @@ let aiChatSelectionModeActive = false; // Track if selection mode is active from
 // Toggle text selection mode (for AI chat modal)
 function toggleAIChatSelectionMode() {
     aiChatSelectionModeActive = !aiChatSelectionModeActive;
-    textSelectionModeActive = aiChatSelectionModeActive;
+    textSelectionModeActive = aiChatSelectionModeActive || selectionToolbarAlwaysOn;
     
     const btn = document.getElementById('ai-chat-pencil-btn');
     const icon = document.getElementById('ai-chat-pencil-icon');
@@ -3555,6 +3655,13 @@ function disableTextSelection() {
     clearSelection();
 }
 
+// Always-on selection toolbar for AI spark
+function initSelectionToolbarAlwaysOn() {
+    if (!selectionToolbarAlwaysOn) return;
+    textSelectionModeActive = true;
+    enableTextSelection();
+}
+
 // Handle text selection (desktop)
 function handleTextSelection(e) {
     if (!textSelectionModeActive) return;
@@ -3906,25 +4013,32 @@ function clearSelection() {
 
 // Open AI Help with selected text
 function openAIHelpWithSelection() {
-    if (!selectedText) {
+    // Save the selected text before any clearing operations
+    const textToUse = selectedText;
+    
+    if (!textToUse) {
         alert('No text selected. Please select some text first.');
         return;
     }
     
-    // Clear selection visuals
+    console.log('[openAIHelpWithSelection] Selected text:', textToUse);
+    
+    // Clear selection visuals (but keep the text saved above)
     clearHighlights();
     const toolbar = document.getElementById('selection-toolbar');
     if (toolbar) {
         toolbar.classList.remove('show');
     }
     
-    // Exit selection mode
-    if (textSelectionModeActive) {
-        toggleTextSelection();
+    // Clear browser selection visually
+    const selection = window.getSelection();
+    if (selection) {
+        selection.removeAllRanges();
     }
     
-    // Format the question with selected text
-    const question = `Help me understand this: "${selectedText}"`;
+    // Format the question with saved text
+    const question = `Help me understand this: "${textToUse}"`;
+    console.log('[openAIHelpWithSelection] Question:', question);
     
     // Open AI Help modal and set the question
     const modalElement = document.getElementById('aiHelpModal');
@@ -3936,6 +4050,10 @@ function openAIHelpWithSelection() {
         modalElement.addEventListener('hidden.bs.modal', function() {
             disableAIChatTextSelection();
             aiHelpModalInstance = null;
+            // Re-init always-on selection toolbar when modal closes
+            if (selectionToolbarAlwaysOn) {
+                initSelectionToolbarAlwaysOn();
+            }
         }, { once: false });
     }
     aiHelpModalInstance.show();
@@ -3947,7 +4065,11 @@ function openAIHelpWithSelection() {
         modalDialog2.style.height = '330px';
     }
 
-    // Don't automatically enable selection - user must click the button
+    // Initialize drag and resize for the modal
+    setTimeout(() => {
+        initAIHelpModalDrag();
+        initAIHelpModalResize();
+    }, 300);
 
     // Set the question in the input after a short delay
     setTimeout(() => {
@@ -3955,11 +4077,17 @@ function openAIHelpWithSelection() {
         if (questionInput) {
             questionInput.value = question;
             questionInput.focus();
+            console.log('[openAIHelpWithSelection] Set question input to:', question);
             // Trigger auto-resize
             questionInput.style.height = 'auto';
             questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+        } else {
+            console.error('[openAIHelpWithSelection] Could not find ai-question input!');
         }
     }, 600);
+    
+    // Reset the global selectedText variable
+    selectedText = '';
 }
 
 // Handle chat input keyboard events
@@ -4102,6 +4230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('[interaction.html] Loading initial page...');
     loadPage(1);
+    initSelectionToolbarAlwaysOn();
 });
 
 // Also try loading if DOM is already ready (for cases where script loads after DOMContentLoaded)
@@ -4117,6 +4246,7 @@ if (document.readyState === 'loading') {
     if (pageContentElement && sectionSnippetsElement) {
         console.log('[interaction.html] Elements found, loading page');
         loadPage(1);
+        initSelectionToolbarAlwaysOn();
     } else {
         console.warn('[interaction.html] Elements not found yet, will wait for DOMContentLoaded');
     }

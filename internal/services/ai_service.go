@@ -161,19 +161,23 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 func (s *AIService) buildPrompt(interactionType InteractionType, question, context string) string {
 	basePrompt := "You are a helpful reading assistant for Alice's Adventures in Wonderland. "
 	basePrompt += "This is a physical book companion app - users read from their physical book and use this app for assistance.\n\n"
-	basePrompt += "IMPORTANT: Please provide complete, finished answers. Do not cut off mid-sentence or leave incomplete thoughts.\n\n"
+	basePrompt += "IMPORTANT RULES:\n"
+	basePrompt += "1. Provide complete, finished answers. Do not cut off mid-sentence.\n"
+	basePrompt += "2. Focus your answer ONLY on the specific text or question the user highlighted/asked about.\n"
+	basePrompt += "3. Use the surrounding context to understand the situation, but do NOT expand your answer to cover the entire context.\n"
+	basePrompt += "4. Keep your response concise and directly relevant to what was asked.\n\n"
 
 	switch interactionType {
 	case InteractionExplain:
-		return basePrompt + fmt.Sprintf("Please provide a complete explanation of the following passage or concept: %s\n\nContext: %s\n\nMake sure your explanation is thorough and complete.", question, context)
+		return basePrompt + fmt.Sprintf("The user wants an explanation of THIS SPECIFIC TEXT: \"%s\"\n\nSurrounding context (for your understanding only, do not explain this): %s\n\nExplain ONLY the specific text quoted above, not the surrounding context.", question, context)
 	case InteractionQuiz:
-		return basePrompt + fmt.Sprintf("Create a complete quiz question about: %s\n\nContext: %s\n\nInclude the question, answer options, and the correct answer.", question, context)
+		return basePrompt + fmt.Sprintf("Create a quiz question about THIS SPECIFIC TEXT: \"%s\"\n\nSurrounding context (for your understanding only): %s\n\nMake the quiz focused on the quoted text, not the broader context.", question, context)
 	case InteractionSimplify:
-		return basePrompt + fmt.Sprintf("Please provide a complete, simplified version or rephrasing of: %s\n\nContext: %s\n\nMake sure your simplification is complete and clear.", question, context)
+		return basePrompt + fmt.Sprintf("Simplify THIS SPECIFIC TEXT: \"%s\"\n\nSurrounding context (for your understanding only, do not simplify this): %s\n\nProvide a simpler version of ONLY the quoted text above.", question, context)
 	case InteractionDefinition:
-		return basePrompt + fmt.Sprintf("Please provide a complete definition for: %s\n\nContext: %s\n\nMake sure your definition is comprehensive and finished.", question, context)
+		return basePrompt + fmt.Sprintf("Define THIS SPECIFIC TERM OR PHRASE: \"%s\"\n\nSurrounding context (for your understanding only): %s\n\nDefine ONLY the term/phrase quoted above.", question, context)
 	case InteractionChat:
-		return basePrompt + fmt.Sprintf("Question: %s\n\nContext: %s\n\nPlease provide a complete, helpful answer to the question.", question, context)
+		return basePrompt + fmt.Sprintf("User's question: %s\n\nSurrounding context (for your understanding): %s\n\nAnswer the user's specific question. Stay focused on what they asked.", question, context)
 	default:
 		return basePrompt + fmt.Sprintf("Question: %s\n\nPlease provide a complete, helpful answer.", question)
 	}
