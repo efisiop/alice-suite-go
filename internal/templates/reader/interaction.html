@@ -685,25 +685,37 @@ html {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
+    background: transparent;
     border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
     flex-shrink: 0;
+    padding: 0;
 }
 
 .selection-ai-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+    transform: scale(1.15);
 }
 
-.selection-ai-icon {
-    font-size: 1.3rem;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+.selection-ai-btn:hover .ai-sparkle-svg {
+    filter: drop-shadow(0 0 8px rgba(255, 200, 0, 0.8));
+}
+
+.ai-sparkle-svg {
+    width: 40px;
+    height: 40px;
+    transition: filter 0.2s ease;
+}
+
+/* 4-pointed star sparkle shape */
+.ai-sparkle-star {
+    fill: url(#yellowGradient);
+}
+
+.ai-sparkle-star-small {
+    fill: url(#yellowGradient);
 }
 
 .selection-ai-bubble {
@@ -927,6 +939,11 @@ html {
     }
     
     .selection-ai-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .ai-sparkle-svg {
         width: 36px;
         height: 36px;
     }
@@ -1018,7 +1035,21 @@ html {
     <div class="selection-toolbar-text" id="selected-text-preview"></div>
     <div class="selection-ai-container">
         <button class="selection-ai-btn" onclick="openAIHelpWithSelection()" aria-label="Need AI assistance" title="Get AI help">
-            <span class="selection-ai-icon">✨</span>
+            <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="yellowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#FFC200;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#FFB000;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <!-- Large 4-pointed star -->
+                <path class="ai-sparkle-star" d="M50 5 C52 35, 65 48, 95 50 C65 52, 52 65, 50 95 C48 65, 35 52, 5 50 C35 48, 48 35, 50 5 Z"/>
+                <!-- Medium star (bottom left) -->
+                <path class="ai-sparkle-star-small" d="M25 60 C26 72, 33 79, 45 80 C33 81, 26 88, 25 100 C24 88, 17 81, 5 80 C17 79, 24 72, 25 60 Z" transform="scale(0.5) translate(10, 90)"/>
+                <!-- Small star (left) -->
+                <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
+            </svg>
         </button>
         <div class="selection-ai-bubble">Need AI assistance?</div>
     </div>
@@ -2065,18 +2096,18 @@ function lookupWord(word) {
                     }
                 }
                 
-                resultDiv.innerHTML = `
-                    <div class="card">
-                        <div class="card-body">
+            resultDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
                             <h6>${escapeHtml(data.term || wordToLookup)}</h6>
                             <p>${escapeHtml(data.definition)}</p>
                             ${exampleHtml}
-                        </div>
                     </div>
-                `;
-                // Track dictionary lookup
-                trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
-            } else {
+                </div>
+            `;
+            // Track dictionary lookup
+            trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
+        } else {
                 resultDiv.innerHTML = '<p class="text-muted">Word not found in dictionary.</p>';
             }
         }
