@@ -3606,6 +3606,9 @@ function disableChatMessagesTextSelection() {
 function handleClickOutside(e) {
     if (!textSelectionModeActive) return;
     
+    // Don't clear if we're dragging the toolbar
+    if (isDraggingToolbar) return;
+    
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
@@ -3627,6 +3630,9 @@ function handleClickOutside(e) {
 function handleClickOutsideTouch(e) {
     if (!textSelectionModeActive) return;
     
+    // Don't clear if we're dragging the toolbar
+    if (isDraggingToolbar) return;
+    
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
@@ -3641,6 +3647,9 @@ function handleClickOutsideTouch(e) {
     
     // Small delay to avoid clearing selection while user is selecting
     setTimeout(() => {
+        // Check again if we're dragging (might have started during the delay)
+        if (isDraggingToolbar) return;
+        
         const selection = window.getSelection();
         if (!selection || selection.toString().trim().length === 0) {
             if (!aiChatSelectionModeActive) {
@@ -3852,7 +3861,13 @@ function handleTextSelectionMobile(e) {
 function handleSelectionChange() {
     if (!textSelectionModeActive) return;
     
+    // Don't clear if we're dragging the toolbar
+    if (isDraggingToolbar) return;
+    
     setTimeout(() => {
+        // Check again if we're dragging (might have started during the delay)
+        if (isDraggingToolbar) return;
+        
         const selection = window.getSelection();
         if (!selection || selection.toString().trim().length === 0) {
             // If in AI chat selection mode, don't clear automatically
@@ -4105,7 +4120,10 @@ function initSelectionToolbarDrag() {
         toolbar.style.bottom = '';
         toolbar.style.right = '';
         toolbar.style.width = '';
+        
+        // Prevent default to avoid clearing selection
         e.preventDefault();
+        e.stopPropagation();
     }
     
     function dragToolbarTouch(e) {
@@ -4124,7 +4142,10 @@ function initSelectionToolbarDrag() {
         toolbar.style.bottom = '';
         toolbar.style.right = '';
         toolbar.style.width = '';
+        
+        // Prevent default to avoid clearing selection
         e.preventDefault();
+        e.stopPropagation();
     }
     
     function stopToolbarDrag(e) {
@@ -4153,6 +4174,9 @@ function initSelectionToolbarDrag() {
 
 // Clear selection
 function clearSelection() {
+    // Don't clear if we're dragging the toolbar
+    if (isDraggingToolbar) return;
+    
     selectedText = '';
     selectedRange = null;
     
