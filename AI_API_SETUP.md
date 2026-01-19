@@ -1,6 +1,6 @@
 # AI API Setup Guide - Tier 2
 
-This guide shows you where to paste your **Gemini API key** and optionally configure your **Moonshot API key** for Tier 2 AI assistance features.
+This guide shows you where to paste your **Gemini API key**, optionally configure your **Moonshot API key**, and optionally configure your **Freepik API key** for Tier 2 AI assistance features including image generation.
 
 ## 🔑 Where to Set API Keys
 
@@ -10,6 +10,7 @@ This guide shows you where to paste your **Gemini API key** and optionally confi
 ```bash
 export GEMINI_API_KEY="your-gemini-api-key-here"
 export MOONSHOT_API_KEY="your-moonshot-api-key-here"  # Optional
+export FREEPIK_API_KEY="your-freepik-api-key-here"  # Optional - for visual example image generation
 export AI_PROVIDER="auto"  # Optional: "gemini", "moonshot", or "auto" (default)
 ```
 
@@ -19,6 +20,7 @@ export AI_PROVIDER="auto"  # Optional: "gemini", "moonshot", or "auto" (default)
 ```bash
 echo 'export GEMINI_API_KEY="your-gemini-api-key-here"' >> ~/.zshrc
 echo 'export MOONSHOT_API_KEY="your-moonshot-api-key-here"' >> ~/.zshrc  # Optional
+echo 'export FREEPIK_API_KEY="your-freepik-api-key-here"' >> ~/.zshrc  # Optional - for visual example image generation
 echo 'export AI_PROVIDER="auto"' >> ~/.zshrc  # Optional
 source ~/.zshrc
 ```
@@ -27,6 +29,7 @@ source ~/.zshrc
 ```bash
 echo 'export GEMINI_API_KEY="your-gemini-api-key-here"' >> ~/.bashrc
 echo 'export MOONSHOT_API_KEY="your-moonshot-api-key-here"' >> ~/.bashrc  # Optional
+echo 'export FREEPIK_API_KEY="your-freepik-api-key-here"' >> ~/.bashrc  # Optional - for visual example image generation
 source ~/.bashrc
 ```
 
@@ -47,7 +50,11 @@ Based on your Render dashboard:
    - In the **KEY** field: `GEMINI_API_KEY`
    - In the **VALUE** field: `your-gemini-api-key-here`
    - Click **Save**, **Add**, or **Apply** (depending on what buttons appear)
-8. If you want to add optional variables, repeat step 7:
+8. (Optional) Add Freepik API key for visual example image generation:
+   - In the **KEY** field: `FREEPIK_API_KEY`
+   - In the **VALUE** field: `your-freepik-api-key-here`
+   - Click **Save**, **Add**, or **Apply**
+9. If you want to add other optional variables, repeat step 7:
    - **KEY:** `MOONSHOT_API_KEY`, **VALUE:** `your-moonshot-api-key-here`
    - **KEY:** `AI_PROVIDER`, **VALUE:** `auto`
 9. Click **Save Changes** or **Apply** to confirm
@@ -82,6 +89,8 @@ services:
         value: your-gemini-api-key-here  # ⚠️ This will be in Git!
       - key: MOONSHOT_API_KEY  # Optional
         value: your-moonshot-api-key-here
+      - key: FREEPIK_API_KEY  # Optional - for visual example image generation
+        value: your-freepik-api-key-here
       - key: AI_PROVIDER  # Optional
         value: auto
 ```
@@ -139,7 +148,9 @@ curl -X PATCH "https://api.render.com/v1/services/srv-d4uunpm3jp1c73eahffg/env-v
    - If you prefer Moonshot's performance or pricing
    - No fallback
 
-## 📝 Getting Your Gemini API Key
+## 📝 Getting Your API Keys
+
+### Gemini API Key
 
 1. Go to [Google AI Studio](https://aistudio.google.com/)
 2. Sign in with your Google account
@@ -147,6 +158,18 @@ curl -X PATCH "https://api.render.com/v1/services/srv-d4uunpm3jp1c73eahffg/env-v
 4. Create a new project or select existing one
 5. Copy the API key
 6. Paste it where indicated above
+
+### Freepik API Key (Optional - for Visual Examples)
+
+The Freepik API key enables image generation for the "Visual Example" feature. Without it, visual examples will only show text descriptions.
+
+1. Go to [Freepik API Documentation](https://docs.freepik.com/)
+2. Sign up or log in to your Freepik account
+3. Navigate to API settings or developer dashboard
+4. Generate or copy your API key
+5. Add it as `FREEPIK_API_KEY` environment variable (see setup instructions above)
+
+**Note:** Freepik uses a credit-based system. Check their [pricing page](https://www.freepik.com/api/pricing) for details. The free tier includes limited credits for testing.
 
 ## 🧪 Testing Your Setup
 
@@ -178,6 +201,9 @@ The AI service will automatically detect which providers are configured and use 
 
 **Problem:** On Render.com, keys don't work
 - **Solution:** Make sure you added them via the Environment tab in Render dashboard, then restart the service
+
+**Problem:** Visual examples show text but no images
+- **Solution:** Make sure `FREEPIK_API_KEY` is set. Without it, only text descriptions will be shown.
 
 ## ✅ Verification
 

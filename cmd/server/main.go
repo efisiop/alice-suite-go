@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,7 +15,53 @@ import (
 	"github.com/efisiopittau/alice-suite-go/internal/middleware"
 )
 
+// loadEnvFile loads environment variables from .env file if it exists
+func loadEnvFile() {
+	envFile := ".env"
+	if _, err := os.Stat(envFile); os.IsNotExist(err) {
+		return // .env file doesn't exist, skip
+	}
+
+	file, err := os.Open(envFile)
+	if err != nil {
+		log.Printf("Warning: Could not open .env file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Parse KEY=VALUE format
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			// Remove quotes if present
+			if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'')) {
+				value = value[1 : len(value)-1]
+			}
+			// Only set if not already in environment
+			if os.Getenv(key) == "" {
+				os.Setenv(key, value)
+				log.Printf("Loaded environment variable from .env: %s", key)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("Warning: Error reading .env file: %v", err)
+	}
+}
+
 func main() {
+	// Load .env file if it exists (for local development)
+	loadEnvFile()
+
 	// Load configuration
 	cfg := config.Load()
 	cfg.Validate()

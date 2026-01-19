@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# Load .env file if it exists (for local development)
+if [ -f .env ]; then
+    echo "Loading environment variables from .env file..."
+    set -a
+    . ./.env
+    set +a
+fi
+
 # Always run migrations to ensure database schema is up to date
 echo "Running database migrations..."
 export DB_PATH="${DB_PATH:-data/alice-suite.db}"

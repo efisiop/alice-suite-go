@@ -344,6 +344,35 @@ func SearchGlossaryTerms(bookID, searchTerm string) ([]*models.AliceGlossary, er
 	return terms, rows.Err()
 }
 
+// GetAllGlossaryTerms retrieves all glossary terms for a book
+func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
+	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
+	          FROM alice_glossary 
+	          WHERE book_id = ?
+	          ORDER BY term`
+
+	rows, err := DB.Query(query, bookID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	terms := []*models.AliceGlossary{}
+	for rows.Next() {
+		term := &models.AliceGlossary{}
+		err := rows.Scan(
+			&term.ID, &term.BookID, &term.Term, &term.Definition,
+			&term.SourceSentence, &term.Example, &term.ChapterReference,
+			&term.CreatedAt, &term.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		terms = append(terms, term)
+	}
+	return terms, rows.Err()
+}
+
 // GetGlossaryTermBySection gets glossary terms linked to a specific section
 func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error) {
 	query := `SELECT g.id, g.book_id, g.term, g.definition, g.source_sentence, g.example, g.chapter_reference, g.created_at, g.updated_at

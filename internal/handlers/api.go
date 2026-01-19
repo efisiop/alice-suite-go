@@ -18,7 +18,18 @@ var (
 	dictionaryService = services.NewDictionaryService()
 	helpService       = services.NewHelpService()
 	aiService         = services.NewAIService()
+	imageService      *services.ImageService
 )
+
+// getImageService returns the image service instance, initializing it lazily
+// This allows the .env file to be loaded before the service is created
+// It will recreate the service if it becomes unconfigured (e.g., after .env is loaded)
+func getImageService() *services.ImageService {
+	// Always create a new instance to pick up environment variables
+	// This ensures .env file changes are picked up
+	imageService = services.NewImageService()
+	return imageService
+}
 
 // SetupAPIRoutes sets up REST API routes (Supabase-compatible)
 func SetupAPIRoutes(mux *http.ServeMux) {
@@ -90,6 +101,8 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/dictionary/lookup", HandleLookupWord)
 	mux.HandleFunc("/api/dictionary/section/", HandleGetSectionGlossaryTerms)
 	mux.HandleFunc("/api/ai/ask", HandleAskAI)
+	mux.HandleFunc("/api/ai/generate-image", HandleGenerateImage)
+	mux.HandleFunc("/api/ai/image-status", HandleImageStatus)
 	mux.HandleFunc("/api/help", HandleCreateHelpRequest)
 }
 
@@ -315,6 +328,7 @@ func HandleGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sectionID := r.URL.Query().Get("section_id")
+	bookID := r.URL.Query().Get("book_id")
 
 	if sectionID != "" {
 		terms, err := dictionaryService.GetGlossaryTermsForSection(sectionID)
@@ -327,9 +341,19 @@ func HandleGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement book-level glossary terms
+	// Return all glossary terms for the book
+	if bookID == "" {
+		bookID = "alice-in-wonderland" // Default book ID
+	}
+	
+	terms, err := dictionaryService.GetAllGlossaryTerms(bookID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]interface{}{})
+	json.NewEncoder(w).Encode(terms)
 }
 
 // HandleGetDefinitionWithContext handles POST /rest/v1/rpc/get_definition_with_context
@@ -681,6 +705,152 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(interaction)
+}
+
+// HandleGenerateImage handles POST /api/ai/generate-image
+func HandleGenerateImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract and validate token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header required", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	_, err = auth.ValidateJWT(token)
+	if err != nil {
+		if err == auth.ErrInvalidToken || err == auth.ErrExpiredToken {
+			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Authentication failed", http.StatusUnauthorized)
+		return
+	}
+
+	imgService := getImageService()
+	if !imgService.IsConfigured() {
+		http.Error(w, "Image generation service not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		Prompt      string `json:"prompt"`
+		AspectRatio string `json:"aspect_ratio,omitempty"`
+		Model       string `json:"model,omitempty"`
+		Resolution  string `json:"resolution,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Prompt == "" {
+		http.Error(w, "Prompt is required", http.StatusBadRequest)
+		return
+	}
+
+	// Create image generation request
+	imageReq := services.ImageGenerationRequest{
+		Prompt:      req.Prompt,
+		AspectRatio: req.AspectRatio,
+		Model:       req.Model,
+		Resolution:  req.Resolution,
+	}
+
+	// Generate image (may be sync for DeepAI or async for Freepik)
+	genResp, err := imgService.GenerateImage(imageReq)
+	if err != nil {
+		log.Printf("Error generating image: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to generate image: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"task_id": genResp.TaskID,
+		"status":  genResp.Status,
+		"message": genResp.Message,
+	}
+	
+	// For DeepAI (synchronous), if status is "completed", the image URL is in Message
+	if genResp.Status == "completed" && genResp.Message != "" {
+		response["image_url"] = genResp.Message
+	}
+	
+	json.NewEncoder(w).Encode(response)
+}
+
+// HandleImageStatus handles GET /api/ai/image-status?task_id=...&model=...
+func HandleImageStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract and validate token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header required", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	_, err = auth.ValidateJWT(token)
+	if err != nil {
+		if err == auth.ErrInvalidToken || err == auth.ErrExpiredToken {
+			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Authentication failed", http.StatusUnauthorized)
+		return
+	}
+
+	imgService := getImageService()
+	if !imgService.IsConfigured() {
+		http.Error(w, "Image generation service not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	taskID := r.URL.Query().Get("task_id")
+	model := r.URL.Query().Get("model")
+	if model == "" {
+		model = "mystic" // Default model
+	}
+
+	if taskID == "" {
+		http.Error(w, "task_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	status, err := imgService.CheckImageTaskStatus(taskID, model)
+	if err != nil {
+		if err == services.ErrImageTaskNotFound {
+			http.Error(w, "Image task not found", http.StatusNotFound)
+			return
+		}
+		log.Printf("Error checking image status: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to check image status: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
 }
 
 func HandleCreateHelpRequest(w http.ResponseWriter, r *http.Request) {

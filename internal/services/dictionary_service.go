@@ -288,6 +288,11 @@ func (s *DictionaryService) GetGlossaryTermsForSection(sectionID string) ([]*mod
 	return database.GetGlossaryTermBySection(sectionID)
 }
 
+// GetAllGlossaryTerms gets all glossary terms for a book
+func (s *DictionaryService) GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
+	return database.GetAllGlossaryTerms(bookID)
+}
+
 // GetGlossaryTermsForPageSection gets all glossary terms for a specific page and section
 func (s *DictionaryService) GetGlossaryTermsForPageSection(bookID string, pageNumber, sectionNumber int) ([]*models.AliceGlossary, error) {
 	return database.GetGlossaryTermByPageAndSection(bookID, pageNumber, sectionNumber)

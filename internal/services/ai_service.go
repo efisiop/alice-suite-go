@@ -104,22 +104,26 @@ func NewAIService() *AIService {
 type InteractionType string
 
 const (
-	InteractionExplain   InteractionType = "explain"
-	InteractionQuiz      InteractionType = "quiz"
-	InteractionSimplify  InteractionType = "simplify"
-	InteractionDefinition InteractionType = "definition"
-	InteractionChat      InteractionType = "chat"
+	InteractionExplain            InteractionType = "explain"
+	InteractionQuiz               InteractionType = "quiz"
+	InteractionSimplify           InteractionType = "simplify"
+	InteractionDefinition         InteractionType = "definition"
+	InteractionChat               InteractionType = "chat"
+	InteractionFindMisunderstoodWord InteractionType = "find_misunderstood_word"
+	InteractionVisualExample      InteractionType = "visual_example"
 )
 
 // AskAI sends a question to the AI and returns a response
 func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType, question string, sectionID *string, context string) (*models.AIInteraction, error) {
 	// Validate interaction type
 	validTypes := map[InteractionType]bool{
-		InteractionExplain:    true,
-		InteractionQuiz:      true,
-		InteractionSimplify:  true,
-		InteractionDefinition: true,
-		InteractionChat:      true,
+		InteractionExplain:            true,
+		InteractionQuiz:               true,
+		InteractionSimplify:           true,
+		InteractionDefinition:         true,
+		InteractionChat:               true,
+		InteractionFindMisunderstoodWord: true,
+		InteractionVisualExample:      true,
 	}
 	if !validTypes[interactionType] {
 		return nil, ErrInvalidInteractionType
@@ -178,6 +182,36 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 		return basePrompt + fmt.Sprintf("Define THIS SPECIFIC TERM OR PHRASE: \"%s\"\n\nSurrounding context (for your understanding only): %s\n\nDefine ONLY the term/phrase quoted above.", question, context)
 	case InteractionChat:
 		return basePrompt + fmt.Sprintf("User's question: %s\n\nSurrounding context (for your understanding): %s\n\nAnswer the user's specific question. Stay focused on what they asked.", question, context)
+	case InteractionFindMisunderstoodWord:
+		return basePrompt + fmt.Sprintf("The user is having trouble understanding THIS SPECIFIC TEXT: \"%s\"\n\nSurrounding context (including the prior sentence for context): %s\n\n"+
+			"Your task: Identify 4 to 8 words from the quoted text that are most likely to be misunderstood by a reader.\n\n"+
+			"Return ONLY a simple comma-separated list of the words, nothing else. For example:\n"+
+			"word1, word2, word3, word4\n\n"+
+			"Rules:\n"+
+			"- Return exactly 4-8 words (adjust based on text length - shorter text gets fewer words)\n"+
+			"- Only include words from the quoted text above\n"+
+			"- Focus on: uncommon vocabulary, complex words, words with multiple meanings, abstract concepts\n"+
+			"- Return just the words separated by commas, no explanations, no JSON, no quotes\n"+
+			"- Do not include the quoted text or any other text, only the word list", question, context)
+	case InteractionVisualExample:
+		visualPrompt := basePrompt + fmt.Sprintf("The user wants a visual example to help understand: \"%s\"\n\nSurrounding context (for your understanding): %s\n\n", question, context)
+		visualPrompt += "ABSOLUTE CONTENT RULES - YOU MUST FOLLOW THESE STRICTLY:\n"
+		visualPrompt += "1. NO offensive, inappropriate, or adult content of any kind\n"
+		visualPrompt += "2. All visual examples must be appropriate for ALL AGES (including children)\n"
+		visualPrompt += "3. If asked about sensitive topics (including but not limited to: violence, adult themes, disturbing content), provide only discrete, educational, and age-appropriate visual descriptions\n"
+		visualPrompt += "4. Use simple, clear, and educational visual descriptions\n"
+		visualPrompt += "5. Focus on the educational aspect and learning value\n\n"
+		visualPrompt += "VISUAL STYLE REQUIREMENTS:\n"
+		visualPrompt += "- Create a prompt for generating a pencil sketch or line drawing style illustration\n"
+		visualPrompt += "- Use a standardized, simple drawing style (like a technical illustration or educational diagram)\n"
+		visualPrompt += "- Keep the image generation prompt clear and suitable for all audiences\n"
+		visualPrompt += "- Focus on clarity and educational value\n"
+		visualPrompt += "- The image should be simple, light, and educational (like a pencil drawing)\n\n"
+		visualPrompt += "IMPORTANT: Your response should be ONLY a concise image generation prompt (1-2 sentences) that describes what the visual should look like. "+
+			"This prompt will be used to generate an actual image. Make it specific enough for image generation but appropriate for all ages. "+
+			"If the topic requires discretion, provide a simplified, educational version that maintains appropriateness for all ages.\n\n"+
+			"Example format: \"A simple pencil sketch of [educational description], suitable for all ages, educational illustration style\""
+		return visualPrompt
 	default:
 		return basePrompt + fmt.Sprintf("Question: %s\n\nPlease provide a complete, helpful answer.", question)
 	}

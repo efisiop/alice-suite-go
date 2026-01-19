@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,9 @@ import (
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+//go:embed sections-data.sql
+var embeddedSectionsData string
 
 func main() {
 	// Load configuration
@@ -358,7 +362,13 @@ func min(a, b int) int {
 
 // getSectionsData returns the embedded sections SQL data
 func getSectionsData() string {
-	// Try multiple possible paths (works in different environments)
+	// First, try to use embedded data (most reliable - always available)
+	if embeddedSectionsData != "" && len(embeddedSectionsData) > 100 {
+		fmt.Printf("   ✓ Using embedded sections data (%d bytes)\n", len(embeddedSectionsData))
+		return embeddedSectionsData
+	}
+
+	// Fallback: Try multiple possible paths (for development/debugging)
 	possiblePaths := []string{
 		"scripts/sections-data.sql",
 		"../scripts/sections-data.sql",
@@ -370,31 +380,12 @@ func getSectionsData() string {
 
 	for _, path := range possiblePaths {
 		if data, err := os.ReadFile(path); err == nil {
-			fmt.Printf("   ✓ Found sections data at: %s\n", path)
+			fmt.Printf("   ✓ Found sections data at: %s (%d bytes)\n", path, len(data))
 			return string(data)
 		}
 	}
 
-	// If file not found, try embedded data (fallback)
+	// If nothing found, return empty (should not happen with embedded data)
+	fmt.Printf("   ⚠️  Warning: No sections data found (embedded=%d bytes)\n", len(embeddedSectionsData))
 	return embeddedSectionsData
-}
-
-// embeddedSectionsData contains the actual SQL INSERT statements
-// This is a fallback if the file can't be read
-var embeddedSectionsData = getEmbeddedSectionsData()
-
-func getEmbeddedSectionsData() string {
-	// Try to read from the file using all possible paths
-	possiblePaths := []string{
-		"scripts/sections-data.sql",
-		"../scripts/sections-data.sql",
-		"../../scripts/sections-data.sql",
-	}
-
-	for _, path := range possiblePaths {
-		if data, err := os.ReadFile(path); err == nil {
-			return string(data)
-		}
-	}
-	return ""
 }
