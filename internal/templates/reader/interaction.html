@@ -213,6 +213,215 @@ html {
     resize: none; /* Disable default browser resize, we'll use custom */
 }
 
+/* Transparent modal design - no chat box background */
+#aiHelpModal .modal-content {
+    background: transparent !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: none !important;
+    border-radius: 12px;
+}
+
+#aiHelpModal .modal-header {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.5rem 0 !important;
+    margin-bottom: 0.5rem;
+}
+
+#aiHelpModal .modal-body {
+    background: transparent !important;
+}
+
+#ai-chat-messages {
+    background-color: transparent !important;
+}
+
+#ai-chat-empty-state {
+    color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* WhatsApp-style Floating Chat Container */
+.ai-chat-container {
+    position: fixed;
+    right: 20px;
+    bottom: 80px;
+    width: 380px;
+    max-width: calc(100vw - 40px);
+    height: 600px;
+    max-height: calc(100vh - 100px);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    z-index: 1050;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.ai-chat-container.hidden {
+    transform: translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ai-chat-header {
+    background: #075E54;
+    color: white;
+    padding: 1rem;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+}
+
+.ai-chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.ai-chat-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.ai-chat-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.ai-chat-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+.ai-chat-close-btn:hover {
+    opacity: 1;
+}
+
+.ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #ECE5DD;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='chatPattern' x='0' y='0' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='50' cy='50' r='1' fill='%23D4D4D4' opacity='0.3'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23chatPattern)'/%3E%3C/svg%3E");
+}
+
+.ai-chat-input-area {
+    padding: 1rem;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.ai-chat-input {
+    border: 1px solid #e0e0e0 !important;
+}
+
+.ai-chat-send-btn {
+    background: #25D366 !important;
+    color: white;
+}
+
+.ai-chat-send-btn:hover {
+    background: #20BA5A !important;
+}
+
+.ai-quick-action-btn {
+    background: rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.1);
+    color: #333;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.ai-quick-action-btn:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+/* WhatsApp-style Chat Bubbles */
+.chat-bubble.user {
+    background-color: #DCF8C6;
+    color: #000;
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+}
+
+.chat-bubble.ai {
+    background-color: white;
+    color: #000;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Minimized Chat Bar at Bottom */
+.ai-chat-minimized {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 1049;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.ai-chat-minimized:hover {
+    background: #f8f9fa;
+}
+
+.ai-chat-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #075E54;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+}
+
+.ai-chat-title-small {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.ai-chat-last-message {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.ai-chat-close-btn-small {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.ai-chat-close-btn-small:hover {
+    color: #333;
+}
+
 .dictionary-popup-content-inner {
     padding: 1rem;
 }
@@ -462,12 +671,16 @@ html {
 }
 
 .chat-bubble {
-    max-width: 75%;
+    max-width: 85%;
+    min-width: 120px;
     padding: 0.75rem 1rem;
     border-radius: 18px;
     word-wrap: break-word;
     line-height: 1.5;
     position: relative;
+    width: auto;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 .chat-bubble.user {
@@ -477,11 +690,13 @@ html {
 }
 
 .chat-bubble.ai {
-    background-color: white;
+    background-color: transparent;
     color: #333;
-    border: 1px solid #e0e0e0;
+    border: none;
     border-bottom-left-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .chat-message-header {
@@ -1076,74 +1291,86 @@ html {
     </div>
 </div>
 
-<!-- AI Help Modal (Tier 2: AI Assistance) - Chat Interface -->
-<div class="modal fade" id="aiHelpModal" tabindex="-1">
-    <div class="modal-dialog" id="aiHelpModalDialog" style="max-width: 800px; min-width: 400px; width: 520px; height: 330px; min-height: 250px; max-height: 90vh; margin: 50px auto; position: absolute; left: 50%; top: 50px; transform: translateX(-50%); resize: both; overflow: hidden;">
-        <div class="modal-content d-flex flex-column h-100" style="position: relative;">
-            <div class="modal-header" id="aiHelpModalDragHandle" style="cursor: move; user-select: none;">
-                <h5 class="modal-title">💬 AI Help Assistant</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- WhatsApp-style Floating AI Chat -->
+<div id="ai-chat-container" class="ai-chat-container" style="display: none;">
+    <!-- Chat Header -->
+    <div class="ai-chat-header" id="ai-chat-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <span class="ai-chat-avatar">💬</span>
+                <div>
+                    <div class="ai-chat-title">AI Assistant</div>
+                    <small class="ai-chat-subtitle">Online</small>
+                </div>
             </div>
-            <!-- Resize Handle -->
-            <div id="aiHelpModalResizeHandle" title="Drag to resize"></div>
-            
-            <!-- Chat Messages Container -->
-            <div class="modal-body flex-grow-1 d-flex flex-column p-0" style="min-height: 0; overflow: hidden; flex: 1 1 auto;">
-                <div id="ai-chat-messages" class="flex-grow-1 p-3" style="overflow-y: auto; background-color: #f5f5f5; flex: 1 1 auto;">
-                    <!-- Messages will be inserted here -->
-                    <div class="text-center text-muted py-5" id="ai-chat-empty-state">
-                        <p>Start a conversation with the AI assistant!</p>
-                        <small>Ask questions about what you're reading.</small>
-                    </div>
-                </div>
-                
-                <!-- Chat Input Area -->
-                <div class="border-top p-3 bg-white">
-                    <!-- Select Text Button -->
-                    <div class="mb-2">
-                        <button 
-                            class="btn btn-outline-primary btn-sm w-100" 
-                            id="ai-select-text-btn"
-                            onclick="activateTextSelectionMode()" 
-                            style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                            <span>✏️</span>
-                            <span>Select the text you want to clarify</span>
-                        </button>
-                    </div>
-                    
-                    <div class="d-flex gap-2 align-items-end">
-                        <div class="flex-grow-1">
-                            <textarea 
-                                class="form-control" 
-                                id="ai-question" 
-                                rows="1" 
-                                placeholder="Ask me anything about the text you're reading..."
-                                style="resize: none; max-height: 120px;"
-                                onkeydown="handleChatInputKeydown(event)"></textarea>
-                        </div>
-                        <button 
-                            class="btn btn-primary" 
-                            onclick="askAI()" 
-                            id="ai-ask-button"
-                            style="height: 38px;">
-                            <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status"></span>
-                            <span id="ai-send-text">Send</span>
-                        </button>
-                    </div>
-                    <div class="mt-2 d-flex gap-2 flex-wrap align-items-center">
-                        <small class="text-muted">Quick actions:</small>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('explain')" title="Explain">Explain</button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('find_misunderstood_word')" title="Find misunderstood words">Find Words</button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="setQuickQuestion('visual_example')" title="Get visual example">Visual Example</button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()" title="Clear conversation">Clear</button>
-                        <!-- Selection status indicator -->
-                        <div id="ai-chat-selection-status" class="ms-auto text-success small fw-bold" style="display: none;">
-                            <span id="ai-chat-selection-status-text">Text selected - Press Enter to add to chat</span>
-                        </div>
-                    </div>
-                </div>
+            <button class="ai-chat-close-btn" onclick="minimizeAIChatToBottom()" title="Minimize">−</button>
+        </div>
+    </div>
+    
+    <!-- Chat Messages -->
+    <div id="ai-chat-messages" class="ai-chat-messages">
+        <div class="text-center text-muted py-5" id="ai-chat-empty-state">
+            <p>Start a conversation with the AI assistant!</p>
+            <small>Ask questions about what you're reading.</small>
+        </div>
+    </div>
+    
+    <!-- Chat Input Area -->
+    <div class="ai-chat-input-area">
+        <!-- Select Text Button -->
+        <div class="mb-2">
+            <button 
+                class="btn btn-outline-primary btn-sm w-100" 
+                id="ai-select-text-btn"
+                onclick="activateTextSelectionMode()" 
+                style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(255,255,255,0.95); border-color: rgba(0,123,255,0.3);">
+                <span>✏️</span>
+                <span>Select the text you want to clarify</span>
+            </button>
+        </div>
+        
+        <div class="d-flex gap-2 align-items-end">
+            <div class="flex-grow-1">
+                <textarea 
+                    class="form-control ai-chat-input" 
+                    id="ai-question" 
+                    rows="1" 
+                    placeholder="Type a message..."
+                    style="resize: none; max-height: 120px; background: white; border-radius: 20px; padding: 0.5rem 1rem;"
+                    onkeydown="handleChatInputKeydown(event)"></textarea>
+            </div>
+            <button 
+                class="btn ai-chat-send-btn" 
+                onclick="askAI()" 
+                id="ai-ask-button"
+                style="height: 38px; width: 38px; border-radius: 50%; background: #25D366; border: none; padding: 0;">
+                <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status" style="width: 1rem; height: 1rem;"></span>
+                <span id="ai-send-text">📤</span>
+            </button>
+        </div>
+        <div class="mt-2 d-flex gap-2 flex-wrap align-items-center">
+            <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('explain')" title="Explain">Explain</button>
+            <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('find_misunderstood_word')" title="Find misunderstood words">Find Words</button>
+            <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('visual_example')" title="Get visual example">Visual</button>
+            <button class="btn btn-sm ai-quick-action-btn" onclick="clearChat()" title="Clear conversation">Clear</button>
+            <div id="ai-chat-selection-status" class="ms-auto text-success small fw-bold" style="display: none;">
+                <span id="ai-chat-selection-status-text">Text selected - Press Enter</span>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Minimized Chat Bar at Bottom -->
+<div id="ai-chat-minimized" class="ai-chat-minimized" style="display: none;" onclick="expandAIChatFromBottom()">
+    <div class="d-flex align-items-center justify-content-between p-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="ai-chat-avatar-small">💬</span>
+            <div>
+                <div class="ai-chat-title-small">AI Assistant</div>
+                <small class="ai-chat-last-message" id="ai-chat-last-message-preview">Tap to open chat</small>
+            </div>
+        </div>
+        <button class="ai-chat-close-btn-small" onclick="event.stopPropagation(); closeAIChat();" title="Close">✕</button>
     </div>
 </div>
 
@@ -2457,64 +2684,161 @@ function initAIHelpModalDrag() {
 
 // Store modal instance globally to prevent closing on backdrop click
 let aiHelpModalInstance = null;
+let isChatMinimized = false;
+let minimizeTimeout = null;
 
-// Show AI Help modal
-function showAIHelp() {
-    const modalElement = document.getElementById('aiHelpModal');
+// Minimize chat to bottom bar
+function minimizeAIChatToBottom() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const minimizedBar = document.getElementById('ai-chat-minimized');
     
-    // Create modal with backdrop: 'static' to prevent closing on backdrop click
-    aiHelpModalInstance = new bootstrap.Modal(modalElement, {
-        backdrop: 'static',
-        keyboard: true  // Still allow ESC key to close
-    });
+    if (chatContainer && minimizedBar) {
+        chatContainer.style.display = 'none';
+        minimizedBar.style.display = 'block';
+        isChatMinimized = true;
+    }
+}
+
+// Expand chat from bottom bar
+function expandAIChatFromBottom() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const minimizedBar = document.getElementById('ai-chat-minimized');
     
-    // Listen for modal close event
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        disableAIChatTextSelection();
-        aiHelpModalInstance = null;
-    }, { once: false });
+    if (chatContainer && minimizedBar) {
+        chatContainer.style.display = 'flex';
+        minimizedBar.style.display = 'none';
+        isChatMinimized = false;
+        // Scroll to bottom
+        scrollChatToBottom();
+    }
+}
+
+// Close chat completely
+function closeAIChat() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const minimizedBar = document.getElementById('ai-chat-minimized');
     
-    aiHelpModalInstance.show();
-    
-    // Reset modal to default size when opening
+    if (chatContainer) chatContainer.style.display = 'none';
+    if (minimizedBar) minimizedBar.style.display = 'none';
+    isChatMinimized = false;
+    disableAIChatTextSelection();
+}
+
+// Check if point is inside the chat modal
+function isInsideChatModal(x, y) {
     const modalDialog = document.getElementById('aiHelpModalDialog');
-    if (modalDialog) {
-        modalDialog.style.width = '520px';
-        modalDialog.style.height = '330px';
+    if (!modalDialog) return false;
+    
+    const rect = modalDialog.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+// Handle mouse/touch movement - auto-minimize when outside
+function handleOutsideChatInteraction(e) {
+    const modalElement = document.getElementById('aiHelpModal');
+    if (!modalElement || !modalElement.classList.contains('show')) return;
+    if (isChatMinimized) return; // Don't do anything if already minimized
+    
+    // Don't minimize if user is interacting with chat elements
+    const target = e.target;
+    if (target && modalElement.contains(target)) {
+        // Clear any pending minimize if user is inside chat
+        if (minimizeTimeout) {
+            clearTimeout(minimizeTimeout);
+            minimizeTimeout = null;
+        }
+        return;
     }
     
-    // Don't automatically enable selection - user must click the button
+    const x = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    const y = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
     
-    // Initialize drag and resize functionality after modal is shown
-    setTimeout(() => {
-        initAIHelpModalDrag();
-        initAIHelpModalResize();
-    }, 300);
+    // Clear any existing timeout
+    if (minimizeTimeout) {
+        clearTimeout(minimizeTimeout);
+    }
     
-    // Clear input
-    document.getElementById('ai-question').value = '';
+    // If outside the chat, minimize after a short delay
+    if (!isInsideChatModal(x, y)) {
+        minimizeTimeout = setTimeout(() => {
+            // Double-check user is still outside before minimizing
+            if (!isInsideChatModal(x, y) && !isChatMinimized) {
+                minimizeAIChat();
+            }
+        }, 800); // 800ms delay before minimizing (gives user time to move back)
+    } else {
+        // User moved back inside - cancel minimize
+        if (minimizeTimeout) {
+            clearTimeout(minimizeTimeout);
+            minimizeTimeout = null;
+        }
+    }
+}
+
+// Show AI Help - WhatsApp style floating chat
+function showAIHelp() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const minimizedBar = document.getElementById('ai-chat-minimized');
     
-    // Set focus on question input and setup auto-resize
-    setTimeout(() => {
-        const textarea = document.getElementById('ai-question');
-        if (textarea) {
-            textarea.focus();
+    // If minimized, expand it
+    if (isChatMinimized && minimizedBar && minimizedBar.style.display !== 'none') {
+        expandAIChatFromBottom();
+        return;
+    }
+    
+    // Show the floating chat container
+    if (chatContainer) {
+        chatContainer.style.display = 'flex';
+        if (minimizedBar) minimizedBar.style.display = 'none';
+        isChatMinimized = false;
+        
+        // Add click listener to page content to minimize when clicking text
+        const pageContent = document.getElementById('page-content');
+        if (pageContent && !pageContent.dataset.chatMinimizeListener) {
+            pageContent.dataset.chatMinimizeListener = 'true';
+            pageContent.addEventListener('click', function handlePageClick(e) {
+                // Don't minimize if clicking inside chat
+                const chatContainer = document.getElementById('ai-chat-container');
+                if (chatContainer && chatContainer.contains(e.target)) {
+                    return;
+                }
+                // Don't minimize if clicking on selection toolbar or other UI elements
+                if (e.target.closest('.selection-toolbar') || 
+                    e.target.closest('.selection-mode-indicator') ||
+                    e.target.closest('.dictionary-popup')) {
+                    return;
+                }
+                // Minimize chat when clicking on page content
+                minimizeAIChatToBottom();
+            });
+        }
+        
+        // Clear input
+        const questionInput = document.getElementById('ai-question');
+        if (questionInput) {
+            questionInput.value = '';
+            questionInput.style.height = 'auto';
             
             // Auto-resize textarea on input
-            textarea.addEventListener('input', function() {
+            questionInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
-            
-            // Also resize on paste
-            textarea.addEventListener('paste', function() {
-                setTimeout(() => {
-                    this.style.height = 'auto';
-                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-                }, 10);
-            });
         }
-    }, 500);
+        
+        // Focus on input after a short delay
+        setTimeout(() => {
+            if (questionInput) {
+                questionInput.focus();
+            }
+        }, 100);
+        
+        // Load conversation history
+        loadAIConversationHistory();
+        
+        // Scroll to bottom
+        scrollChatToBottom();
+    }
 }
 
 // Activate text selection mode (called by button click)
@@ -2560,7 +2884,7 @@ function activateTextSelectionMode() {
         
         if (backdrop) {
             backdrop.style.pointerEvents = 'none';
-            backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
+            backdrop.style.backgroundColor = 'transparent'; // No grey backdrop - completely transparent
         }
         
         // Make modal element itself allow pointer events through (except where we explicitly enable)
@@ -2861,8 +3185,22 @@ function addChatMessage(role, content, timestamp, provider = null, isHTML = fals
     messageDiv.appendChild(bubbleDiv);
     messagesContainer.appendChild(messageDiv);
     
-    // Scroll to bottom after adding message
+    // Update last message preview in minimized bar
+    if (role === 'ai') {
+        const preview = document.getElementById('ai-chat-last-message-preview');
+        if (preview) {
+            const textContent = content.replace(/<[^>]*>/g, '').trim();
+            preview.textContent = textContent.length > 30 ? textContent.substring(0, 30) + '...' : textContent;
+        }
+    }
+    
+    // Scroll to bottom after adding message - ensure latest conversation is visible
     scrollChatToBottom();
+    
+    // Additional scroll after content is fully rendered (for images, HTML content)
+    setTimeout(() => {
+        scrollChatToBottom();
+    }, 300);
 }
 
 // Show typing indicator
@@ -2909,12 +3247,24 @@ function removeTypingIndicator() {
     }
 }
 
-// Scroll chat to bottom
+// Scroll chat to bottom - ensure latest message is visible
 function scrollChatToBottom() {
     const messagesContainer = document.getElementById('ai-chat-messages');
-    setTimeout(() => {
+    if (!messagesContainer) return;
+    
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
+        // Also ensure scroll after a brief delay to handle dynamic content
+        setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Scroll with smooth behavior to the very bottom
+            const lastMessage = messagesContainer.lastElementChild;
+            if (lastMessage) {
+                lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }, 150);
+    });
 }
 
 // Clear chat conversation
@@ -3750,7 +4100,7 @@ function toggleAIChatSelectionMode() {
             
             if (backdrop) {
                 backdrop.style.pointerEvents = 'none';
-                backdrop.style.backgroundColor = 'rgba(0,0,0,0.1)'; // Lighter backdrop
+                backdrop.style.backgroundColor = 'transparent'; // No grey backdrop - completely transparent
             }
             
             // Make modal element itself allow pointer events through
