@@ -537,6 +537,18 @@ html {
     margin-bottom: 0.5rem;
 }
 
+/* Glossary badge indicator */
+.glossary-badge {
+    margin-top: 0.25rem;
+}
+
+.glossary-badge .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
 /* Examples container - hidden by default */
 .dictionary-popup-examples-container {
     margin-top: 0.5rem;
@@ -2171,6 +2183,12 @@ function lookupWordInline(word, popupContent) {
         
         if (data.definition && data.definition !== 'Word not found in dictionary.') {
             let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
+            
+            // Add glossary badge if definition is from glossary
+            if (data.source === 'glossary') {
+                html += `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
+            }
+            
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
             
             // Add two buttons side by side: Derivation (left) and Examples (right)
@@ -2496,6 +2514,13 @@ function lookupWord(word) {
     .then(data => {
         if (resultDiv) {
             if (data.definition && data.definition !== 'Word not found in dictionary.') {
+                let html = '';
+                
+                // Add glossary badge if definition is from glossary
+                if (data.source === 'glossary') {
+                    html += `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
+                }
+                
                 let exampleHtml = '';
                 
                 // Handle examples: Hidden by default, show with "See an example" button
@@ -2543,10 +2568,17 @@ function lookupWord(word) {
                     }
                 }
                 
+            // Build HTML with glossary badge if from glossary
+            let badgeHtml = '';
+            if (data.source === 'glossary') {
+                badgeHtml = `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
+            }
+            
             resultDiv.innerHTML = `
                 <div class="card">
                     <div class="card-body">
                             <h6>${escapeHtml(data.term || wordToLookup)}</h6>
+                            ${badgeHtml}
                             <p>${escapeHtml(data.definition)}</p>
                             ${exampleHtml}
                     </div>

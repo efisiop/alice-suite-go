@@ -233,12 +233,19 @@ func (s *DictionaryService) LookupExternalDictionary(word string) (*models.Dicti
 // LookupWordInContext looks up a word and provides context from the book
 // Strategy: 1) Glossary (technical terms), 2) Cache (previously fetched), 3) External API (common words)
 func (s *DictionaryService) LookupWordInContext(bookID, word string, chapterID, sectionID *string) (*models.AliceGlossary, error) {
+	term, _, err := s.LookupWordInContextWithSource(bookID, word, chapterID, sectionID)
+	return term, err
+}
+
+// LookupWordInContextWithSource looks up a word and returns both the term and the source
+// Returns: (term, source, error) where source is "glossary", "cache", or "external"
+func (s *DictionaryService) LookupWordInContextWithSource(bookID, word string, chapterID, sectionID *string) (*models.AliceGlossary, string, error) {
 	normalizedWord := s.NormalizeWord(word)
 	
 	// Step 1: Try glossary first (prioritize glossary definitions for technical terms)
 	term, err := s.LookupWord(bookID, normalizedWord)
 	if err == nil && term != nil {
-		return term, nil
+		return term, "glossary", nil
 	}
 
 	// Step 2: Check cache (previously fetched definitions)
@@ -254,7 +261,7 @@ func (s *DictionaryService) LookupWordInContext(bookID, word string, chapterID, 
 		if chapterID != nil {
 			glossaryTerm.ChapterReference = *chapterID
 		}
-		return glossaryTerm, nil
+		return glossaryTerm, "cache", nil
 	}
 
 	// Step 3: Fetch from external API (common words)
@@ -276,11 +283,11 @@ func (s *DictionaryService) LookupWordInContext(bookID, word string, chapterID, 
 		if chapterID != nil {
 			glossaryTerm.ChapterReference = *chapterID
 		}
-		return glossaryTerm, nil
+		return glossaryTerm, "external", nil
 	}
 
 	// Word not found in glossary, cache, or external API
-	return nil, ErrTermNotFound
+	return nil, "", ErrTermNotFound
 }
 
 // GetGlossaryTermsForSection gets all glossary terms linked to a specific section

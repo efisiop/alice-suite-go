@@ -80,7 +80,7 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 	// 1. Glossary lookup (technical terms)
 	// 2. Cache lookup (previously fetched)
 	// 3. External API lookup (common words)
-	glossaryTerm, err := dictionaryService.LookupWordInContext(bookID, term, nil, sectionID)
+	glossaryTerm, source, err := dictionaryService.LookupWordInContextWithSource(bookID, term, nil, sectionID)
 	
 	w.Header().Set("Content-Type", "application/json")
 	
@@ -97,6 +97,7 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 	response := map[string]interface{}{
 		"term":       glossaryTerm.Term, // Preserves original casing
 		"definition": glossaryTerm.Definition,
+		"source":     source, // "glossary", "cache", or "external"
 	}
 	
 	// Include example if available
