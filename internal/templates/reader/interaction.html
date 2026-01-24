@@ -117,16 +117,16 @@ html {
     border-radius: 2px;
 }
 
-/* Glossary terms - slightly different color to distinguish them */
+/* Glossary terms - lighter blue to distinguish from regular vocabulary */
 .word-highlight.glossary-term {
-    color: #8B4513; /* Saddle brown - distinct from regular words */
+    color: #6BA3D6 !important; /* Light blue - lighter than regular vocabulary (#0056b3) */
     font-weight: 500;
-    text-decoration-color: #8B4513;
+    text-decoration-color: #6BA3D6 !important;
 }
 
 .word-highlight.glossary-term:hover {
-    background-color: #f5e6d3; /* Light brown tint */
-    color: #6B3410; /* Darker brown on hover */
+    background-color: #E6F2FF !important; /* Light blue tint */
+    color: #4A8BC2 !important; /* Slightly darker blue on hover */
 }
 
 /* Inline dictionary popup */
@@ -256,6 +256,11 @@ html {
     flex-direction: column;
     z-index: 1050;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    overflow: hidden; /* Ensure resize handle stays in corner */
+}
+
+.ai-chat-container.dragging {
+    transition: none;
 }
 
 .ai-chat-container.hidden {
@@ -270,17 +275,37 @@ html {
     padding: 1rem;
     border-radius: 12px 12px 0 0;
     flex-shrink: 0;
+    cursor: move;
+    user-select: none;
+}
+
+.ai-chat-header.dragging {
+    cursor: grabbing;
 }
 
 .ai-chat-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    flex-shrink: 0;
+    background: transparent;
+}
+
+.ai-chat-avatar .ai-sparkle-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ai-chat-avatar .ai-sparkle-star {
+    fill: #FFD700;
+    stroke: none;
+}
+
+.ai-chat-avatar .ai-sparkle-star-small {
+    fill: #FFC200;
+    stroke: none;
 }
 
 .ai-chat-title {
@@ -291,6 +316,28 @@ html {
 .ai-chat-subtitle {
     font-size: 0.75rem;
     opacity: 0.8;
+}
+
+.ai-chat-header-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.ai-chat-header-btn:hover {
+    opacity: 1;
+    background: rgba(255,255,255,0.1);
 }
 
 .ai-chat-close-btn {
@@ -310,6 +357,40 @@ html {
 
 .ai-chat-close-btn:hover {
     opacity: 1;
+}
+
+/* Resize states */
+.ai-chat-container.resized-small {
+    width: 300px !important;
+    height: 400px !important;
+}
+
+.ai-chat-container.resized-large {
+    width: 500px !important;
+    height: 700px !important;
+}
+
+/* Resize Handle */
+.ai-chat-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 0%, transparent 30%, rgba(0,0,0,0.2) 30%, rgba(0,0,0,0.2) 40%, transparent 40%, transparent 70%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0.2) 80%, transparent 80%);
+    z-index: 1051;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    border-radius: 0 0 12px 0;
+}
+
+.ai-chat-resize-handle:hover {
+    opacity: 1;
+}
+
+.ai-chat-container.resizing {
+    transition: none !important;
 }
 
 .ai-chat-messages {
@@ -368,14 +449,17 @@ html {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Minimized Chat Bar at Bottom */
+/* Minimized Chat Bar at Bottom - Right Side */
 .ai-chat-minimized {
     position: fixed;
     bottom: 0;
-    left: 0;
-    right: 0;
+    right: 20px;
+    width: 380px;
+    max-width: calc(100vw - 40px);
     background: white;
-    border-top: 1px solid #e0e0e0;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     z-index: 1049;
     cursor: pointer;
@@ -389,13 +473,26 @@ html {
 .ai-chat-avatar-small {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
-    background: #075E54;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    color: white;
+    flex-shrink: 0;
+    background: transparent;
+}
+
+.ai-chat-avatar-small .ai-sparkle-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ai-chat-avatar-small .ai-sparkle-star {
+    fill: #FFD700;
+    stroke: none;
+}
+
+.ai-chat-avatar-small .ai-sparkle-star-small {
+    fill: #FFC200;
+    stroke: none;
 }
 
 .ai-chat-title-small {
@@ -1297,13 +1394,26 @@ html {
     <div class="ai-chat-header" id="ai-chat-header">
         <div class="d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2">
-                <span class="ai-chat-avatar">💬</span>
+                <span class="ai-chat-avatar">
+                    <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 40px; height: 40px;">
+                        <!-- Large 4-pointed star -->
+                        <path class="ai-sparkle-star" d="M50 5 C52 35, 65 48, 95 50 C65 52, 52 65, 50 95 C48 65, 35 52, 5 50 C35 48, 48 35, 50 5 Z"/>
+                        <!-- Medium star (bottom left) -->
+                        <path class="ai-sparkle-star-small" d="M25 60 C26 72, 33 79, 45 80 C33 81, 26 88, 25 100 C24 88, 17 81, 5 80 C17 79, 24 72, 25 60 Z" transform="scale(0.5) translate(10, 90)"/>
+                        <!-- Small star (left) -->
+                        <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
+                    </svg>
+                </span>
                 <div>
                     <div class="ai-chat-title">AI Assistant</div>
                     <small class="ai-chat-subtitle">Online</small>
                 </div>
             </div>
-            <button class="ai-chat-close-btn" onclick="minimizeAIChatToBottom()" title="Minimize">−</button>
+            <div class="d-flex align-items-center gap-1">
+                <button class="ai-chat-header-btn" onclick="toggleAIChatResize()" title="Resize" id="ai-chat-resize-btn">⤢</button>
+                <button class="ai-chat-header-btn" onclick="minimizeAIChatToBottom()" title="Minimize to bottom">−</button>
+                <button class="ai-chat-header-btn" onclick="closeAIChat()" title="Close">✕</button>
+            </div>
         </div>
     </div>
     
@@ -1314,6 +1424,9 @@ html {
             <small>Ask questions about what you're reading.</small>
         </div>
     </div>
+    
+    <!-- Resize Handle -->
+    <div class="ai-chat-resize-handle" id="ai-chat-resize-handle" title="Drag to resize"></div>
     
     <!-- Chat Input Area -->
     <div class="ai-chat-input-area">
@@ -1349,8 +1462,7 @@ html {
             </button>
         </div>
         <div class="mt-2 d-flex gap-2 flex-wrap align-items-center">
-            <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('explain')" title="Explain">Explain</button>
-            <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('find_misunderstood_word')" title="Find misunderstood words">Find Words</button>
+            <button class="btn btn-sm ai-quick-action-btn" onclick="findMisunderstoodWordsWithAI()" title="Find the misunderstood word">Find the misunderstood word</button>
             <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('visual_example')" title="Get visual example">Visual</button>
             <button class="btn btn-sm ai-quick-action-btn" onclick="clearChat()" title="Clear conversation">Clear</button>
             <div id="ai-chat-selection-status" class="ms-auto text-success small fw-bold" style="display: none;">
@@ -1364,7 +1476,16 @@ html {
 <div id="ai-chat-minimized" class="ai-chat-minimized" style="display: none;" onclick="expandAIChatFromBottom()">
     <div class="d-flex align-items-center justify-content-between p-2">
         <div class="d-flex align-items-center gap-2">
-            <span class="ai-chat-avatar-small">💬</span>
+            <span class="ai-chat-avatar-small">
+                <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;">
+                    <!-- Large 4-pointed star -->
+                    <path class="ai-sparkle-star" d="M50 5 C52 35, 65 48, 95 50 C65 52, 52 65, 50 95 C48 65, 35 52, 5 50 C35 48, 48 35, 50 5 Z"/>
+                    <!-- Medium star (bottom left) -->
+                    <path class="ai-sparkle-star-small" d="M25 60 C26 72, 33 79, 45 80 C33 81, 26 88, 25 100 C24 88, 17 81, 5 80 C17 79, 24 72, 25 60 Z" transform="scale(0.5) translate(10, 90)"/>
+                    <!-- Small star (left) -->
+                    <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
+                </svg>
+            </span>
             <div>
                 <div class="ai-chat-title-small">AI Assistant</div>
                 <small class="ai-chat-last-message" id="ai-chat-last-message-preview">Tap to open chat</small>
@@ -1390,8 +1511,10 @@ html {
 
 {{define "scripts"}}
 <script>
+console.log('[interaction.html] ========== SCRIPT BLOCK LOADING ==========');
 let currentPage = 1;
 const bookId = 'alice-in-wonderland'; // Default book ID
+console.log('[interaction.html] Variables initialized, bookId:', bookId);
 
 // Store all glossary terms for highlighting
 let glossaryTerms = new Set(); // Set of lowercase terms for fast lookup
@@ -1402,42 +1525,66 @@ let currentSectionIndex = 0; // Track current section index (0-based)
 
 // Load all glossary terms for highlighting
 function loadGlossaryTerms() {
-    const token = getAuthToken();
-    if (!token) {
-        console.log('No auth token, skipping glossary load');
-        return;
-    }
-    
-    fetch(`/rest/v1/alice_glossary?book_id=${bookId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
+    return new Promise((resolve, reject) => {
+        console.log('[loadGlossaryTerms] Starting to load glossary terms...');
+        const token = getAuthToken();
+        if (!token) {
+            console.warn('[loadGlossaryTerms] No auth token, skipping glossary load');
+            resolve(); // Resolve without error if no token
+            return;
         }
-    })
-    .then(res => res.json())
-    .then(terms => {
-        if (Array.isArray(terms)) {
-            glossaryTerms.clear();
-            glossaryTermsMap.clear();
-            glossaryTermsList = [];
+        
+        const url = `/rest/v1/alice_glossary?book_id=${bookId}`;
+        console.log('[loadGlossaryTerms] Fetching from:', url);
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        })
+        .then(res => {
+            console.log('[loadGlossaryTerms] Response status:', res.status, res.statusText);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(terms => {
+            console.log('[loadGlossaryTerms] Received response:', terms);
+            console.log('[loadGlossaryTerms] Is array?', Array.isArray(terms));
+            console.log('[loadGlossaryTerms] Terms count:', Array.isArray(terms) ? terms.length : 'not an array');
             
-            terms.forEach(term => {
-                if (term.term) {
-                    const normalizedTerm = term.term.toLowerCase().trim();
-                    glossaryTerms.add(normalizedTerm);
-                    glossaryTermsMap.set(normalizedTerm, term);
-                    glossaryTermsList.push(normalizedTerm);
-                }
-            });
-            
-            // Sort by length (longest first) to match multi-word terms first
-            glossaryTermsList.sort((a, b) => b.length - a.length);
-            
-            console.log(`Loaded ${glossaryTerms.size} glossary terms for highlighting`);
-        }
-    })
-    .catch(err => {
-        console.error('Error loading glossary terms:', err);
+            if (Array.isArray(terms)) {
+                glossaryTerms.clear();
+                glossaryTermsMap.clear();
+                glossaryTermsList = [];
+                
+                terms.forEach(term => {
+                    if (term && term.term) {
+                        const normalizedTerm = term.term.toLowerCase().trim();
+                        glossaryTerms.add(normalizedTerm);
+                        glossaryTermsMap.set(normalizedTerm, term);
+                        glossaryTermsList.push(normalizedTerm);
+                    }
+                });
+                
+                // Sort by length (longest first) to match multi-word terms first
+                glossaryTermsList.sort((a, b) => b.length - a.length);
+                
+                console.log(`[loadGlossaryTerms] ✅ Loaded ${glossaryTerms.size} glossary terms for highlighting`);
+                console.log(`[loadGlossaryTerms] Sample glossary terms:`, Array.from(glossaryTerms).slice(0, 10));
+                resolve();
+            } else {
+                console.warn('[loadGlossaryTerms] Response is not an array:', typeof terms, terms);
+                resolve(); // Resolve even if no terms
+            }
+        })
+        .catch(err => {
+            console.error('[loadGlossaryTerms] ❌ Error loading glossary terms:', err);
+            console.error('[loadGlossaryTerms] Error details:', err.message, err.stack);
+            resolve(); // Resolve even on error to not block page loading
+        });
     });
 }
 
@@ -1711,9 +1858,15 @@ function showSection(sectionIndex) {
     }
 
     // Display only the selected section in the content area
+    console.log('[showSection] Glossary terms loaded:', glossaryTerms.size);
     const formattedContent = formatTextWithWordHighlights(sectionContent);
     console.log('[showSection] Formatted content length:', formattedContent.length);
     console.log('[showSection] Formatted content preview (first 200 chars):', formattedContent.substring(0, 200));
+    
+    // Count how many glossary terms were found in this section
+    const glossaryTermMatches = formattedContent.match(/glossary-term/g);
+    const glossaryTermCount = glossaryTermMatches ? glossaryTermMatches.length : 0;
+    console.log('[showSection] Found', glossaryTermCount, 'glossary term highlights in formatted content');
     
     const content = `<div class="section-content">${formattedContent}</div>`;
     const pageContentElement = document.getElementById('page-content');
@@ -2498,6 +2651,20 @@ let aiModalDragStartY = 0;
 let aiModalStartX = 0;
 let aiModalStartY = 0;
 
+// Drag state for AI chat container
+let isDraggingAIChat = false;
+let aiChatDragStartX = 0;
+let aiChatDragStartY = 0;
+let aiChatStartX = 0;
+let aiChatStartY = 0;
+
+// Resize state for AI chat container
+let isResizingAIChat = false;
+let aiChatResizeStartX = 0;
+let aiChatResizeStartY = 0;
+let aiChatStartWidth = 0;
+let aiChatStartHeight = 0;
+
 // Variables for AI modal resizing
 let isResizingAIModal = false;
 let aiModalResizeStartX = 0;
@@ -2724,6 +2891,170 @@ function closeAIChat() {
     disableAIChatTextSelection();
 }
 
+// Toggle chat resize (small -> medium -> large -> small)
+let chatResizeState = 'medium'; // 'small', 'medium', 'large'
+
+function toggleAIChatResize() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const resizeBtn = document.getElementById('ai-chat-resize-btn');
+    
+    if (!chatContainer) return;
+    
+    // Remove all resize classes
+    chatContainer.classList.remove('resized-small', 'resized-large');
+    
+    // Cycle through sizes
+    if (chatResizeState === 'medium') {
+        chatResizeState = 'large';
+        chatContainer.classList.add('resized-large');
+        if (resizeBtn) resizeBtn.textContent = '⤡';
+        if (resizeBtn) resizeBtn.title = 'Make smaller';
+    } else if (chatResizeState === 'large') {
+        chatResizeState = 'small';
+        chatContainer.classList.add('resized-small');
+        if (resizeBtn) resizeBtn.textContent = '⤢';
+        if (resizeBtn) resizeBtn.title = 'Make larger';
+    } else {
+        chatResizeState = 'medium';
+        // Default size (no class)
+        if (resizeBtn) resizeBtn.textContent = '⤢';
+        if (resizeBtn) resizeBtn.title = 'Resize';
+    }
+}
+
+// Initialize drag functionality for AI chat container
+function initAIChatDrag() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const chatHeader = document.getElementById('ai-chat-header');
+    
+    if (!chatContainer || !chatHeader) return;
+    
+    // Check if already initialized
+    if (chatHeader.dataset.dragInitialized === 'true') return;
+    chatHeader.dataset.dragInitialized = 'true';
+    
+    // Mouse events
+    chatHeader.addEventListener('mousedown', function(e) {
+        // Don't start drag if clicking on buttons
+        if (e.target.classList.contains('ai-chat-header-btn') || 
+            e.target.closest('.ai-chat-header-btn')) {
+            return;
+        }
+        startAIChatDrag(e, chatContainer, chatHeader);
+    });
+    
+    // Touch events for mobile
+    chatHeader.addEventListener('touchstart', function(e) {
+        // Don't start drag if clicking on buttons
+        if (e.target.classList.contains('ai-chat-header-btn') || 
+            e.target.closest('.ai-chat-header-btn')) {
+            return;
+        }
+        startAIChatDragTouch(e, chatContainer);
+    }, { passive: false });
+    
+    function startAIChatDrag(e, container, header) {
+        isDraggingAIChat = true;
+        aiChatDragStartX = e.clientX;
+        aiChatDragStartY = e.clientY;
+        const rect = container.getBoundingClientRect();
+        aiChatStartX = rect.left;
+        aiChatStartY = rect.top;
+        header.classList.add('dragging');
+        container.classList.add('dragging');
+        e.preventDefault();
+        
+        document.addEventListener('mousemove', dragAIChatHandler);
+        document.addEventListener('mouseup', stopAIChatDragHandler);
+    }
+    
+    function startAIChatDragTouch(e, container) {
+        const touch = e.touches[0];
+        isDraggingAIChat = true;
+        aiChatDragStartX = touch.clientX;
+        aiChatDragStartY = touch.clientY;
+        const rect = container.getBoundingClientRect();
+        aiChatStartX = rect.left;
+        aiChatStartY = rect.top;
+        const header = document.getElementById('ai-chat-header');
+        if (header) header.classList.add('dragging');
+        container.classList.add('dragging');
+        e.preventDefault();
+        
+        document.addEventListener('touchmove', dragAIChatTouchHandler, { passive: false });
+        document.addEventListener('touchend', stopAIChatDragHandler);
+    }
+    
+    function dragAIChatHandler(e) {
+        if (!isDraggingAIChat) return;
+        const deltaX = e.clientX - aiChatDragStartX;
+        const deltaY = e.clientY - aiChatDragStartY;
+        
+        // Calculate new position
+        let newX = aiChatStartX + deltaX;
+        let newY = aiChatStartY + deltaY;
+        
+        // Keep within viewport bounds
+        const container = document.getElementById('ai-chat-container');
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        // Update position
+        container.style.left = newX + 'px';
+        container.style.top = newY + 'px';
+        container.style.right = 'auto';
+        container.style.bottom = 'auto';
+        e.preventDefault();
+    }
+    
+    function dragAIChatTouchHandler(e) {
+        if (!isDraggingAIChat) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - aiChatDragStartX;
+        const deltaY = touch.clientY - aiChatDragStartY;
+        
+        // Calculate new position
+        let newX = aiChatStartX + deltaX;
+        let newY = aiChatStartY + deltaY;
+        
+        // Keep within viewport bounds
+        const container = document.getElementById('ai-chat-container');
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        // Update position
+        container.style.left = newX + 'px';
+        container.style.top = newY + 'px';
+        container.style.right = 'auto';
+        container.style.bottom = 'auto';
+        e.preventDefault();
+    }
+    
+    function stopAIChatDragHandler() {
+        if (isDraggingAIChat) {
+            isDraggingAIChat = false;
+            const header = document.getElementById('ai-chat-header');
+            const container = document.getElementById('ai-chat-container');
+            if (header) header.classList.remove('dragging');
+            if (container) container.classList.remove('dragging');
+            document.removeEventListener('mousemove', dragAIChatHandler);
+            document.removeEventListener('mouseup', stopAIChatDragHandler);
+            document.removeEventListener('touchmove', dragAIChatTouchHandler);
+            document.removeEventListener('touchend', stopAIChatDragHandler);
+        }
+    }
+}
+
 // Check if point is inside the chat modal
 function isInsideChatModal(x, y) {
     const modalDialog = document.getElementById('aiHelpModalDialog');
@@ -2836,8 +3167,172 @@ function showAIHelp() {
         // Load conversation history
         loadAIConversationHistory();
         
+        // Initialize drag and resize functionality
+        setTimeout(() => {
+            initAIChatDrag();
+            initAIChatResize();
+        }, 100);
+        
         // Scroll to bottom
         scrollChatToBottom();
+    }
+}
+
+// Initialize resize functionality for AI chat container
+function initAIChatResize() {
+    const chatContainer = document.getElementById('ai-chat-container');
+    const resizeHandle = document.getElementById('ai-chat-resize-handle');
+    
+    if (!chatContainer || !resizeHandle) return;
+    
+    // Check if already initialized
+    if (resizeHandle.dataset.resizeInitialized === 'true') return;
+    resizeHandle.dataset.resizeInitialized = 'true';
+    
+    // Mouse events
+    resizeHandle.addEventListener('mousedown', function(e) {
+        startAIChatResize(e, chatContainer);
+    });
+    
+    // Touch events for mobile
+    resizeHandle.addEventListener('touchstart', function(e) {
+        startAIChatResizeTouch(e, chatContainer);
+    }, { passive: false });
+    
+    function startAIChatResize(e, container) {
+        isResizingAIChat = true;
+        aiChatResizeStartX = e.clientX;
+        aiChatResizeStartY = e.clientY;
+        const rect = container.getBoundingClientRect();
+        aiChatStartWidth = rect.width;
+        aiChatStartHeight = rect.height;
+        aiChatStartX = rect.left;
+        aiChatStartY = rect.top;
+        container.classList.add('resizing');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        document.addEventListener('mousemove', resizeAIChatHandler);
+        document.addEventListener('mouseup', stopAIChatResizeHandler);
+    }
+    
+    function startAIChatResizeTouch(e, container) {
+        const touch = e.touches[0];
+        isResizingAIChat = true;
+        aiChatResizeStartX = touch.clientX;
+        aiChatResizeStartY = touch.clientY;
+        const rect = container.getBoundingClientRect();
+        aiChatStartWidth = rect.width;
+        aiChatStartHeight = rect.height;
+        aiChatStartX = rect.left;
+        aiChatStartY = rect.top;
+        container.classList.add('resizing');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        document.addEventListener('touchmove', resizeAIChatTouchHandler, { passive: false });
+        document.addEventListener('touchend', stopAIChatResizeHandler);
+    }
+    
+    function resizeAIChatHandler(e) {
+        if (!isResizingAIChat) return;
+        
+        const deltaX = e.clientX - aiChatResizeStartX;
+        const deltaY = e.clientY - aiChatResizeStartY;
+        
+        // Calculate new dimensions
+        let newWidth = aiChatStartWidth + deltaX;
+        let newHeight = aiChatStartHeight + deltaY;
+        
+        // Minimum and maximum sizes
+        const minWidth = 280;
+        const maxWidth = Math.min(window.innerWidth - 40, 800);
+        const minHeight = 300;
+        const maxHeight = Math.min(window.innerHeight - 40, window.innerHeight - 20);
+        
+        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+        newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+        
+        // Update container size
+        const container = document.getElementById('ai-chat-container');
+        if (!container) return;
+        
+        container.style.width = newWidth + 'px';
+        container.style.height = newHeight + 'px';
+        
+        // Remove fixed size classes when manually resizing
+        container.classList.remove('resized-small', 'resized-large');
+        chatResizeState = 'custom';
+        
+        // Ensure container stays within viewport
+        const rect = container.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            container.style.left = (window.innerWidth - newWidth) + 'px';
+            container.style.right = 'auto';
+        }
+        if (rect.bottom > window.innerHeight) {
+            container.style.top = (window.innerHeight - newHeight) + 'px';
+            container.style.bottom = 'auto';
+        }
+        
+        e.preventDefault();
+    }
+    
+    function resizeAIChatTouchHandler(e) {
+        if (!isResizingAIChat) return;
+        const touch = e.touches[0];
+        
+        const deltaX = touch.clientX - aiChatResizeStartX;
+        const deltaY = touch.clientY - aiChatResizeStartY;
+        
+        // Calculate new dimensions
+        let newWidth = aiChatStartWidth + deltaX;
+        let newHeight = aiChatStartHeight + deltaY;
+        
+        // Minimum and maximum sizes
+        const minWidth = 280;
+        const maxWidth = Math.min(window.innerWidth - 40, 800);
+        const minHeight = 300;
+        const maxHeight = Math.min(window.innerHeight - 40, window.innerHeight - 20);
+        
+        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+        newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+        
+        // Update container size
+        const container = document.getElementById('ai-chat-container');
+        if (!container) return;
+        
+        container.style.width = newWidth + 'px';
+        container.style.height = newHeight + 'px';
+        
+        // Remove fixed size classes when manually resizing
+        container.classList.remove('resized-small', 'resized-large');
+        chatResizeState = 'custom';
+        
+        // Ensure container stays within viewport
+        const rect = container.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            container.style.left = (window.innerWidth - newWidth) + 'px';
+            container.style.right = 'auto';
+        }
+        if (rect.bottom > window.innerHeight) {
+            container.style.top = (window.innerHeight - newHeight) + 'px';
+            container.style.bottom = 'auto';
+        }
+        
+        e.preventDefault();
+    }
+    
+    function stopAIChatResizeHandler() {
+        if (isResizingAIChat) {
+            isResizingAIChat = false;
+            const container = document.getElementById('ai-chat-container');
+            if (container) container.classList.remove('resizing');
+            document.removeEventListener('mousemove', resizeAIChatHandler);
+            document.removeEventListener('mouseup', stopAIChatResizeHandler);
+            document.removeEventListener('touchmove', resizeAIChatTouchHandler);
+            document.removeEventListener('touchend', stopAIChatResizeHandler);
+        }
     }
 }
 
@@ -3483,66 +3978,64 @@ function extractTextForVisualExample(question) {
     return null;
 }
 
-// Parse misunderstood words response and highlight them in the page text
-function parseAndHighlightMisunderstoodWordsInPage(responseText, selectedText) {
-    console.log('Parsing AI response for misunderstood words. Raw response:', responseText);
+// Randomly select and highlight words from selected text (no AI needed)
+// Find misunderstood words using AI analysis
+function findMisunderstoodWordsWithAI() {
+    // Get selected text from the input or from the page
+    const questionInput = document.getElementById('ai-question');
+    let selectedText = '';
     
-    // Clean up the response - remove common prefixes and suffixes the AI might add
-    let cleanedText = responseText.trim();
+    // If no text in input, try to get from page selection or global selectedText
+    if (!questionInput || !questionInput.value.trim()) {
+        // Check global selectedText variable (from selection mode)
+        if (typeof window.selectedText !== 'undefined' && window.selectedText && window.selectedText.trim()) {
+            selectedText = window.selectedText.trim();
+        } else {
+            // Try browser selection
+            const selection = window.getSelection();
+            if (selection && selection.toString().trim()) {
+                selectedText = selection.toString().trim();
+            }
+        }
+    } else {
+        selectedText = questionInput.value.trim();
+    }
     
-    // Remove common prefixes the AI might add
-    cleanedText = cleanedText.replace(/^(here are the words?|the words? (are|might be)|words?:?|misunderstood words?:?)\s*/i, '');
-    
-    // Remove any leading/trailing punctuation or quotes
-    cleanedText = cleanedText.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '');
-    
-    // Remove any trailing explanations or additional text (look for common patterns)
-    // Stop at common phrases like "These words", "Remember", etc.
-    const stopPatterns = [
-        /(\n|\.)\s*(These? words?|Remember|Note:|Tip:|Important:)/i,
-        /\n\n/  // Double newline usually indicates additional text
-    ];
-    
-    for (const pattern of stopPatterns) {
-        const match = cleanedText.match(pattern);
-        if (match) {
-            cleanedText = cleanedText.substring(0, match.index).trim();
+    // If still no text, try to get from current section content
+    if (!selectedText && typeof currentPageSections !== 'undefined' && currentPageSections && currentPageSections[currentSectionIndex]) {
+        const currentSection = currentPageSections[currentSectionIndex];
+        if (currentSection && currentSection.content) {
+            // Use first 200 characters of current section as fallback
+            selectedText = currentSection.content.substring(0, 200).trim();
         }
     }
     
-    // Parse comma-separated word list from cleaned AI response
-    let words = cleanedText
-        .split(',')
-        .map(w => w.trim())
-        .filter(w => w.length > 0 && w.length < 50) // Filter out very long strings (likely not words)
-        .map(w => {
-            // Remove any remaining quotes or punctuation from individual words
-            return w.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '').trim();
-        })
-        .filter(w => w.length > 0 && /^[a-zA-Z'-]+$/.test(w)) // Only keep words with letters, hyphens, apostrophes
-        .slice(0, 8); // Maximum 8 words
-    
-    // If we still have no words, try splitting by newlines or other delimiters
-    if (words.length === 0) {
-        console.warn('No words found after comma split, trying alternative parsing...');
-        // Try splitting by newlines
-        words = cleanedText
-            .split(/\n|\.|;|:/)
-            .map(w => w.trim())
-            .filter(w => w.length > 0 && w.length < 50)
-            .map(w => w.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '').trim())
-            .filter(w => w.length > 0 && /^[a-zA-Z'-]+$/.test(w))
-            .slice(0, 8);
+    if (!selectedText) {
+        // Show message to select text first
+        addChatMessage('ai', 'Please select the text you want to check, or type it in the input field, then click "Find the misunderstood word".', new Date().toISOString());
+        return;
     }
     
-    if (words.length === 0) {
-        console.error('No words found in AI response after parsing. Raw response:', responseText);
-        console.error('Cleaned text:', cleanedText);
+    console.log('Selected text for AI word analysis:', selectedText);
+    
+    // Set the input value with the proper format for AI
+    if (questionInput) {
+        questionInput.value = `Find misunderstood words: "${selectedText}"`;
+    }
+    
+    // Call askAI with the find_misunderstood_word interaction type
+    // This will be handled by askAI() which detects the interaction type
+    askAI();
+}
+
+// Highlight words in page (reusable function)
+function highlightWordsInPage(words) {
+    if (!words || words.length === 0) {
+        console.error('No words provided for highlighting');
         return false;
     }
     
-    console.log('Successfully parsed words:', words);
-    console.log('Highlighting misunderstood words in page:', words);
+    console.log('Highlighting words in page:', words);
     
     const pageContent = document.getElementById('page-content');
     if (!pageContent) {
@@ -3650,6 +4143,232 @@ function parseAndHighlightMisunderstoodWordsInPage(responseText, selectedText) {
                             highlightSpan.textContent = matches[i];
                             
                             // Normalize word the same way as regular word highlights
+                            const cleanWord = matches[i].replace(/[.,!?;:()\[\]{}"']/g, '').toLowerCase();
+                            
+                            // Make clickable for dictionary lookup
+                            const escapedCleanWord = escapeHtml(cleanWord);
+                            highlightSpan.setAttribute('onclick', `lookupWordFromText('${escapedCleanWord}', event)`);
+                            highlightSpan.setAttribute('data-word', escapedCleanWord);
+                            
+                            fragment.appendChild(highlightSpan);
+                            window.misunderstoodWordHighlights.push(highlightSpan);
+                            highlightedCount++;
+                            console.log(`Highlighted word "${matches[i]}" (clean: "${cleanWord}")`);
+                        }
+                    }
+                    
+                    // Replace the text node with the fragment
+                    try {
+                        parent.replaceChild(fragment, textNode);
+                    } catch (e) {
+                        console.error('Error replacing text node:', e);
+                    }
+                }
+            }
+        });
+        
+        if (!wordFoundInPage) {
+            console.warn(`Word "${word}" was not found in any text node on the page`);
+        }
+    });
+    
+    console.log('Total words highlighted:', highlightedCount);
+    return highlightedCount > 0;
+}
+
+// Parse misunderstood words response and highlight them in the page text (OLD - kept for backwards compatibility)
+function parseAndHighlightMisunderstoodWordsInPage(responseText, selectedText) {
+    console.log('Parsing AI response for misunderstood words. Raw response:', responseText);
+    
+    // Clean up the response - remove common prefixes and suffixes the AI might add
+    let cleanedText = responseText.trim();
+    
+    // Remove common prefixes the AI might add
+    cleanedText = cleanedText.replace(/^(here are the words?|the words? (are|might be)|words?:?|misunderstood words?:?)\s*/i, '');
+    
+    // Remove any leading/trailing punctuation or quotes
+    cleanedText = cleanedText.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '');
+    
+    // Remove any trailing explanations or additional text (look for common patterns)
+    // Stop at common phrases like "These words", "Remember", etc.
+    const stopPatterns = [
+        /(\n|\.)\s*(These? words?|Remember|Note:|Tip:|Important:)/i,
+        /\n\n/  // Double newline usually indicates additional text
+    ];
+    
+    for (const pattern of stopPatterns) {
+        const match = cleanedText.match(pattern);
+        if (match) {
+            cleanedText = cleanedText.substring(0, match.index).trim();
+        }
+    }
+    
+    console.log('Cleaned text after prefix/suffix removal:', cleanedText);
+    
+    // Parse comma-separated word list from cleaned AI response
+    let words = cleanedText
+        .split(',')
+        .map(w => w.trim())
+        .filter(w => w.length > 0 && w.length < 50) // Filter out very long strings (likely not words)
+        .map(w => {
+            // Remove any remaining quotes or punctuation from individual words
+            return w.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '').trim();
+        })
+        .filter(w => w.length > 0 && /^[a-zA-Z'-]+$/.test(w)) // Only keep words with letters, hyphens, apostrophes
+        .slice(0, 8); // Maximum 8 words
+    
+    console.log('Words after comma split:', words);
+    
+    // If we still have no words, try splitting by newlines or other delimiters
+    if (words.length === 0) {
+        console.warn('No words found after comma split, trying alternative parsing...');
+        // Try splitting by newlines
+        words = cleanedText
+            .split(/\n|\.|;|:/)
+            .map(w => w.trim())
+            .filter(w => w.length > 0 && w.length < 50)
+            .map(w => w.replace(/^["'`\[\]()]+|["'`\[\]()]+$/g, '').trim())
+            .filter(w => w.length > 0 && /^[a-zA-Z'-]+$/.test(w))
+            .slice(0, 8);
+        console.log('Words after alternative parsing:', words);
+    }
+    
+    if (words.length === 0) {
+        console.error('No words found in AI response after parsing. Raw response:', responseText);
+        console.error('Cleaned text:', cleanedText);
+        return false;
+    }
+    
+    console.log('Successfully parsed words:', words);
+    console.log('Highlighting misunderstood words in page:', words);
+    
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent) {
+        console.error('Page content element not found');
+        return false;
+    }
+    
+    // Log a sample of page content for debugging
+    const pageTextSample = pageContent.textContent.substring(0, 200);
+    console.log('Page content sample (first 200 chars):', pageTextSample);
+    
+    // Store highlighted words for later removal
+    if (!window.misunderstoodWordHighlights) {
+        window.misunderstoodWordHighlights = [];
+    }
+    
+    // Clear any existing highlights first
+    if (window.misunderstoodWordHighlights.length > 0) {
+        clearMisunderstoodWordHighlights();
+    }
+    
+    // Use TreeWalker to find and replace only text nodes (not HTML attributes)
+    const walker = document.createTreeWalker(
+        pageContent,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(node) {
+                // Skip text nodes inside script, style, or already highlighted words
+                const parent = node.parentNode;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                // Skip if already inside any word-highlight span (to preserve existing dictionary functionality)
+                if (parent.classList && (parent.classList.contains('misunderstood-word-highlight') || parent.classList.contains('word-highlight'))) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                // Also check if any ancestor is a word-highlight span
+                let current = parent;
+                while (current && current !== pageContent) {
+                    if (current.classList && (current.classList.contains('word-highlight') || current.classList.contains('misunderstood-word-highlight'))) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    current = current.parentNode;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        },
+        false
+    );
+    
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+        textNodes.push(node);
+    }
+    
+    let highlightedCount = 0;
+    
+    // Process each word - normalize to lowercase for matching but preserve original case for display
+    words.forEach(word => {
+        // Normalize word to lowercase for matching (but we'll use original case from page)
+        const normalizedWord = word.toLowerCase();
+        const escapedWord = normalizedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Use word boundary regex that's case-insensitive
+        const wordRegex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        
+        console.log(`Searching for word: "${word}" (normalized: "${normalizedWord}") with regex: ${wordRegex}`);
+        let wordFoundInPage = false;
+        
+        // Process each text node
+        textNodes.forEach(textNode => {
+            // Double-check: skip if this text node is inside a word-highlight span
+            let current = textNode.parentNode;
+            let insideWordHighlight = false;
+            while (current && current !== pageContent) {
+                if (current.classList && (current.classList.contains('word-highlight') || current.classList.contains('misunderstood-word-highlight'))) {
+                    insideWordHighlight = true;
+                    break;
+                }
+                current = current.parentNode;
+            }
+            if (insideWordHighlight) {
+                return; // Skip this text node
+            }
+            
+            const text = textNode.textContent;
+            // Reset regex lastIndex to avoid issues with test() side effects
+            wordRegex.lastIndex = 0;
+            // Test if the word appears in this text node (case-insensitive)
+            if (wordRegex.test(text)) {
+                wordFoundInPage = true;
+                const parent = textNode.parentNode;
+                
+                // Final safety check: don't process if parent is a word-highlight
+                if (parent && parent.classList && parent.classList.contains('word-highlight')) {
+                    return; // Skip
+                }
+                
+                // Reset regex again before split/match
+                wordRegex.lastIndex = 0;
+                // Split and match, preserving original case from the page
+                const parts = text.split(wordRegex);
+                wordRegex.lastIndex = 0;
+                const matches = text.match(wordRegex) || [];
+                
+                console.log(`Found "${word}" in text node. Matches:`, matches, 'Text sample:', text.substring(0, 50));
+                
+                if (matches.length > 0 && parts.length > 1) {
+                    const fragment = document.createDocumentFragment();
+                    
+                    for (let i = 0; i < parts.length; i++) {
+                        if (parts[i]) {
+                            fragment.appendChild(document.createTextNode(parts[i]));
+                        }
+                        if (i < matches.length) {
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.className = 'word-highlight misunderstood-word-highlight';
+                            highlightSpan.style.backgroundColor = '#fff3cd';
+                            highlightSpan.style.padding = '2px 4px';
+                            highlightSpan.style.borderRadius = '3px';
+                            highlightSpan.style.cursor = 'pointer';
+                            highlightSpan.style.textDecoration = 'underline';
+                            highlightSpan.style.textDecorationStyle = 'dotted';
+                            // Use the matched word from the page (preserves original case)
+                            highlightSpan.textContent = matches[i];
+                            
+                            // Normalize word the same way as regular word highlights
                             // Remove punctuation and convert to lowercase (same as formatTextWithWordHighlights)
                             const cleanWord = matches[i].replace(/[.,!?;:()\[\]{}"']/g, '').toLowerCase();
                             
@@ -3662,18 +4381,34 @@ function parseAndHighlightMisunderstoodWordsInPage(responseText, selectedText) {
                             fragment.appendChild(highlightSpan);
                             window.misunderstoodWordHighlights.push(highlightSpan);
                             highlightedCount++;
+                            console.log(`Highlighted word "${matches[i]}" (clean: "${cleanWord}")`);
                         }
                     }
                     
                     // Replace the text node with the fragment
-                    parent.replaceChild(fragment, textNode);
+                    try {
+                        parent.replaceChild(fragment, textNode);
+                    } catch (e) {
+                        console.error('Error replacing text node:', e);
+                    }
                 }
             }
         });
+        
+        if (!wordFoundInPage) {
+            console.warn(`Word "${word}" was not found in any text node on the page`);
+        }
     });
     
     // DON'T normalize - it can break inline onclick handlers on word-highlight spans
     // pageContent.normalize();
+    
+    console.log('Highlighting complete. Total words highlighted:', highlightedCount);
+    
+    if (highlightedCount === 0) {
+        console.warn('No words were highlighted. Words to highlight were:', words);
+        console.warn('This might mean the words are not found in the page content, or they are already inside highlighted spans.');
+    }
     
     return highlightedCount > 0;
 }
@@ -3721,13 +4456,15 @@ function askAI() {
     let interactionType = 'chat';
     let processedQuestion = question;
     
-    if (question.toLowerCase().startsWith('find misunderstood words:')) {
+    if (question.toLowerCase().startsWith('find misunderstood words:') || question.toLowerCase().includes('find misunderstood')) {
+        // Use AI to identify misunderstood words
         interactionType = 'find_misunderstood_word';
         // Extract selected text
         const selectedText = extractSelectedTextFromQuestion(question);
         if (selectedText) {
             processedQuestion = selectedText;
         }
+        // Continue with AI call (don't return early)
     } else if (question.toLowerCase().startsWith('visual example:')) {
         interactionType = 'visual_example';
         // Extract text for visual example
@@ -3819,27 +4556,35 @@ function askAI() {
         const responseTime = data.created_at || new Date().toISOString();
         let isHTML = false;
         
-        // For find_misunderstood_word, highlight words in page and show simple message
+        // For find_misunderstood_word, parse AI response and highlight words in page
         if (interactionType === 'find_misunderstood_word' && processedQuestion) {
-            // Parse words and highlight them in the page content
-            console.log('Processing find_misunderstood_word response. AI returned:', responseText);
+            console.log('Processing find_misunderstood_word AI response. AI returned:', responseText);
+            console.log('Original question/selected text:', processedQuestion);
+            
+            // Parse words from AI response and highlight them in the page content
             const highlighted = parseAndHighlightMisunderstoodWordsInPage(responseText, processedQuestion);
             
             // Show simple message in chat
             if (highlighted) {
                 responseText = 'I will help you to locate what word(s) they might be misunderstood. Please check the words highlighted in the text.';
+                // Add "understood now!" button
+                responseText += `<div class="mt-3">
+                    <button class="btn btn-primary btn-sm" onclick="clearMisunderstoodWordHighlights()">
+                        ✓ Understood now!
+                    </button>
+                </div>`;
+                isHTML = true; // Contains HTML button
             } else {
-                responseText = 'I tried to find misunderstood words, but couldn\'t parse the response. The AI response was: "' + escapeHtml(responseText.substring(0, 100)) + '". Please try again.';
+                // More helpful error message
+                const parsedWords = responseText.split(',').map(w => w.trim()).filter(w => w.length > 0);
+                if (parsedWords.length > 0) {
+                    responseText = `I found these words in the AI response: ${parsedWords.join(', ')}. However, I couldn't find them in the page content to highlight. This might mean the selected text doesn't match the current page, or the words are formatted differently. Please try selecting the text directly from the page.`;
+                } else {
+                    responseText = 'I tried to find misunderstood words, but couldn\'t parse the AI response. The AI response was: "' + escapeHtml(responseText.substring(0, 100)) + '". Please try again.';
+                }
                 console.error('Failed to highlight words. AI response was:', responseText);
+                console.error('Parsed words attempt:', parsedWords);
             }
-            
-            // Add "understood now!" button
-            responseText += `<div class="mt-3">
-                <button class="btn btn-primary btn-sm" onclick="clearMisunderstoodWordHighlights()">
-                    ✓ Understood now!
-                </button>
-            </div>`;
-            isHTML = true; // Contains HTML button
         }
         
         // For visual_example, generate image from the AI's prompt
@@ -5363,7 +6108,11 @@ function requestHelp() {
 
 // Load first page on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[interaction.html] DOMContentLoaded fired');
+    console.log('[interaction.html] ========== DOMContentLoaded fired ==========');
+    console.log('[interaction.html] Checking if functions are defined...');
+    console.log('[interaction.html] loadGlossaryTerms:', typeof loadGlossaryTerms);
+    console.log('[interaction.html] loadPage:', typeof loadPage);
+    console.log('[interaction.html] getAuthToken:', typeof getAuthToken);
     
     // Attach logout handler (backup - app.js also handles this via event delegation)
     const logoutLink = document.getElementById('logout-link-reader');
@@ -5404,10 +6153,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     console.log('[interaction.html] Loading initial page...');
-    // Load glossary terms for highlighting
-    loadGlossaryTerms();
-    loadPage(1);
-    initSelectionToolbarAlwaysOn();
+    console.log('[interaction.html] About to call loadGlossaryTerms...');
+    console.log('[interaction.html] loadGlossaryTerms function exists?', typeof loadGlossaryTerms);
+    
+    // Load glossary terms for highlighting, then load page
+    if (typeof loadGlossaryTerms === 'function') {
+        loadGlossaryTerms().then(() => {
+            console.log('[interaction.html] loadGlossaryTerms completed, loading page...');
+            loadPage(1);
+            initSelectionToolbarAlwaysOn();
+        }).catch(err => {
+            console.error('[interaction.html] Error in loadGlossaryTerms promise:', err);
+            // Still load page even if glossary fails
+            loadPage(1);
+            initSelectionToolbarAlwaysOn();
+        });
+    } else {
+        console.error('[interaction.html] loadGlossaryTerms is not a function!');
+        // Load page anyway
+        loadPage(1);
+        initSelectionToolbarAlwaysOn();
+    }
 });
 
 // Also try loading if DOM is already ready (for cases where script loads after DOMContentLoaded)
@@ -5422,9 +6188,21 @@ if (document.readyState === 'loading') {
     
     if (pageContentElement && sectionSnippetsElement) {
         console.log('[interaction.html] Elements found, loading page');
-        loadGlossaryTerms();
-        loadPage(1);
-        initSelectionToolbarAlwaysOn();
+        if (typeof loadGlossaryTerms === 'function') {
+            loadGlossaryTerms().then(() => {
+                console.log('[interaction.html] loadGlossaryTerms completed (second call), loading page...');
+                loadPage(1);
+                initSelectionToolbarAlwaysOn();
+            }).catch(err => {
+                console.error('[interaction.html] Error in loadGlossaryTerms promise (second call):', err);
+                loadPage(1);
+                initSelectionToolbarAlwaysOn();
+            });
+        } else {
+            console.error('[interaction.html] loadGlossaryTerms is not a function (second call)!');
+            loadPage(1);
+            initSelectionToolbarAlwaysOn();
+        }
     } else {
         console.warn('[interaction.html] Elements not found yet, will wait for DOMContentLoaded');
     }

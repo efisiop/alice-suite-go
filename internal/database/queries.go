@@ -346,6 +346,10 @@ func SearchGlossaryTerms(bookID, searchTerm string) ([]*models.AliceGlossary, er
 
 // GetAllGlossaryTerms retrieves all glossary terms for a book
 func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
+	if DB == nil {
+		return nil, fmt.Errorf("database connection is not initialized")
+	}
+	
 	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
 	          FROM alice_glossary 
 	          WHERE book_id = ?
@@ -353,21 +357,52 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 
 	rows, err := DB.Query(query, bookID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("database query failed: %w", err)
 	}
 	defer rows.Close()
 
 	terms := []*models.AliceGlossary{}
 	for rows.Next() {
 		term := &models.AliceGlossary{}
+		var sourceSentence, example, chapterRef sql.NullString
+		var createdAt, updatedAt string
+		
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
-			&term.SourceSentence, &term.Example, &term.ChapterReference,
-			&term.CreatedAt, &term.UpdatedAt,
+			&sourceSentence, &example, &chapterRef,
+			&createdAt, &updatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		
+		// Handle NULL values
+		if sourceSentence.Valid {
+			term.SourceSentence = sourceSentence.String
+		}
+		if example.Valid {
+			term.Example = example.String
+		}
+		if chapterRef.Valid {
+			term.ChapterReference = chapterRef.String
+		}
+		
+		// Parse timestamps (SQLite stores as string)
+		if createdAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+				term.CreatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+				term.CreatedAt = t
+			}
+		}
+		if updatedAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
+				term.UpdatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+				term.UpdatedAt = t
+			}
+		}
+		
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()

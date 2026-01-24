@@ -187,12 +187,20 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 			"Your task: Identify 4 to 8 words from the quoted text that are most likely to be misunderstood by a reader.\n\n"+
 			"Return ONLY a simple comma-separated list of the words, nothing else. For example:\n"+
 			"word1, word2, word3, word4\n\n"+
-			"Rules:\n"+
-			"- Return exactly 4-8 words (adjust based on text length - shorter text gets fewer words)\n"+
-			"- Only include words from the quoted text above\n"+
-			"- Focus on: uncommon vocabulary, complex words, words with multiple meanings, abstract concepts\n"+
-			"- Return just the words separated by commas, no explanations, no JSON, no quotes\n"+
-			"- Do not include the quoted text or any other text, only the word list", question, context)
+			"STRICT RULES - FOLLOW EXACTLY:\n"+
+			"1. Return exactly 4-8 words (adjust based on text length - shorter text gets fewer words, longer text gets more)\n"+
+			"2. Only include words that appear EXACTLY in the quoted text above (case-insensitive matching)\n"+
+			"3. Focus on words that are:\n"+
+			"   - Uncommon or advanced vocabulary\n"+
+			"   - Complex words with multiple syllables\n"+
+			"   - Words with multiple meanings or ambiguous context\n"+
+			"   - Abstract concepts or technical terms\n"+
+			"   - Idiomatic expressions or phrases\n"+
+			"   - Words that might be unfamiliar to a general reader\n"+
+			"4. Prioritize content words (nouns, verbs, adjectives, adverbs) over function words (the, a, is, etc.)\n"+
+			"5. Return just the words separated by commas, no explanations, no JSON, no quotes, no prefixes like 'words:' or 'list:'\n"+
+			"6. Do not include the quoted text or any other text, only the word list\n"+
+			"7. Use the exact spelling and form as they appear in the quoted text (preserve capitalization if needed for matching)", question, context)
 	case InteractionVisualExample:
 		visualPrompt := basePrompt + fmt.Sprintf("The user wants a visual example to help understand: \"%s\"\n\nSurrounding context (for your understanding): %s\n\n", question, context)
 		visualPrompt += "ABSOLUTE CONTENT RULES - YOU MUST FOLLOW THESE STRICTLY:\n"

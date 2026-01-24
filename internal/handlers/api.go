@@ -333,7 +333,10 @@ func HandleGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 	if sectionID != "" {
 		terms, err := dictionaryService.GetGlossaryTermsForSection(sectionID)
 		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Printf("Error getting glossary terms for section %s: %v", sectionID, err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -348,12 +351,23 @@ func HandleGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 	
 	terms, err := dictionaryService.GetAllGlossaryTerms(bookID)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("Error getting glossary terms for book %s: %v", bookID, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+			"message": fmt.Sprintf("Failed to get glossary terms for book: %s", bookID),
+		})
 		return
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(terms)
+	if err := json.NewEncoder(w).Encode(terms); err != nil {
+		log.Printf("Error encoding glossary terms: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error encoding response"})
+		return
+	}
 }
 
 // HandleGetDefinitionWithContext handles POST /rest/v1/rpc/get_definition_with_context
