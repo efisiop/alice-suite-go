@@ -1646,11 +1646,19 @@ function loadPage(pageNumber) {
         }
 
         // Check for sections array (new structure)
-        let sections = page.sections;
+        let sections = page.sections || page.Sections; // Handle both lowercase and uppercase
         console.log('[loadPage] Initial sections check:', sections);
+        console.log('[loadPage] Sections type:', typeof sections);
+        console.log('[loadPage] Is array?', Array.isArray(sections));
+        console.log('[loadPage] Sections length:', sections ? sections.length : 'null/undefined');
         
         if (!sections || !Array.isArray(sections) || sections.length === 0) {
-            console.log('[loadPage] Sections array is empty or invalid, checking for content field');
+            console.warn('[loadPage] ⚠️ Sections array is empty or invalid');
+            console.warn('[loadPage] Page object keys:', Object.keys(page || {}));
+            console.warn('[loadPage] page.sections:', page.sections);
+            console.warn('[loadPage] page.Sections:', page.Sections);
+            console.log('[loadPage] Checking for content field as fallback...');
+            
             // Fallback: check if there's a content field (old structure)
             if (page.content && page.content.trim()) {
                 console.log('[loadPage] Using old structure with content field');
@@ -1662,10 +1670,10 @@ function loadPage(pageNumber) {
                     section_number: 1
                 }];
             } else {
-                console.error('[loadPage] No sections or content found in page data');
-                console.error('[loadPage] Page object:', page);
+                console.error('[loadPage] ❌ ERROR: No sections or content found in page data');
+                console.error('[loadPage] Full page object:', JSON.stringify(page, null, 2));
                 document.getElementById('page-content').innerHTML = '<p class="text-muted">No content found for this page.</p>';
-                document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available.</p>';
+                document.getElementById('section-snippets').innerHTML = '<p class="text-muted small">No sections available. Check console for details.</p>';
                 currentPageSections = [];
                 return;
             }
