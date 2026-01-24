@@ -22,9 +22,15 @@ echo "Ensuring users are initialized..."
 # This is safe to run multiple times - it checks and only fixes if needed
 if [ -f "./bin/fix-render" ]; then
     echo "Verifying and fixing sections data..."
-    ./bin/fix-render
+    if ./bin/fix-render; then
+        echo "✅ Sections fix completed successfully"
+    else
+        echo "⚠️  Warning: fix-render exited with error, but continuing..."
+        # Don't fail startup - sections might still work
+    fi
 else
     echo "⚠️  Warning: fix-render binary not found, skipping sections fix"
+    echo "   This might cause sections to not display correctly on Render"
 fi
 
 # Optional: Run deployment verification (can be disabled for faster startup)
