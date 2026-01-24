@@ -303,15 +303,49 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
 	          FROM alice_glossary WHERE book_id = ? AND term = ?`
 
+	var sourceSentence, example, chapterRef sql.NullString
+	var createdAt, updatedAt string
+	
 	err := DB.QueryRow(query, bookID, term).Scan(
 		&glossary.ID, &glossary.BookID, &glossary.Term, &glossary.Definition,
-		&glossary.SourceSentence, &glossary.Example, &glossary.ChapterReference,
-		&glossary.CreatedAt, &glossary.UpdatedAt,
+		&sourceSentence, &example, &chapterRef,
+		&createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return glossary, err
+	if err != nil {
+		return nil, err
+	}
+	
+	// Handle NULL values
+	if sourceSentence.Valid {
+		glossary.SourceSentence = sourceSentence.String
+	}
+	if example.Valid {
+		glossary.Example = example.String
+	}
+	if chapterRef.Valid {
+		glossary.ChapterReference = chapterRef.String
+	}
+	
+	// Parse timestamps
+	if createdAt != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+			glossary.CreatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+			glossary.CreatedAt = t
+		}
+	}
+	if updatedAt != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
+			glossary.UpdatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+			glossary.UpdatedAt = t
+		}
+	}
+	
+	return glossary, nil
 }
 
 // SearchGlossaryTerms searches for glossary terms
@@ -425,14 +459,45 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 	terms := []*models.AliceGlossary{}
 	for rows.Next() {
 		term := &models.AliceGlossary{}
+		var sourceSentence, example, chapterRef sql.NullString
+		var createdAt, updatedAt string
+		
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
-			&term.SourceSentence, &term.Example, &term.ChapterReference,
-			&term.CreatedAt, &term.UpdatedAt,
+			&sourceSentence, &example, &chapterRef,
+			&createdAt, &updatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		
+		// Handle NULL values
+		if sourceSentence.Valid {
+			term.SourceSentence = sourceSentence.String
+		}
+		if example.Valid {
+			term.Example = example.String
+		}
+		if chapterRef.Valid {
+			term.ChapterReference = chapterRef.String
+		}
+		
+		// Parse timestamps
+		if createdAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+				term.CreatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+				term.CreatedAt = t
+			}
+		}
+		if updatedAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
+				term.UpdatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+				term.UpdatedAt = t
+			}
+		}
+		
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()
@@ -456,14 +521,45 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 	terms := []*models.AliceGlossary{}
 	for rows.Next() {
 		term := &models.AliceGlossary{}
+		var sourceSentence, example, chapterRef sql.NullString
+		var createdAt, updatedAt string
+		
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
-			&term.SourceSentence, &term.Example, &term.ChapterReference,
-			&term.CreatedAt, &term.UpdatedAt,
+			&sourceSentence, &example, &chapterRef,
+			&createdAt, &updatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		
+		// Handle NULL values
+		if sourceSentence.Valid {
+			term.SourceSentence = sourceSentence.String
+		}
+		if example.Valid {
+			term.Example = example.String
+		}
+		if chapterRef.Valid {
+			term.ChapterReference = chapterRef.String
+		}
+		
+		// Parse timestamps
+		if createdAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+				term.CreatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+				term.CreatedAt = t
+			}
+		}
+		if updatedAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
+				term.UpdatedAt = t
+			} else if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+				term.UpdatedAt = t
+			}
+		}
+		
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()
@@ -484,10 +580,13 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	          LIMIT 1`
 
 	term = &models.AliceGlossary{}
+	var sourceSentence, example, chapterRef sql.NullString
+	var createdAt, updatedAt string
+	
 	err = DB.QueryRow(query, bookID, word).Scan(
 		&term.ID, &term.BookID, &term.Term, &term.Definition,
-		&term.SourceSentence, &term.Example, &term.ChapterReference,
-		&term.CreatedAt, &term.UpdatedAt,
+		&sourceSentence, &example, &chapterRef,
+		&createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -495,6 +594,34 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	if err != nil {
 		return nil, err
 	}
+	
+	// Handle NULL values
+	if sourceSentence.Valid {
+		term.SourceSentence = sourceSentence.String
+	}
+	if example.Valid {
+		term.Example = example.String
+	}
+	if chapterRef.Valid {
+		term.ChapterReference = chapterRef.String
+	}
+	
+	// Parse timestamps
+	if createdAt != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+			term.CreatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+			term.CreatedAt = t
+		}
+	}
+	if updatedAt != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
+			term.UpdatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, updatedAt); err == nil {
+			term.UpdatedAt = t
+		}
+	}
+	
 	return term, nil
 }
 
