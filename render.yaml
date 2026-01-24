@@ -3,7 +3,7 @@ services:
     name: alice-suite-go
     runtime: go
     plan: free
-    buildCommand: go mod download && CGO_ENABLED=1 go build -o bin/server ./cmd/server && CGO_ENABLED=1 go build -o bin/migrate ./cmd/migrate && CGO_ENABLED=1 go build -o bin/init-users ./cmd/init-users && CGO_ENABLED=1 go build -o bin/fix-render ./cmd/fix-render && CGO_ENABLED=1 go build -o bin/verify-deployment ./cmd/verify-deployment
+    buildCommand: go mod download && CGO_ENABLED=1 go build -o bin/server ./cmd/server && CGO_ENABLED=1 go build -o bin/migrate ./cmd/migrate && CGO_ENABLED=1 go build -o bin/init-users ./cmd/init-users && CGO_ENABLED=1 go build -o bin/fix-render ./cmd/fix-render && CGO_ENABLED=1 go build -o bin/verify-deployment ./cmd/verify-deployment && CGO_ENABLED=1 go build -o bin/diagnose-sections ./cmd/diagnose-sections
     startCommand: ./start.sh
     envVars:
       - key: PORT

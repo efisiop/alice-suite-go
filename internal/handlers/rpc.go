@@ -144,6 +144,15 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	var rows *sql.Rows
 	var queryErr error
 
+	// Check if sections table exists and has data
+	var sectionCount int
+	countErr := database.DB.QueryRow("SELECT COUNT(*) FROM sections WHERE page_number = ?", pageNum).Scan(&sectionCount)
+	if countErr != nil {
+		log.Printf("Error counting sections for page %d: %v", pageNum, countErr)
+	} else {
+		log.Printf("Found %d sections in database for page %d", sectionCount, pageNum)
+	}
+
 	// Try querying new structure first (with page_number) - this is the most common case
 	query := `SELECT id, content, page_number, section_number FROM sections 
 	         WHERE page_number = ?
@@ -211,13 +220,19 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	}
 
 	if len(foundSections) == 0 {
+		log.Printf("⚠️  WARNING: No sections found for page %d. Section count in DB: %d", pageNum, sectionCount)
+		log.Printf("   This might indicate sections data wasn't imported. Check if fix-render ran successfully.")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Page not found",
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Page not found or has no sections",
+			"page":    pageNum,
+			"details": fmt.Sprintf("No sections found in database for page %d. Section count: %d", pageNum, sectionCount),
 		})
 		return
 	}
+	
+	log.Printf("✅ Successfully found %d sections for page %d", len(foundSections), pageNum)
 
 	// Return a page object with the found sections
 	pageObj := &models.Page{
