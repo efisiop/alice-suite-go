@@ -1113,3 +1113,143 @@ func CacheDefinition(cache *models.DictionaryCache) error {
 		cache.Phonetic, cache.PartOfSpeech, cache.SourceAPI)
 	return err
 }
+
+// FindPageByText searches for a page and section containing the given text
+// Uses fuzzy matching by searching for text within page and section content
+// Returns the best matching page and section
+func FindPageByText(bookID, searchText string) (*models.Page, *models.Section, error) {
+	if searchText == "" {
+		return nil, nil, fmt.Errorf("search text cannot be empty")
+	}
+
+	// Normalize search text: remove extra whitespace, convert to lowercase for matching
+	normalizedSearch := strings.ToLower(strings.TrimSpace(searchText))
+	
+	// Extract key words from search text (words with 3+ characters)
+	words := strings.Fields(normalizedSearch)
+	var keyWords []string
+	for _, word := range words {
+		word = strings.Trim(word, ".,!?;:\"'()[]{}")
+		if len(word) >= 3 {
+			keyWords = append(keyWords, word)
+		}
+	}
+
+	if len(keyWords) == 0 {
+		return nil, nil, fmt.Errorf("no searchable words found in text")
+	}
+
+	// Build a search pattern: look for pages/sections containing multiple key words
+	// We'll search for sections that contain at least 2 key words
+	var searchPatterns []string
+	for _, word := range keyWords {
+		searchPatterns = append(searchPatterns, "%"+word+"%")
+	}
+
+	// Query sections table to find matches
+	// Search sections that belong to pages of the given book
+	// We'll look for sections where content contains the search text or key words
+	query := `SELECT s.id, s.page_id, s.page_number, s.section_number, s.content, s.word_count,
+	                 p.id as page_id_full, p.chapter_id, p.chapter_title, p.content as page_content
+	          FROM sections s
+	          LEFT JOIN pages p ON (s.page_id = p.id OR s.page_number = p.page_number) AND p.book_id = ?
+	          WHERE s.page_number IN (
+	              SELECT page_number FROM pages WHERE book_id = ?
+	          )
+	          AND (
+	              LOWER(s.content) LIKE ? OR LOWER(s.content) LIKE ?
+	          )
+	          ORDER BY s.page_number, s.section_number
+	          LIMIT 50`
+
+	// Use first two key words for initial filtering
+	pattern1 := searchPatterns[0]
+	pattern2 := searchPatterns[0]
+	if len(searchPatterns) > 1 {
+		pattern2 = searchPatterns[1]
+	}
+
+	rows, err := DB.Query(query, bookID, bookID, pattern1, pattern2)
+	if err != nil {
+		return nil, nil, fmt.Errorf("database query error: %w", err)
+	}
+	defer rows.Close()
+
+	var bestMatch *models.Section
+	var bestPage *models.Page
+	bestScore := 0
+
+	for rows.Next() {
+		var section models.Section
+		var pageIDFull, chapterID, chapterTitle, pageContent sql.NullString
+		var sectionCreatedAtStr string
+
+		err := rows.Scan(
+			&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
+			&section.Content, &section.WordCount, &pageIDFull, &chapterID, &chapterTitle,
+			&pageContent, &sectionCreatedAtStr,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Calculate match score: count how many key words appear in the section
+		sectionLower := strings.ToLower(section.Content)
+		score := 0
+		for _, word := range keyWords {
+			if strings.Contains(sectionLower, word) {
+				score++
+			}
+		}
+
+		// Also check if the full search text appears (higher score)
+		if strings.Contains(sectionLower, normalizedSearch) {
+			score += len(keyWords) // Bonus for exact phrase match
+		}
+
+		// Update best match if this is better
+		if score > bestScore {
+			bestScore = score
+			bestMatch = &section
+
+			// Build page object
+			pageID := section.PageID
+			if pageIDFull.Valid {
+				pageID = pageIDFull.String
+			}
+			if pageID == "" {
+				pageID = fmt.Sprintf("page-%d", section.PageNumber)
+			}
+
+			bestPage = &models.Page{
+				ID:         pageID,
+				BookID:     bookID,
+				PageNumber: section.PageNumber,
+			}
+
+			if chapterID.Valid {
+				chapterIDStr := chapterID.String
+				bestPage.ChapterID = &chapterIDStr
+			}
+			if chapterTitle.Valid {
+				chapterTitleStr := chapterTitle.String
+				bestPage.ChapterTitle = &chapterTitleStr
+			}
+			if pageContent.Valid {
+				bestPage.Content = pageContent.String
+			}
+		}
+	}
+
+	if bestMatch == nil || bestPage == nil {
+		return nil, nil, fmt.Errorf("no matching page or section found")
+	}
+
+	// Get all sections for the best matching page to populate the page object
+	page, err := GetPageByNumber(bookID, bestPage.PageNumber)
+	if err == nil && page != nil {
+		bestPage = page
+	}
+
+	return bestPage, bestMatch, nil
+}

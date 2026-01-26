@@ -45,6 +45,8 @@ func HandleRPC(w http.ResponseWriter, r *http.Request) {
 		handleGetDefinitionWithContext(w, r, params)
 	case "get_sections_for_page":
 		handleGetSectionsForPage(w, r, params)
+	case "find_page_by_text":
+		handleFindPageByText(w, r, params)
 	case "verify-book-code":
 		// This is handled by HandleVerifyBookCode in verification.go
 		HandleVerifyBookCode(w, r)
@@ -244,6 +246,63 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pageObj)
+}
+
+// handleFindPageByText handles find_page_by_text RPC
+// Searches for a page and section containing the given text (from OCR scan)
+func handleFindPageByText(w http.ResponseWriter, r *http.Request, params map[string]interface{}) {
+	text, _ := params["text"].(string)
+	bookID, _ := params["book_id"].(string)
+
+	if text == "" {
+		http.Error(w, "text parameter required", http.StatusBadRequest)
+		return
+	}
+
+	if bookID == "" {
+		bookID = "alice-in-wonderland" // Default book ID
+	}
+
+	// Search for page and section containing the text
+	page, section, err := database.FindPageByText(bookID, text)
+	
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err != nil {
+		log.Printf("Error finding page by text: %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Page not found",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	if page == nil || section == nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Page not found",
+			"message": "No matching page or section found for the scanned text",
+		})
+		return
+	}
+
+	// Return the found page and section
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"page": map[string]interface{}{
+			"id":           page.ID,
+			"book_id":      page.BookID,
+			"page_number":  page.PageNumber,
+			"chapter_id":   page.ChapterID,
+			"chapter_title": page.ChapterTitle,
+		},
+		"section": map[string]interface{}{
+			"id":             section.ID,
+			"page_id":        section.PageID,
+			"page_number":    section.PageNumber,
+			"section_number": section.SectionNumber,
+		},
+	})
 }
 
 // handleCheckTableExists handles check_table_exists RPC

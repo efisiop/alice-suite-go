@@ -98,6 +98,32 @@ html {
     -webkit-overflow-scrolling: touch;
 }
 
+/* Scan to Locate Button Styling */
+#scan-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#scan-button span {
+    font-size: 1.2em;
+}
+
+/* Camera Preview Styling */
+#camera-preview {
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+/* Scan Progress Styling */
+#scan-progress {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Prevent auto-scroll when content changes */
 #page-content {
     scroll-behavior: auto;
@@ -1301,9 +1327,15 @@ html {
                         <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
                         <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 mb-2">
                         <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">Previous</button>
                         <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">Next</button>
+                    </div>
+                    <div class="border-top pt-2">
+                        <button class="btn btn-sm btn-outline-success w-100" onclick="event.preventDefault(); event.stopPropagation(); startScanToLocate(); return false;" id="scan-button">
+                            <span>📷</span> Scan to Locate
+                        </button>
+                        <p class="text-muted small mb-0 mt-1">Point camera at page text to find your location</p>
                     </div>
                 </div>
                 <div class="card-body border-top">
@@ -1341,6 +1373,53 @@ html {
                 <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showDictionary()">Dictionary</button>
                 <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showAIHelp()">AI Help</button>
                 <button class="btn btn-sm btn-outline-primary w-100" onclick="requestHelp()">Request Help</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan to Locate Modal -->
+<div class="modal fade" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scanModalLabel">📷 Scan to Locate Your Reading Position</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="scan-instructions" class="mb-3">
+                    <p class="text-muted">Point your camera at the text on the page you're reading. Make sure the text is clear and well-lit.</p>
+                </div>
+                <div id="camera-container" style="display: none;">
+                    <video id="camera-preview" autoplay playsinline style="width: 100%; max-height: 400px; background: #000;"></video>
+                    <canvas id="capture-canvas" style="display: none;"></canvas>
+                </div>
+                <div id="scan-progress" style="display: none;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <p class="mt-2" id="progress-text">Processing image...</p>
+                    </div>
+                </div>
+                <div id="scan-result" style="display: none;">
+                    <div class="alert alert-success" role="alert">
+                        <h6>Location Found!</h6>
+                        <p id="result-message"></p>
+                    </div>
+                </div>
+                <div id="scan-error" style="display: none;">
+                    <div class="alert alert-danger" role="alert">
+                        <h6>Error</h6>
+                        <p id="error-message"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancel-scan-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="start-camera-btn" onclick="initCamera()">Start Camera</button>
+                <button type="button" class="btn btn-success" id="capture-btn" onclick="captureImage()" style="display: none;">Capture & Scan</button>
+                <button type="button" class="btn btn-primary" id="retry-btn" onclick="resetScanModal()" style="display: none;">Try Again</button>
             </div>
         </div>
     </div>
@@ -6305,5 +6384,311 @@ if (document.readyState === 'loading') {
         console.warn('[interaction.html] Elements not found yet, will wait for DOMContentLoaded');
     }
 }
+
+// ========== Scan to Locate Feature ==========
+
+let cameraStream = null;
+let tesseractWorker = null;
+
+// Initialize Tesseract.js worker (lazy load)
+async function initTesseract() {
+    if (tesseractWorker) {
+        return tesseractWorker;
+    }
+    
+    // Load Tesseract.js from CDN if not already loaded
+    if (typeof Tesseract === 'undefined') {
+        await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+    }
+    
+    // Create worker
+    tesseractWorker = await Tesseract.createWorker('eng');
+    await tesseractWorker.loadLanguage('eng');
+    await tesseractWorker.initialize('eng');
+    
+    return tesseractWorker;
+}
+
+// Helper to load script dynamically
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Start scan to locate process
+async function startScanToLocate() {
+    const modal = new bootstrap.Modal(document.getElementById('scanModal'));
+    modal.show();
+    resetScanModal();
+}
+
+// Reset scan modal to initial state
+function resetScanModal() {
+    document.getElementById('scan-instructions').style.display = 'block';
+    document.getElementById('camera-container').style.display = 'none';
+    document.getElementById('scan-progress').style.display = 'none';
+    document.getElementById('scan-result').style.display = 'none';
+    document.getElementById('scan-error').style.display = 'none';
+    document.getElementById('start-camera-btn').style.display = 'block';
+    document.getElementById('capture-btn').style.display = 'none';
+    document.getElementById('retry-btn').style.display = 'none';
+    
+    // Stop camera if running
+    stopCamera();
+}
+
+// Initialize camera - prioritize back camera
+async function initCamera() {
+    try {
+        const video = document.getElementById('camera-preview');
+        let constraints = {
+            video: {
+                facingMode: { exact: 'environment' }, // Require back camera
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+        
+        // Try to enumerate devices to find back camera by deviceId
+        // Note: device labels are only available after permission is granted
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            if (videoDevices.length > 0) {
+                // Try to find back camera by label
+                const backCamera = videoDevices.find(device => {
+                    const label = device.label.toLowerCase();
+                    return label.includes('back') || 
+                           label.includes('rear') || 
+                           label.includes('environment') ||
+                           label.includes('facing back') ||
+                           label.includes('facing: back');
+                });
+                
+                // If no back camera found by label, filter out front cameras
+                let selectedCamera = backCamera;
+                if (!selectedCamera && videoDevices.length >= 2) {
+                    const nonFrontCameras = videoDevices.filter(device => {
+                        const label = device.label.toLowerCase();
+                        return !label.includes('front') && 
+                               !label.includes('user') && 
+                               !label.includes('facing: user') &&
+                               !label.includes('facing front');
+                    });
+                    
+                    if (nonFrontCameras.length > 0) {
+                        // Use the last non-front camera (usually the back one)
+                        selectedCamera = nonFrontCameras[nonFrontCameras.length - 1];
+                    }
+                }
+                
+                if (selectedCamera && selectedCamera.deviceId && selectedCamera.deviceId !== 'default') {
+                    constraints.video = {
+                        deviceId: { exact: selectedCamera.deviceId },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    };
+                    console.log('Using back camera by deviceId:', selectedCamera.label || selectedCamera.deviceId);
+                }
+            }
+        } catch (enumError) {
+            console.log('Could not enumerate devices, using facingMode constraint:', enumError);
+            // Continue with facingMode constraint
+        }
+        
+        // Request camera with back camera constraints
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        cameraStream = stream;
+        video.srcObject = stream;
+        
+        document.getElementById('scan-instructions').style.display = 'none';
+        document.getElementById('camera-container').style.display = 'block';
+        document.getElementById('start-camera-btn').style.display = 'none';
+        document.getElementById('capture-btn').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error accessing back camera:', error);
+        
+        // If exact environment camera fails, try with ideal (less strict)
+        if (error.name === 'OverconstrainedError' || error.name === 'NotReadableError') {
+            try {
+                console.log('Trying back camera with ideal constraint...');
+                const video = document.getElementById('camera-preview');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: { ideal: 'environment' }, // Less strict - prefer but don't require
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                cameraStream = stream;
+                video.srcObject = stream;
+                
+                document.getElementById('scan-instructions').style.display = 'none';
+                document.getElementById('camera-container').style.display = 'block';
+                document.getElementById('start-camera-btn').style.display = 'none';
+                document.getElementById('capture-btn').style.display = 'block';
+            } catch (fallbackError) {
+                console.error('Back camera not available:', fallbackError);
+                showScanError('Back camera is not available. Please use a device with a back camera, or ensure the back camera is not being used by another app.');
+            }
+        } else {
+            showScanError('Could not access camera. Please make sure you have granted camera permissions.');
+        }
+    }
+}
+
+// Stop camera stream
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    const video = document.getElementById('camera-preview');
+    if (video.srcObject) {
+        video.srcObject = null;
+    }
+}
+
+// Capture image and process
+async function captureImage() {
+    const video = document.getElementById('camera-preview');
+    const canvas = document.getElementById('capture-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Stop camera
+    stopCamera();
+    
+    // Show progress
+    document.getElementById('camera-container').style.display = 'none';
+    document.getElementById('scan-progress').style.display = 'block';
+    document.getElementById('capture-btn').style.display = 'none';
+    document.getElementById('progress-text').textContent = 'Extracting text from image...';
+    
+    try {
+        // Perform OCR using Tesseract.js
+        const worker = await initTesseract();
+        document.getElementById('progress-text').textContent = 'Processing text...';
+        
+        const { data: { text } } = await worker.recognize(canvas);
+        
+        if (!text || text.trim().length < 10) {
+            throw new Error('Could not extract enough text from the image. Please try again with clearer text.');
+        }
+        
+        document.getElementById('progress-text').textContent = 'Finding location in book...';
+        
+        // Send OCR text to backend to find page/section
+        const result = await findPageByText(text.trim());
+        
+        if (result && result.page && result.section) {
+            showScanResult(result);
+        } else {
+            throw new Error('Could not find matching page. Please try scanning a different part of the text.');
+        }
+    } catch (error) {
+        console.error('Error processing scan:', error);
+        showScanError(error.message || 'An error occurred while processing the scan. Please try again.');
+    }
+}
+
+// Find page by text using API
+async function findPageByText(text) {
+    const token = getAuthToken();
+    if (!token) {
+        throw new Error('Not authenticated');
+    }
+    
+    const response = await fetch('/rest/v1/rpc/find_page_by_text', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            text: text,
+            book_id: 'alice-in-wonderland'
+        })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to find page');
+    }
+    
+    return await response.json();
+}
+
+// Show scan result and navigate
+function showScanResult(result) {
+    document.getElementById('scan-progress').style.display = 'none';
+    document.getElementById('scan-result').style.display = 'block';
+    document.getElementById('retry-btn').style.display = 'block';
+    
+    const pageNum = result.page.page_number;
+    const sectionNum = result.section.section_number;
+    
+    document.getElementById('result-message').textContent = 
+        `Found at Page ${pageNum}, Section ${sectionNum}. Navigating...`;
+    
+    // Navigate to the found page and section
+    setTimeout(() => {
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('scanModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Navigate to page
+        if (typeof loadPage === 'function') {
+            loadPage(pageNum).then(() => {
+                // Wait a bit for page to load, then show the section
+                setTimeout(() => {
+                    if (typeof showSection === 'function' && currentPageSections) {
+                        // Section numbers are 1-based in the UI, but 0-based in array
+                        const sectionIndex = sectionNum - 1;
+                        if (sectionIndex >= 0 && sectionIndex < currentPageSections.length) {
+                            showSection(sectionIndex);
+                        }
+                    }
+                }, 500);
+            });
+        }
+    }, 1500);
+}
+
+// Show scan error
+function showScanError(message) {
+    document.getElementById('scan-progress').style.display = 'none';
+    document.getElementById('scan-error').style.display = 'block';
+    document.getElementById('retry-btn').style.display = 'block';
+    document.getElementById('error-message').textContent = message;
+}
+
+// Cleanup when modal is closed
+document.addEventListener('DOMContentLoaded', function() {
+    const scanModal = document.getElementById('scanModal');
+    if (scanModal) {
+        scanModal.addEventListener('hidden.bs.modal', function() {
+            stopCamera();
+            resetScanModal();
+        });
+    }
+});
 </script>
 {{end}}
