@@ -5500,7 +5500,8 @@ function handleTextSelection(e) {
     }, 10);
 }
 
-// Expand range to word boundaries (fallback method)
+// Expand range to word boundaries with "choke effect"
+// If any part of a word is selected, the entire word is included
 function expandRangeToWords(range) {
     try {
         // Get the full text content of the range's common ancestor
@@ -5529,14 +5530,71 @@ function expandRangeToWords(range) {
             }
         }
         
-        // Expand start backwards to word boundary
-        while (startOffset > 0 && /\w/.test(text[startOffset - 1])) {
-            startOffset--;
+        // CHOKE EFFECT: Expand to include entire words if any part is touched
+        // This makes selection easier, especially on mobile
+        // If any character of a word is selected, the entire word is included
+        
+        // First, find all word boundaries in the text
+        const wordBoundaries = [];
+        let inWord = false;
+        let wordStart = -1;
+        
+        for (let i = 0; i < text.length; i++) {
+            const isWordChar = /\w/.test(text[i]);
+            if (isWordChar && !inWord) {
+                // Start of a word
+                inWord = true;
+                wordStart = i;
+            } else if (!isWordChar && inWord) {
+                // End of a word
+                inWord = false;
+                wordBoundaries.push({ start: wordStart, end: i });
+            }
+        }
+        // Handle word at end of text
+        if (inWord) {
+            wordBoundaries.push({ start: wordStart, end: text.length });
         }
         
-        // Expand end forwards to word boundary  
-        while (endOffset < text.length && /\w/.test(text[endOffset])) {
-            endOffset++;
+        // Find all words that overlap with the current selection (choke effect)
+        // A word overlaps if any part of it is within the selection range
+        let minStart = startOffset;
+        let maxEnd = endOffset;
+        let foundOverlap = false;
+        
+        for (const word of wordBoundaries) {
+            // Check if word overlaps with selection
+            // Overlap occurs if: word starts before selection ends AND word ends after selection starts
+            const wordOverlaps = (word.start < endOffset && word.end > startOffset);
+            
+            if (wordOverlaps) {
+                foundOverlap = true;
+                // This word is touched by selection, include it fully
+                if (word.start < minStart) {
+                    minStart = word.start;
+                }
+                if (word.end > maxEnd) {
+                    maxEnd = word.end;
+                }
+            }
+        }
+        
+        // If we found overlapping words, use the expanded range
+        // Otherwise, use the simple word boundary expansion as fallback
+        if (foundOverlap) {
+            startOffset = minStart;
+            endOffset = maxEnd;
+        } else {
+            // Fallback: simple word boundary expansion
+            // Expand start backwards to word boundary
+            while (startOffset > 0 && /\w/.test(text[startOffset - 1])) {
+                startOffset--;
+            }
+            
+            // Expand end forwards to word boundary  
+            while (endOffset < text.length && /\w/.test(text[endOffset])) {
+                endOffset++;
+            }
         }
         
         // Try to set the range - need to handle text nodes properly
