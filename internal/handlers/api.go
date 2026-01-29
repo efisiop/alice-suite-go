@@ -79,6 +79,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/reader/state", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderState)))
 	mux.Handle("/api/consultant/reader/purchase-date", middleware.RequireConsultant(http.HandlerFunc(HandleUpdateBookPurchaseDate)))
 	mux.Handle("/api/consultant/online-readers", middleware.RequireConsultant(http.HandlerFunc(HandleGetOnlineReaders)))
+	mux.Handle("/api/consultant/ai-insight", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantAIInsight)))
 
 	// Help requests API
 	mux.HandleFunc("/rest/v1/help_requests", HandleHelpRequests)

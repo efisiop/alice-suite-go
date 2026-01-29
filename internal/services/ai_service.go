@@ -161,6 +161,40 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 	return interaction, nil
 }
 
+// ConsultantAnalysisScope is the scope for consultant AI analysis
+const (
+	ConsultantScopeDashboard = "dashboard"
+	ConsultantScopeReader    = "reader"
+)
+
+// ConsultantAnalyst asks the AI to analyze reader data and suggest how the consultant can assist.
+// scope is "dashboard" (cohort) or "reader" (single reader). context is the formatted data string.
+// Does not save to ai_interactions.
+func (s *AIService) ConsultantAnalyst(scope string, context string) (string, error) {
+	system := `You are an analyst for a reading-assistant app. Your role is to help consultants (publishers/support staff) understand what readers are doing and how to assist them.
+
+Rules:
+- Write in clear, short bullets or 2–4 brief paragraphs.
+- Focus on: who needs attention, what’s going well, and concrete next steps for the consultant.
+- No jargon. Be direct and actionable.
+- For dashboard: summarize the cohort, highlight readers who may need help, and suggest priorities.
+- For a single reader: summarize that reader’s pattern, possible needs, and what the consultant could do next.`
+
+	var task string
+	if scope == ConsultantScopeDashboard {
+		task = "Analyze the following DASHBOARD data (all readers, recent period) and provide a brief summary: what’s going on, who might need attention, and suggested focus for the consultant."
+	} else {
+		task = "Analyze the following SINGLE READER data and provide a brief insight: what’s going on with this reader, possible needs, and how the consultant could assist."
+	}
+
+	prompt := system + "\n\n" + task + "\n\n---\nDATA:\n" + context
+	response, _, err := s.callAI(prompt)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrAIServiceUnavailable, err)
+	}
+	return response, nil
+}
+
 // buildPrompt builds a prompt based on interaction type
 func (s *AIService) buildPrompt(interactionType InteractionType, question, context string) string {
 	basePrompt := "You are a helpful reading assistant for Alice's Adventures in Wonderland. "

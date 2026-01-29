@@ -8,12 +8,6 @@
     <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/consultant/readers">Readers</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="#" id="reader-inspector-link">Reader Inspector</a>
-</li>
-<li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
@@ -129,8 +123,8 @@
 {{define "content"}}
 <div class="container-fluid">
     <div class="back-button">
-        <a href="/consultant/readers" class="btn btn-outline-secondary">
-            ← Back to Readers
+        <a href="/consultant" class="btn btn-outline-secondary">
+            ← Back to Dashboard
         </a>
     </div>
     
@@ -188,6 +182,27 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- AI Insight for this reader -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">AI insight for this reader</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <select id="ai-insight-hours" class="form-select form-select-sm" style="width: auto;">
+                        <option value="168">Last 7 days</option>
+                        <option value="72">Last 3 days</option>
+                        <option value="24">Last 24 hours</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="ai-insight-btn" onclick="generateAIInsight()">Generate insight</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="ai-insight-loading" class="text-muted small" style="display: none;">Analysing this reader...</div>
+                <div id="ai-insight-error" class="text-danger small" style="display: none;"></div>
+                <div id="ai-insight-result" class="small" style="display: none; white-space: pre-wrap;"></div>
+                <div id="ai-insight-placeholder" class="text-muted small">Click "Generate insight" to get an AI summary of this reader's activity and how you can assist.</div>
             </div>
         </div>
 
@@ -390,6 +405,52 @@ function refreshAll() {
     loadActivities();
     loadAIInteractions();
     loadHelpRequests();
+}
+
+// Generate AI insight for this reader (scope=reader)
+function generateAIInsight() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        document.getElementById('ai-insight-placeholder').style.display = 'none';
+        const errEl = document.getElementById('ai-insight-error');
+        errEl.textContent = 'Please log in or ensure reader is loaded.';
+        errEl.style.display = 'block';
+        return;
+    }
+    const hoursEl = document.getElementById('ai-insight-hours');
+    const hours = hoursEl ? hoursEl.value || '168' : '168';
+    const loadingEl = document.getElementById('ai-insight-loading');
+    const errorEl = document.getElementById('ai-insight-error');
+    const resultEl = document.getElementById('ai-insight-result');
+    const placeholderEl = document.getElementById('ai-insight-placeholder');
+    const btn = document.getElementById('ai-insight-btn');
+    
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    resultEl.style.display = 'none';
+    placeholderEl.style.display = 'none';
+    if (btn) btn.disabled = true;
+    
+    const url = '/api/consultant/ai-insight?scope=reader&user_id=' + encodeURIComponent(readerId) + '&hours=' + encodeURIComponent(hours);
+    fetch(url, { headers: {'Authorization': 'Bearer ' + token} })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+        loadingEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        if (ok && data.summary) {
+            resultEl.textContent = data.summary;
+            resultEl.style.display = 'block';
+        } else {
+            errorEl.textContent = data.error || 'AI insight unavailable.';
+            errorEl.style.display = 'block';
+        }
+    })
+    .catch(err => {
+        loadingEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        errorEl.textContent = 'Request failed. Try again.';
+        errorEl.style.display = 'block';
+    });
 }
 
 // Load reading progress for the current reader

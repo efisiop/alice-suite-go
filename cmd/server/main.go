@@ -126,14 +126,13 @@ func main() {
 		}
 		
 		switch path {
-		case "", "/":
-			handlers.HandleConsultantDashboard(w, r)
+		case "", "/", "/readers":
+			// Dashboard is the readers list; /consultant and /consultant/readers both show it
+			handlers.HandleConsultantReaders(w, r)
 		case "/help-requests":
 			handlers.HandleConsultantHelpRequests(w, r)
 		case "/feedback":
 			handlers.HandleConsultantFeedback(w, r)
-		case "/readers":
-			handlers.HandleConsultantReaders(w, r)
 		case "/reports":
 			handlers.HandleConsultantReports(w, r)
 		case "/reading-insights":

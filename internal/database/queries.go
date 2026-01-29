@@ -1023,6 +1023,56 @@ func GetHelpRequestByID(id string) (*models.HelpRequest, error) {
 	return request, nil
 }
 
+// GetRecentHelpRequests retrieves the most recent help requests across all readers (for consultant dashboard / AI analyst)
+func GetRecentHelpRequests(limit int) ([]*models.HelpRequest, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at
+	          FROM help_requests ORDER BY created_at DESC LIMIT ?`
+	rows, err := DB.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	requests := []*models.HelpRequest{}
+	for rows.Next() {
+		request := &models.HelpRequest{}
+		var sectionID, assignedTo, response sql.NullString
+		var resolvedAt sql.NullTime
+		var createdAtStr, updatedAtStr string
+		err := rows.Scan(
+			&request.ID, &request.UserID, &request.BookID, &sectionID, &request.Status,
+			&request.Content, &request.Context, &assignedTo, &response, &resolvedAt,
+			&createdAtStr, &updatedAtStr,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if createdAtStr != "" {
+			request.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
+		}
+		if updatedAtStr != "" {
+			request.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
+		}
+		if sectionID.Valid {
+			request.SectionID = &sectionID.String
+		}
+		if assignedTo.Valid {
+			request.AssignedTo = &assignedTo.String
+		}
+		if response.Valid {
+			request.Response = response.String
+		}
+		if resolvedAt.Valid {
+			request.ResolvedAt = &resolvedAt.Time
+		}
+		requests = append(requests, request)
+	}
+	return requests, rows.Err()
+}
+
 // GetHelpRequestsByConsultant retrieves help requests assigned to a consultant
 func GetHelpRequestsByConsultant(consultantID string) ([]*models.HelpRequest, error) {
 	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 )
@@ -197,3 +198,127 @@ func HandleGetOnlineReaders(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleConsultantAIInsight handles GET /api/consultant/ai-insight
+// scope=dashboard (last N hours) or scope=reader&user_id=... (single reader)
+// hours=24 (default for dashboard) or 168 for reader
+func HandleConsultantAIInsight(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	scope := r.URL.Query().Get("scope")
+	if scope != "dashboard" && scope != "reader" {
+		respondAIInsightError(w, "scope must be 'dashboard' or 'reader'", http.StatusBadRequest)
+		return
+	}
+
+	hoursStr := r.URL.Query().Get("hours")
+	hours := 24
+	if scope == "reader" {
+		hours = 168 // 7 days default for single reader
+	}
+	if hoursStr != "" {
+		if p, err := strconv.Atoi(hoursStr); err == nil && p > 0 {
+			hours = p
+		}
+	}
+
+	var context strings.Builder
+
+	if scope == "dashboard" {
+		minutes := hours * 60
+		active, _ := database.GetActiveReaders(minutes)
+		activities, _ := database.GetRecentActivities(100)
+		helpReqs, _ := database.GetRecentHelpRequests(50)
+
+		context.WriteString(fmt.Sprintf("Time window: last %d hours\n\n", hours))
+		context.WriteString(fmt.Sprintf("Active readers (last %d hours): %d\n", hours, len(active)))
+		for _, r := range active {
+			context.WriteString(fmt.Sprintf("  - %s %s (user_id=%s, last_active=%s)\n", r.FirstName, r.LastName, r.UserID, r.LastActiveAt.Format("2006-01-02 15:04")))
+		}
+		context.WriteString(fmt.Sprintf("\nRecent activities (last 100): total=%d\n", len(activities)))
+		typeCount := make(map[string]int)
+		for _, a := range activities {
+			typeCount[a.ActivityType]++
+		}
+		for t, c := range typeCount {
+			context.WriteString(fmt.Sprintf("  - %s: %d\n", t, c))
+		}
+		context.WriteString(fmt.Sprintf("\nHelp requests (last 50): total=%d\n", len(helpReqs)))
+		pending := 0
+		for _, h := range helpReqs {
+			if h.Status == "pending" || h.Status == "assigned" {
+				pending++
+			}
+			preview := h.Content
+			if len(preview) > 120 {
+				preview = preview[:120] + "..."
+			}
+			context.WriteString(fmt.Sprintf("  - user_id=%s status=%s at %s: %s\n", h.UserID, h.Status, h.CreatedAt.Format("2006-01-02 15:04"), preview))
+		}
+		context.WriteString(fmt.Sprintf("\nPending/assigned help requests: %d\n", pending))
+	} else {
+		userID := r.URL.Query().Get("user_id")
+		if userID == "" {
+			respondAIInsightError(w, "user_id required when scope=reader", http.StatusBadRequest)
+			return
+		}
+		summary, err := database.GetReaderActivitySummary(userID, hours)
+		if err != nil {
+			log.Printf("GetReaderActivitySummary error: %v", err)
+			respondAIInsightError(w, "Failed to load reader activity", http.StatusInternalServerError)
+			return
+		}
+		state, _ := database.GetReaderState(userID)
+		helpReqs, _ := database.GetHelpRequests(userID)
+		userActivities, _ := database.GetUserActivities(userID, 30)
+
+		context.WriteString(fmt.Sprintf("Reader user_id=%s, last %d hours\n\n", userID, hours))
+		context.WriteString(fmt.Sprintf("Activity summary: total=%d, active_days=%d, word_lookups=%d, ai_interactions=%d, page_views=%d\n",
+			summary.TotalActivities, summary.ActiveDays, summary.WordLookups, summary.AIIteractions, summary.PageViews))
+		if state != nil {
+			context.WriteString(fmt.Sprintf("Current state: last_activity_type=%s, last_active=%s, status=%s\n",
+				strOrNil(state.LastActivityType), state.LastActivityAt.Format("2006-01-02 15:04"), state.Status))
+		}
+		context.WriteString(fmt.Sprintf("\nHelp requests: %d\n", len(helpReqs)))
+		for _, h := range helpReqs {
+			preview := h.Content
+			if len(preview) > 150 {
+				preview = preview[:150] + "..."
+			}
+			context.WriteString(fmt.Sprintf("  - status=%s at %s: %s\n", h.Status, h.CreatedAt.Format("2006-01-02 15:04"), preview))
+		}
+		context.WriteString(fmt.Sprintf("\nRecent activities (last 30): %d\n", len(userActivities)))
+		for i, a := range userActivities {
+			if i >= 15 {
+				context.WriteString("  ...\n")
+				break
+			}
+			context.WriteString(fmt.Sprintf("  - %s type=%s\n", a.CreatedAt.Format("2006-01-02 15:04"), a.ActivityType))
+		}
+	}
+
+	summary, err := aiService.ConsultantAnalyst(scope, context.String())
+	if err != nil {
+		log.Printf("ConsultantAnalyst error: %v", err)
+		respondAIInsightError(w, "AI summary unavailable. Check that GEMINI_API_KEY or MOONSHOT_API_KEY is set.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"summary": summary})
+}
+
+func respondAIInsightError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
+}
+
+func strOrNil(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

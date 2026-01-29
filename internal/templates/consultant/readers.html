@@ -1,4 +1,4 @@
-{{define "title"}}Readers - Consultant Dashboard - Alice Suite{{end}}
+{{define "title"}}Consultant Dashboard - Alice Suite{{end}}
 
 {{define "head"}}
 <style>
@@ -65,14 +65,12 @@
     transition: background-color 0.2s;
 }
 
-/* Compact columns - left side takes ~35% */
-.col-name { width: 8%; }
-.col-lastname { width: 8%; }
-.col-email { width: 12%; overflow: hidden; text-overflow: ellipsis; }
-.col-purchased { width: 7%; }
-.col-activated { width: 7%; }
-/* Calendar takes ~58% */
-.col-calendar { width: 58%; }
+/* Compact columns - more space for name and calendar (email removed) */
+.col-name { width: 10%; }
+.col-lastname { width: 10%; }
+.col-purchased { width: 8%; }
+.col-activated { width: 8%; }
+.col-calendar { width: 64%; }
 
 .reader-name {
     font-weight: 600;
@@ -206,13 +204,10 @@
 
 {{define "nav"}}
 <li class="nav-item">
-    <a class="nav-link" href="/consultant">Dashboard</a>
+    <a class="nav-link active" href="/consultant">Dashboard</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="/consultant/readers">Readers</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
@@ -222,12 +217,32 @@
 {{define "content"}}
 <div class="row">
     <div class="col-12">
-        <h1 class="mb-4">All Readers</h1>
+        <h1 class="mb-4">Dashboard</h1>
+        
+        <!-- AI Summary card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">AI summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                    <select id="ai-summary-hours" class="form-select form-select-sm" style="width: auto; max-width: 180px;">
+                        <option value="24">Last 24 hours</option>
+                        <option value="168">Last 7 days</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" id="ai-summary-btn" onclick="generateAISummary()">Generate summary</button>
+                </div>
+                <div id="ai-summary-loading" class="text-muted small" style="display: none;">Analysing readers...</div>
+                <div id="ai-summary-error" class="text-danger small" style="display: none;"></div>
+                <div id="ai-summary-result" class="small" style="display: none; white-space: pre-wrap;"></div>
+                <div id="ai-summary-placeholder" class="text-muted small">Use the button above to get an AI overview of reader activity and suggested focus.</div>
+            </div>
+        </div>
         
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h5 class="mb-0">Reader Accounts</h5>
+                    <h5 class="mb-0">All Readers</h5>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <div class="activity-legend">
@@ -261,7 +276,6 @@
                                 <th style="width: 20px;"></th>
                                 <th class="col-name">Name</th>
                                 <th class="col-lastname">Last Name</th>
-                                <th class="col-email">Email</th>
                                 <th class="col-purchased">Purchased</th>
                                 <th class="col-activated">Activated</th>
                                 <th class="col-calendar">Activity Calendar (use arrows to scroll through time)</th>
@@ -395,6 +409,70 @@ function loadConsultantUserInfo() {
         }
     })
     .catch(err => console.error('Error loading user info:', err));
+}
+
+// Generate AI summary for dashboard (scope=dashboard)
+function generateAISummary() {
+    const token = getAuthToken();
+    if (!token) {
+        document.getElementById('ai-summary-placeholder').style.display = 'none';
+        document.getElementById('ai-summary-error').textContent = 'Please log in again.';
+        document.getElementById('ai-summary-error').style.display = 'block';
+        return;
+    }
+    const hoursEl = document.getElementById('ai-summary-hours');
+    const hours = hoursEl ? hoursEl.value || '24' : '24';
+    const loadingEl = document.getElementById('ai-summary-loading');
+    const errorEl = document.getElementById('ai-summary-error');
+    const resultEl = document.getElementById('ai-summary-result');
+    const placeholderEl = document.getElementById('ai-summary-placeholder');
+    const btn = document.getElementById('ai-summary-btn');
+    
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    resultEl.style.display = 'none';
+    placeholderEl.style.display = 'none';
+    if (btn) btn.disabled = true;
+    
+    fetch('/api/consultant/ai-insight?scope=dashboard&hours=' + encodeURIComponent(hours), {
+        headers: {'Authorization': 'Bearer ' + token},
+        redirect: 'manual'
+    })
+    .then(function(res) {
+        if (res.type === 'opaqueredirect' || res.status === 0) {
+            return { ok: false, error: 'Session expired. Please log in again.' };
+        }
+        if (res.status === 302 || res.status === 301) {
+            return { ok: false, error: 'Session expired. Please log in again.' };
+        }
+        return res.text().then(function(text) {
+            var data = {};
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (e) {}
+            if (res.ok && data.summary) {
+                return { ok: true, summary: data.summary };
+            }
+            return { ok: false, error: data.error || ('Server error ' + res.status) };
+        });
+    })
+    .then(function(out) {
+        loadingEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        if (out.ok && out.summary) {
+            resultEl.textContent = out.summary;
+            resultEl.style.display = 'block';
+        } else {
+            errorEl.textContent = out.error || 'AI summary unavailable.';
+            errorEl.style.display = 'block';
+        }
+    })
+    .catch(function(err) {
+        loadingEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        errorEl.textContent = 'Request failed: ' + (err.message || 'check network or try again.');
+        errorEl.style.display = 'block';
+    });
 }
 
 // Load all readers
@@ -595,7 +673,6 @@ function createReaderRow(reader, activityData, purchaseDate = '-') {
     
     const firstName = reader.first_name || '';
     const lastName = reader.last_name || '';
-    const email = reader.email || '';
     
     let accountActivated = 'N/A';
     if (reader.created_at) {
@@ -611,7 +688,6 @@ function createReaderRow(reader, activityData, purchaseDate = '-') {
         <td style="width: 20px; padding-right: 0;">${onlineDot}</td>
         <td class="reader-name" title="${escapeHtml(firstName)}">${escapeHtml(firstName)}</td>
         <td class="reader-name" title="${escapeHtml(lastName)}">${escapeHtml(lastName)}</td>
-        <td class="compact-cell" title="${escapeHtml(email)}">${escapeHtml(email)}</td>
         <td class="compact-cell">${escapeHtml(purchaseDate)}</td>
         <td class="compact-cell">${accountActivated}</td>
         <td class="calendar-cell" id="calendar-${reader.id}"></td>
