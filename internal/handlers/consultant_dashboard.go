@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/models"
 )
 
 // HandleConsultantActiveReaders handles GET /api/consultant/active-readers
@@ -148,8 +149,8 @@ func HandleUpdateBookPurchaseDate(w http.ResponseWriter, r *http.Request) {
 
 	// Extract user ID and book ID from request
 	var req struct {
-		UserID      string `json:"user_id"`
-		BookID      string `json:"book_id"`
+		UserID       string `json:"user_id"`
+		BookID       string `json:"book_id"`
 		PurchaseDate string `json:"purchase_date"`
 	}
 
@@ -173,7 +174,7 @@ func HandleUpdateBookPurchaseDate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
+		"status":  "success",
 		"message": "Purchase date updated",
 	})
 }
@@ -321,4 +322,118 @@ func strOrNil(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// HandleConsultantCreatePrompt handles POST /api/consultant/prompts
+// Body: { "user_id", "book_id", "page_number", "section_number" (optional), "prompt_text" }
+func HandleConsultantCreatePrompt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		UserID        string `json:"user_id"`
+		BookID        string `json:"book_id"`
+		PageNumber    int    `json:"page_number"`
+		SectionNumber *int   `json:"section_number"`
+		PromptText    string `json:"prompt_text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	if req.UserID == "" || req.BookID == "" || req.PromptText == "" {
+		http.Error(w, "user_id, book_id and prompt_text are required", http.StatusBadRequest)
+		return
+	}
+	if req.PageNumber < 1 {
+		http.Error(w, "page_number must be at least 1", http.StatusBadRequest)
+		return
+	}
+	p := &models.ConsultantPrompt{
+		UserID:        req.UserID,
+		BookID:        req.BookID,
+		PageNumber:    req.PageNumber,
+		SectionNumber: req.SectionNumber,
+		PromptText:    strings.TrimSpace(req.PromptText),
+	}
+	if err := database.InsertConsultantPrompt(p); err != nil {
+		log.Printf("InsertConsultantPrompt error: %v", err)
+		http.Error(w, "Failed to save prompt", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":         p.ID,
+		"created_at": p.CreatedAt,
+	})
+}
+
+// HandleConsultantReaderPrompts handles GET /api/consultant/reader/prompts?user_id=...
+func HandleConsultantReaderPrompts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "user_id required", http.StatusBadRequest)
+		return
+	}
+	list, err := database.GetConsultantPromptsForReader(userID)
+	if err != nil {
+		log.Printf("GetConsultantPromptsForReader error: %v", err)
+		http.Error(w, "Failed to load prompts", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"prompts": list})
+}
+
+// HandleConsultantDeletePrompt handles DELETE /api/consultant/prompts/:id
+func HandleConsultantDeletePrompt(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Prompt ID required", http.StatusBadRequest)
+		return
+	}
+	id := pathParts[3]
+	if id == "" {
+		http.Error(w, "Prompt ID required", http.StatusBadRequest)
+		return
+	}
+	if err := database.DeleteConsultantPrompt(id); err != nil {
+		log.Printf("DeleteConsultantPrompt error: %v", err)
+		http.Error(w, "Failed to delete prompt", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "deleted"})
+}
+
+// HandleConsultantPromptRetrigger handles POST /api/consultant/prompt-retrigger (body: { "prompt_id": "..." })
+// Clears dismissed_at so the hint shows again to the reader (new cycle)
+func HandleConsultantPromptRetrigger(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		PromptID string `json:"prompt_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PromptID == "" {
+		http.Error(w, "prompt_id required", http.StatusBadRequest)
+		return
+	}
+	if err := database.ReTriggerConsultantPrompt(req.PromptID); err != nil {
+		log.Printf("ReTriggerConsultantPrompt error: %v", err)
+		http.Error(w, "Failed to re-trigger prompt", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "retriggered"})
 }

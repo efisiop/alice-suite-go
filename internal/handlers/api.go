@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/internal/middleware"
+	"github.com/efisiopittau/alice-suite-go/internal/models"
 	"github.com/efisiopittau/alice-suite-go/internal/services"
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
@@ -35,7 +38,7 @@ func getImageService() *services.ImageService {
 func SetupAPIRoutes(mux *http.ServeMux) {
 	// System status endpoint
 	mux.HandleFunc("/api/status", HandleStatus)
-	
+
 	// Generic REST endpoint for all tables
 	// This will catch /rest/v1/:table and /rest/v1/:table/ paths
 	mux.HandleFunc("/rest/v1/", HandleRESTTable)
@@ -51,16 +54,16 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 
 	// Dictionary/Glossary API
 	mux.HandleFunc("/rest/v1/alice_glossary", HandleGlossaryTerms)
-	
+
 	// RPC functions
 	mux.HandleFunc("/rest/v1/rpc/", HandleRPC)
-	
+
 	// Server-Sent Events for real-time updates
 	mux.HandleFunc("/api/realtime/events", HandleSSE)
-	
+
 	// WebSocket for bidirectional communication (optional)
 	mux.HandleFunc("/api/realtime/ws", HandleWebSocket)
-	
+
 	// Activity tracking
 	mux.HandleFunc("/api/activity/track", HandleTrackActivity)
 
@@ -80,6 +83,15 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/reader/purchase-date", middleware.RequireConsultant(http.HandlerFunc(HandleUpdateBookPurchaseDate)))
 	mux.Handle("/api/consultant/online-readers", middleware.RequireConsultant(http.HandlerFunc(HandleGetOnlineReaders)))
 	mux.Handle("/api/consultant/ai-insight", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantAIInsight)))
+	mux.Handle("/api/consultant/prompts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantCreatePrompt)))
+	mux.Handle("/api/consultant/prompts/", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantDeletePrompt)))
+	mux.Handle("/api/consultant/reader/prompts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderPrompts)))
+
+	// Reader: get consultant prompts for current page/section (reader sees their own prompts only)
+	mux.Handle("/api/reader/prompts", middleware.RequireAuth(http.HandlerFunc(HandleReaderPrompts)))
+	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptDismiss)))
+	mux.Handle("/api/reader/prompt-accept", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptAccept)))
+	mux.Handle("/api/consultant/prompt-retrigger", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantPromptRetrigger)))
 
 	// Help requests API
 	mux.HandleFunc("/rest/v1/help_requests", HandleHelpRequests)
@@ -349,19 +361,19 @@ func HandleGlossaryTerms(w http.ResponseWriter, r *http.Request) {
 	if bookID == "" {
 		bookID = "alice-in-wonderland" // Default book ID
 	}
-	
+
 	terms, err := dictionaryService.GetAllGlossaryTerms(bookID)
 	if err != nil {
 		log.Printf("Error getting glossary terms for book %s: %v", bookID, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
+			"error":   err.Error(),
 			"message": fmt.Sprintf("Failed to get glossary terms for book: %s", bookID),
 		})
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(terms); err != nil {
 		log.Printf("Error encoding glossary terms: %v", err)
@@ -544,6 +556,165 @@ func HandleGetHelpRequestByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(request)
 }
 
+// HandleReaderPrompts handles GET /api/reader/prompts?book_id=&page_number=&section_number=
+// Returns consultant prompts for the authenticated reader at the given page/section (reader sees only their own)
+func HandleReaderPrompts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if c, _ := r.Cookie("auth_token"); c != nil && c.Value != "" {
+			authHeader = "Bearer " + c.Value
+		}
+	}
+	if authHeader == "" {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.UserID
+	bookID := r.URL.Query().Get("book_id")
+	pageStr := r.URL.Query().Get("page_number")
+	if bookID == "" || pageStr == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"prompts": []interface{}{}})
+		return
+	}
+	pageNum, _ := strconv.Atoi(pageStr)
+	if pageNum < 1 {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"prompts": []interface{}{}})
+		return
+	}
+	var sectionNum *int
+	if s := r.URL.Query().Get("section_number"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n >= 1 {
+			sectionNum = &n
+		}
+	}
+	list, err := database.GetConsultantPromptsForReaderAtPage(userID, bookID, pageNum, sectionNum)
+	if err != nil {
+		log.Printf("GetConsultantPromptsForReaderAtPage error: %v", err)
+		http.Error(w, "Failed to load prompts", http.StatusInternalServerError)
+		return
+	}
+	if list == nil {
+		list = []*models.ConsultantPrompt{}
+	}
+	// Return as slice for JSON
+	type promptResp struct {
+		ID            string `json:"id"`
+		PageNumber    int    `json:"page_number"`
+		SectionNumber *int   `json:"section_number,omitempty"`
+		PromptText    string `json:"prompt_text"`
+	}
+	out := make([]promptResp, 0, len(list))
+	for _, p := range list {
+		out = append(out, promptResp{ID: p.ID, PageNumber: p.PageNumber, SectionNumber: p.SectionNumber, PromptText: p.PromptText})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"prompts": out})
+}
+
+// HandleReaderPromptDismiss handles POST /api/reader/prompt-dismiss (body: { "prompt_id": "..." })
+// Records that the reader dismissed this hint; feedback is visible to consultant; re-trigger starts a new cycle
+func HandleReaderPromptDismiss(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if c, _ := r.Cookie("auth_token"); c != nil && c.Value != "" {
+			authHeader = "Bearer " + c.Value
+		}
+	}
+	if authHeader == "" {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.UserID
+	var req struct {
+		PromptID string `json:"prompt_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PromptID == "" {
+		http.Error(w, "prompt_id required", http.StatusBadRequest)
+		return
+	}
+	if err := database.DismissConsultantPrompt(req.PromptID, userID); err != nil {
+		log.Printf("DismissConsultantPrompt error: %v", err)
+		http.Error(w, "Failed to record dismissal", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "dismissed"})
+}
+
+// HandleReaderPromptAccept handles POST /api/reader/prompt-accept (body: { "prompt_id": "..." })
+// Records that the reader clicked Open AI Help and interacted with the hint (feedback to consultant)
+func HandleReaderPromptAccept(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if c, _ := r.Cookie("auth_token"); c != nil && c.Value != "" {
+			authHeader = "Bearer " + c.Value
+		}
+	}
+	if authHeader == "" {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.UserID
+	var req struct {
+		PromptID string `json:"prompt_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PromptID == "" {
+		http.Error(w, "prompt_id required", http.StatusBadRequest)
+		return
+	}
+	if err := database.AcceptConsultantPrompt(req.PromptID, userID); err != nil {
+		log.Printf("AcceptConsultantPrompt error: %v", err)
+		http.Error(w, "Failed to record acceptance", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "accepted"})
+}
+
 // HandleInteractions handles GET/POST /rest/v1/interactions
 func HandleInteractions(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -708,7 +879,7 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 		// Log the actual error for debugging
 		log.Printf("Error in HandleAskAI: %v", err)
 		log.Printf("Request details - UserID: %s, BookID: %s, Type: %s, Question: %s", userID, req.BookID, interactionType, req.Question)
-		
+
 		if err == services.ErrAIServiceUnavailable {
 			http.Error(w, fmt.Sprintf("AI service unavailable: %v", err), http.StatusServiceUnavailable)
 			return
@@ -797,12 +968,12 @@ func HandleGenerateImage(w http.ResponseWriter, r *http.Request) {
 		"status":  genResp.Status,
 		"message": genResp.Message,
 	}
-	
+
 	// For DeepAI (synchronous), if status is "completed", the image URL is in Message
 	if genResp.Status == "completed" && genResp.Message != "" {
 		response["image_url"] = genResp.Message
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 

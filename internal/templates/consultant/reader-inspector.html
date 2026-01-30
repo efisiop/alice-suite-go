@@ -48,6 +48,56 @@
     color: #495057;
 }
 
+/* Reader Information: one well-organized form (top right) */
+.reader-info-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.reader-info-form .reader-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+}
+.reader-info-form .reader-info-row:last-child {
+    border-bottom: none;
+}
+.reader-info-form .reader-info-label {
+    color: #6c757d;
+    font-weight: 500;
+    flex-shrink: 0;
+    min-width: 120px;
+}
+.reader-info-form .reader-info-value {
+    color: #212529;
+    text-align: right;
+    word-break: break-word;
+}
+.reader-info-form .reader-info-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+@media (max-width: 992px) {
+    .reader-info-form .reader-info-row {
+        flex-wrap: wrap;
+    }
+    .reader-info-form .reader-info-label {
+        min-width: 100%;
+    }
+    .reader-info-form .reader-info-value,
+    .reader-info-form .reader-info-actions {
+        min-width: 100%;
+        justify-content: flex-start;
+    }
+}
+
 .activity-timeline {
     max-height: 500px;
     overflow-y: auto;
@@ -79,6 +129,146 @@
 .activity-item .activity-detail {
     font-size: 0.875rem;
     color: #495057;
+}
+
+/* Top-right: Activity calendar (like dashboard) */
+.inspector-calendar-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.inspector-calendar-nav-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #495057;
+    flex-shrink: 0;
+}
+
+.inspector-calendar-nav-btn:hover:not(:disabled) {
+    background: #e9ecef;
+}
+
+.inspector-calendar-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.inspector-activity-calendar {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.inspector-activity-day {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background-color: #e9ecef;
+    cursor: default;
+    flex-shrink: 0;
+}
+
+.inspector-activity-day.active-high {
+    background-color: #28a745;
+}
+
+.inspector-activity-day.active-medium {
+    background-color: #17a2b8;
+}
+
+.inspector-activity-day.active-low {
+    background-color: #6c757d;
+}
+
+/* Recent events list (top right, more visible details) */
+.recent-events-list {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 0.75rem;
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.75rem;
+}
+
+.recent-event-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.8rem;
+}
+
+.recent-event-item:last-child {
+    border-bottom: none;
+}
+
+.recent-event-time {
+    flex-shrink: 0;
+    color: #6c757d;
+    min-width: 70px;
+}
+
+.recent-event-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+}
+
+.recent-event-detail {
+    color: #495057;
+    word-break: break-word;
+}
+
+/* Activity breakdown bars */
+.activity-breakdown {
+    margin-top: 1rem;
+}
+
+.breakdown-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.breakdown-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    min-width: 100px;
+}
+
+.breakdown-bar {
+    flex: 1;
+    height: 14px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.breakdown-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.breakdown-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+    min-width: 28px;
+    text-align: right;
 }
 
 .loading-state {
@@ -138,46 +328,67 @@
     <div id="contentArea" style="display: none;">
         <h1 class="mb-4" id="pageTitle">Reader Inspector</h1>
         
-        <!-- Basic Info Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Reader Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Name</div>
-                            <div class="stat-value-small" id="readerName">-</div>
+        <!-- Top row: Activity over time (left) + Reader Information form (right, top) -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <!-- Activity over time (calendar + recent events) -->
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Activity over time</h5>
+                        <div class="small text-muted">
+                            <span class="me-1" style="background:#28a745;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>High
+                            <span class="me-1 ms-2" style="background:#17a2b8;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Med
+                            <span class="me-1 ms-1" style="background:#6c757d;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Low
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Email</div>
-                            <div class="stat-value-small" id="readerEmail">-</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Account Created</div>
-                            <div class="stat-value-small" id="readerCreated">-</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Account Status</div>
-                            <div class="stat-value-small" id="readerStatus">-</div>
+                    <div class="card-body">
+                        <div id="inspectorCalendarWrap">
+                            <div class="inspector-calendar-container">
+                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-back" title="Go back 30 days">◀</button>
+                                <span class="small text-muted" id="inspector-calendar-range">–</span>
+                                <div class="inspector-activity-calendar" id="inspectorActivityCalendar">
+                                    <!-- Days rendered by JS -->
+                                </div>
+                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-forward" title="Go forward 30 days">▶</button>
+                            </div>
+                            <div class="recent-events-list" id="recentEventsList">
+                                <p class="text-muted small mb-0">Loading recent events...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="stat-card">
-                            <div class="stat-label">Book Purchase Date</div>
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="date" class="form-control form-control-sm" id="purchaseDateInput" style="max-width: 200px;">
-                                <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
-                                <span class="text-muted" id="purchaseDateDisplay">Not set</span>
+            </div>
+            <div class="col-lg-4">
+                <!-- Reader Information: one well-organized form (top right) -->
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Reader Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="reader-info-form">
+                            <div class="reader-info-row">
+                                <span class="reader-info-label">Name</span>
+                                <span class="reader-info-value" id="readerName">–</span>
+                            </div>
+                            <div class="reader-info-row">
+                                <span class="reader-info-label">Email</span>
+                                <span class="reader-info-value" id="readerEmail">–</span>
+                            </div>
+                            <div class="reader-info-row">
+                                <span class="reader-info-label">Account created</span>
+                                <span class="reader-info-value" id="readerCreated">–</span>
+                            </div>
+                            <div class="reader-info-row">
+                                <span class="reader-info-label">Status</span>
+                                <span class="reader-info-value" id="readerStatus">–</span>
+                            </div>
+                            <div class="reader-info-row">
+                                <span class="reader-info-label">Book purchase date</span>
+                                <div class="reader-info-actions">
+                                    <input type="date" class="form-control form-control-sm" id="purchaseDateInput" style="max-width: 140px;">
+                                    <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
+                                    <span class="text-muted small" id="purchaseDateDisplay">Not set</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -203,6 +414,42 @@
                 <div id="ai-insight-error" class="text-danger small" style="display: none;"></div>
                 <div id="ai-insight-result" class="small" style="display: none; white-space: pre-wrap;"></div>
                 <div id="ai-insight-placeholder" class="text-muted small">Click "Generate insight" to get an AI summary of this reader's activity and how you can assist.</div>
+            </div>
+        </div>
+
+        <!-- Suggest help to reader (AI prompt) - consultant-originated suggestion shown to reader on that page -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">💡 Suggest help to reader (AI prompt)</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Create a short suggestion that the reader will see when they open this page/section. It will look like an AI-style tip and can nudge them to use AI Help on that part of the text.</p>
+                <div class="row mb-3">
+                    <div class="col-md-2">
+                        <label for="prompt-page-number" class="form-label small">Page</label>
+                        <input type="number" class="form-control form-control-sm" id="prompt-page-number" min="1" value="1" placeholder="e.g. 5">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="prompt-section" class="form-label small">Section</label>
+                        <select class="form-select form-select-sm" id="prompt-section">
+                            <option value="">Whole page</option>
+                            <option value="1">Section 1</option>
+                            <option value="2">Section 2</option>
+                            <option value="3">Section 3</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="prompt-text" class="form-label small">Suggestion text (shown to reader as AI-style tip)</label>
+                    <textarea class="form-control" id="prompt-text" rows="3" placeholder="e.g. You might find it helpful to use AI Help on this passage to practice conditional sentences."></textarea>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="save-prompt-btn" onclick="saveConsultantPrompt()">Save prompt</button>
+                <span class="ms-2 text-muted small" id="prompt-save-status"></span>
+                <hr class="my-3">
+                <div class="small fw-bold mb-2">Existing prompts for this reader</div>
+                <div id="consultant-prompts-list" style="max-height: 200px; overflow-y: auto;">
+                    <p class="text-muted small mb-0">Loading...</p>
+                </div>
             </div>
         </div>
 
@@ -237,6 +484,24 @@
                             <div class="stat-label">Page Views</div>
                             <div class="stat-value" id="pageViews">0</div>
                         </div>
+                    </div>
+                </div>
+                <!-- Visual activity breakdown bars -->
+                <div class="activity-breakdown" id="activityBreakdown">
+                    <div class="breakdown-bar-wrap">
+                        <span class="breakdown-label">Total</span>
+                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-primary" id="breakdownTotal" style="width: 0%;"></div></div>
+                        <span class="breakdown-value" id="breakdownTotalVal">0</span>
+                    </div>
+                    <div class="breakdown-bar-wrap">
+                        <span class="breakdown-label">Word lookups</span>
+                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-info" id="breakdownWords" style="width: 0%;"></div></div>
+                        <span class="breakdown-value" id="breakdownWordsVal">0</span>
+                    </div>
+                    <div class="breakdown-bar-wrap">
+                        <span class="breakdown-label">Page views</span>
+                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-success" id="breakdownPages" style="width: 0%;"></div></div>
+                        <span class="breakdown-value" id="breakdownPagesVal">0</span>
                     </div>
                 </div>
             </div>
@@ -327,6 +592,11 @@
 
 const readerId = '{{.ReaderID}}';
 
+// Activity calendar state for inspector (top right)
+window.inspectorActivityByDate = null;
+window.inspectorCalendarOffset = 0;
+const INSPECTOR_DAYS_VISIBLE = 30;
+
 // Ensure getAuthToken is available
 if (typeof getAuthToken === 'undefined') {
     window.getAuthToken = function() {
@@ -363,6 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     loadConsultantUserInfo();
     loadReaderDetails();
+    setupInspectorCalendarNav();
     // Note: loadAIInteractions() and loadHelpRequests() are called from loadReaderDetails()
     // after bookId is determined, so we don't call them here
     
@@ -500,11 +771,14 @@ function refreshStats() {
     .then(r => r.json())
     .then(summary => {
         if (summary) {
-            document.getElementById('totalActivities').textContent = summary.TotalActivities || 0;
+            const total = summary.TotalActivities || 0;
+            const words = summary.WordLookups || 0;
+            const pages = summary.PageViews || 0;
+            document.getElementById('totalActivities').textContent = total;
             document.getElementById('activeDays').textContent = summary.ActiveDays || 0;
-            document.getElementById('wordLookups').textContent = summary.WordLookups || 0;
-            document.getElementById('pageViews').textContent = summary.PageViews || 0;
-            
+            document.getElementById('wordLookups').textContent = words;
+            document.getElementById('pageViews').textContent = pages;
+            updateActivityBreakdown(total, words, pages);
             // Update last updated timestamp
             const now = new Date();
             document.getElementById('lastUpdated').textContent = 
@@ -569,6 +843,7 @@ function loadReaderDetails() {
     })
     .then(r => r.json())
     .then(state => {
+        window.readerState = state || null;
         if (state && state.book_id) {
             bookId = state.book_id;
         } else {
@@ -632,6 +907,11 @@ function loadReaderDetails() {
             loadAIInteractions();
         }
         loadHelpRequests(); // Help requests don't require bookId
+        loadConsultantPrompts();
+        if (window.readerState && window.readerState.current_page) {
+            const pageEl = document.getElementById('prompt-page-number');
+            if (pageEl) pageEl.value = window.readerState.current_page;
+        }
         
         // Set basic info
         const fullName = `${reader.first_name || ''} ${reader.last_name || ''}`.trim() || 'Unknown';
@@ -681,12 +961,16 @@ function loadReaderDetails() {
             document.getElementById('purchaseDateDisplay').textContent = 'Not set';
         }
         
-        // Set activity summary
+        // Set activity summary and breakdown bars
         if (summary) {
-            document.getElementById('totalActivities').textContent = summary.TotalActivities || 0;
+            const total = summary.TotalActivities || 0;
+            const words = summary.WordLookups || 0;
+            const pages = summary.PageViews || 0;
+            document.getElementById('totalActivities').textContent = total;
             document.getElementById('activeDays').textContent = summary.ActiveDays || 0;
-            document.getElementById('wordLookups').textContent = summary.WordLookups || 0;
-            document.getElementById('pageViews').textContent = summary.PageViews || 0;
+            document.getElementById('wordLookups').textContent = words;
+            document.getElementById('pageViews').textContent = pages;
+            updateActivityBreakdown(total, words, pages);
         }
         
         // Update last updated timestamp
@@ -773,6 +1057,19 @@ function loadActivities() {
             return new Date(b.created_at) - new Date(a.created_at);
         });
         
+        // Build activity-by-date for inspector calendar (top right)
+        const activitiesByDate = {};
+        allActivities.forEach(activity => {
+            if (activity.created_at) {
+                const dateKey = new Date(activity.created_at).toISOString().split('T')[0];
+                if (!activitiesByDate[dateKey]) activitiesByDate[dateKey] = [];
+                activitiesByDate[dateKey].push(activity);
+            }
+        });
+        window.inspectorActivityByDate = Object.keys(activitiesByDate).length > 0 ? activitiesByDate : null;
+        renderInspectorCalendar();
+        renderRecentEventsList(allActivities.slice(0, 20));
+        
         // Display activities
         const activitiesContainer = document.getElementById('activitiesTimeline');
         if (allActivities.length === 0) {
@@ -816,10 +1113,21 @@ function loadActivities() {
                     activityDetail = activity.event_type || activity.activity_type || 'Activity';
                 }
                 
+                const ev = activity.event_type || activity.activity_type || '';
+                let badge = '';
+                if (ev === 'PAGE_SYNC' || ev === 'PAGE_VIEW') badge = '<span class="badge bg-primary me-2">Page</span>';
+                else if (ev === 'DEFINITION_LOOKUP' || ev === 'WORD_LOOKUP') badge = '<span class="badge bg-info me-2">Word</span>';
+                else if (ev === 'HELP_REQUEST') badge = '<span class="badge bg-warning text-dark me-2">Help</span>';
+                else if (ev === 'LOGIN') badge = '<span class="badge bg-success me-2">Login</span>';
+                else if (ev === 'LOGOUT') badge = '<span class="badge bg-secondary me-2">Logout</span>';
+                else if (ev) badge = '<span class="badge bg-secondary me-2">' + escapeHtml(ev) + '</span>';
+                
                 activitiesHtml += `
-                    <div class="activity-item">
-                        <div class="activity-time">${timeStr}</div>
-                        <div class="activity-detail">${escapeHtml(activityDetail)}</div>
+                    <div class="activity-item d-flex align-items-start gap-2">
+                        <div class="flex-grow-1">
+                            <div class="activity-time">${timeStr}</div>
+                            <div class="activity-detail">${badge}${escapeHtml(activityDetail)}</div>
+                        </div>
                     </div>
                 `;
             });
@@ -829,6 +1137,288 @@ function loadActivities() {
     .catch(err => {
         console.error('Error loading activities:', err);
         document.getElementById('activitiesTimeline').innerHTML = '<p class="text-danger">Error loading activities.</p>';
+        document.getElementById('recentEventsList').innerHTML = '<p class="text-muted small">Error loading events.</p>';
+    });
+}
+
+// Render the activity calendar in the top-right card
+function renderInspectorCalendar() {
+    const container = document.getElementById('inspectorActivityCalendar');
+    const rangeEl = document.getElementById('inspector-calendar-range');
+    const backBtn = document.getElementById('inspector-cal-back');
+    const forwardBtn = document.getElementById('inspector-cal-forward');
+    if (!container || !rangeEl) return;
+    
+    const activityData = window.inspectorActivityByDate;
+    const offset = window.inspectorCalendarOffset || 0;
+    
+    if (!activityData || Object.keys(activityData).length === 0) {
+        container.innerHTML = '';
+        rangeEl.textContent = 'No activity yet';
+        if (backBtn) backBtn.disabled = true;
+        if (forwardBtn) forwardBtn.disabled = true;
+        return;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() - offset);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - INSPECTOR_DAYS_VISIBLE + 1);
+    
+    const canGoBack = offset + INSPECTOR_DAYS_VISIBLE < 365;
+    const canGoForward = offset > 0;
+    if (backBtn) backBtn.disabled = !canGoBack;
+    if (forwardBtn) forwardBtn.disabled = !canGoForward;
+    
+    rangeEl.textContent = formatDateShort(startDate) + ' – ' + formatDateShort(endDate);
+    
+    let html = '';
+    for (let i = 0; i < INSPECTOR_DAYS_VISIBLE; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const dateKey = date.toISOString().split('T')[0];
+        const dayActivities = activityData[dateKey] || [];
+        const count = dayActivities.length;
+        let dayClass = 'inspector-activity-day';
+        let title = formatDateShort(date) + ': No activity';
+        if (count > 0) {
+            if (count >= 10) { dayClass += ' active-high'; title = formatDateShort(date) + ': ' + count + ' events'; }
+            else if (count >= 5) { dayClass += ' active-medium'; title = formatDateShort(date) + ': ' + count + ' events'; }
+            else { dayClass += ' active-low'; title = formatDateShort(date) + ': ' + count + ' events'; }
+        }
+        html += '<div class="' + dayClass + '" title="' + escapeHtml(title) + '"></div>';
+    }
+    container.innerHTML = html;
+}
+
+function formatDateShort(date) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Render recent events list (top right) with more visible details
+function renderRecentEventsList(activities) {
+    const listEl = document.getElementById('recentEventsList');
+    if (!listEl) return;
+    if (!activities || activities.length === 0) {
+        listEl.innerHTML = '<p class="text-muted small mb-0">No recent events.</p>';
+        return;
+    }
+    const now = new Date();
+    const todayKey = now.toISOString().split('T')[0];
+    let html = '';
+    activities.forEach(activity => {
+        const date = new Date(activity.created_at);
+        const dateKey = date.toISOString().split('T')[0];
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const dayLabel = dateKey === todayKey ? 'Today' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const timeLabel = dayLabel + ' ' + timeStr;
+        
+        let badgeClass = 'bg-secondary';
+        let badgeText = 'Event';
+        let detail = '';
+        const ev = activity.event_type || activity.activity_type || '';
+        if (ev === 'PAGE_SYNC' || ev === 'PAGE_VIEW') {
+            badgeClass = 'bg-primary';
+            badgeText = 'Page';
+            if (activity.page_number) {
+                let sect = '';
+                if (activity.parsed_context && activity.parsed_context.section_index !== undefined) {
+                    const s = activity.parsed_context.section_index;
+                    sect = ', §' + (typeof s === 'number' ? s + 1 : parseInt(s, 10) + 1);
+                }
+                detail = 'Page ' + activity.page_number + (sect || '');
+            } else detail = 'Page view';
+        } else if (ev === 'DEFINITION_LOOKUP' || ev === 'WORD_LOOKUP') {
+            badgeClass = 'bg-info';
+            badgeText = 'Word';
+            const word = activity.parsed_context?.word || (activity.context && (typeof activity.context === 'object' ? activity.context.word : null)) || '';
+            detail = word ? '"' + escapeHtml(String(word)) + '"' : 'Lookup';
+        } else if (ev === 'HELP_REQUEST') {
+            badgeClass = 'bg-warning text-dark';
+            badgeText = 'Help';
+            detail = activity.content ? escapeHtml(activity.content.substring(0, 40)) + (activity.content.length > 40 ? '…' : '') : 'Request';
+        } else if (ev === 'LOGIN') { badgeClass = 'bg-success'; badgeText = 'Login'; detail = 'Logged in'; }
+        else if (ev === 'LOGOUT') { badgeClass = 'bg-secondary'; badgeText = 'Logout'; detail = 'Logged out'; }
+        else { detail = ev || 'Activity'; }
+        
+        html += '<div class="recent-event-item">';
+        html += '<span class="recent-event-time">' + escapeHtml(timeLabel) + '</span>';
+        html += '<span class="badge recent-event-badge ' + badgeClass + '">' + escapeHtml(badgeText) + '</span>';
+        html += '<span class="recent-event-detail">' + detail + '</span>';
+        html += '</div>';
+    });
+    listEl.innerHTML = html;
+}
+
+// Inspector calendar navigation
+function setupInspectorCalendarNav() {
+    const backBtn = document.getElementById('inspector-cal-back');
+    const forwardBtn = document.getElementById('inspector-cal-forward');
+    if (backBtn) backBtn.addEventListener('click', function() {
+        window.inspectorCalendarOffset = Math.min(365, (window.inspectorCalendarOffset || 0) + INSPECTOR_DAYS_VISIBLE);
+        renderInspectorCalendar();
+    });
+    if (forwardBtn) forwardBtn.addEventListener('click', function() {
+        window.inspectorCalendarOffset = Math.max(0, (window.inspectorCalendarOffset || 0) - INSPECTOR_DAYS_VISIBLE);
+        renderInspectorCalendar();
+    });
+}
+
+// Update activity breakdown bars (visual analytics)
+function updateActivityBreakdown(total, wordLookups, pageViews) {
+    const maxVal = Math.max(1, total, wordLookups, pageViews);
+    const pct = v => Math.round((v / maxVal) * 100);
+    const totalEl = document.getElementById('breakdownTotal');
+    const wordsEl = document.getElementById('breakdownWords');
+    const pagesEl = document.getElementById('breakdownPages');
+    const totalValEl = document.getElementById('breakdownTotalVal');
+    const wordsValEl = document.getElementById('breakdownWordsVal');
+    const pagesValEl = document.getElementById('breakdownPagesVal');
+    if (totalEl) totalEl.style.width = pct(total) + '%';
+    if (wordsEl) wordsEl.style.width = pct(wordLookups) + '%';
+    if (pagesEl) pagesEl.style.width = pct(pageViews) + '%';
+    if (totalValEl) totalValEl.textContent = total;
+    if (wordsValEl) wordsValEl.textContent = wordLookups;
+    if (pagesValEl) pagesValEl.textContent = pageViews;
+}
+
+// Load consultant prompts for this reader (AI prompt suggestions)
+function loadConsultantPrompts() {
+    const token = getAuthToken();
+    if (!token || !readerId) return;
+    const listEl = document.getElementById('consultant-prompts-list');
+    if (!listEl) return;
+    fetch(`/api/consultant/reader/prompts?user_id=${encodeURIComponent(readerId)}`, {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => r.json())
+    .then(data => {
+        const prompts = data.prompts || [];
+        if (prompts.length === 0) {
+            listEl.innerHTML = '<p class="text-muted small mb-0">No prompts yet. Add one above.</p>';
+            return;
+        }
+        let html = '';
+        prompts.forEach(p => {
+            const sectionLabel = p.section_number ? '§' + p.section_number : 'Whole page';
+            const preview = (p.prompt_text || '').substring(0, 60) + (p.prompt_text && p.prompt_text.length > 60 ? '…' : '');
+            const fmt = function(iso) { try { const d = new Date(iso); return isNaN(d.getTime()) ? iso : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch(e) { return iso; } };
+            const acceptedAt = p.accepted_at ? fmt(p.accepted_at) : null;
+            const dismissedAt = p.dismissed_at ? fmt(p.dismissed_at) : null;
+            const isClosed = acceptedAt || dismissedAt;
+            html += '<div class="d-flex justify-content-between align-items-start gap-2 mb-2 p-2 border rounded">';
+            html += '<div class="small flex-grow-1"><strong>Page ' + escapeHtml(String(p.page_number)) + ', ' + escapeHtml(sectionLabel) + '</strong><br><span class="text-muted">' + escapeHtml(preview) + '</span>';
+            if (acceptedAt) html += '<br><span class="badge bg-success mt-1">Accepted (used AI Help) ' + escapeHtml(acceptedAt) + '</span>';
+            else if (dismissedAt) html += '<br><span class="badge bg-secondary mt-1">Dismissed ' + escapeHtml(dismissedAt) + '</span>';
+            html += '</div>';
+            html += '<div class="d-flex gap-1 flex-shrink-0">';
+            if (isClosed) html += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="retriggerConsultantPrompt(\'' + escapeHtml(p.id) + '\')">Re-trigger</button>';
+            html += '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteConsultantPrompt(\'' + escapeHtml(p.id) + '\')">Delete</button>';
+            html += '</div></div>';
+        });
+        listEl.innerHTML = html;
+    })
+    .catch(err => {
+        console.error('Error loading consultant prompts:', err);
+        listEl.innerHTML = '<p class="text-danger small">Failed to load prompts.</p>';
+    });
+}
+
+// Save consultant prompt (AI suggestion for reader at page/section)
+function saveConsultantPrompt() {
+    const token = getAuthToken();
+    if (!token || !readerId) {
+        document.getElementById('prompt-save-status').textContent = 'Not logged in.';
+        return;
+    }
+    const bookId = window.readerBookId;
+    if (!bookId) {
+        document.getElementById('prompt-save-status').textContent = 'No book for reader.';
+        return;
+    }
+    const pageEl = document.getElementById('prompt-page-number');
+    const pageNum = parseInt(pageEl && pageEl.value ? pageEl.value : '1', 10) || 1;
+    const sectionEl = document.getElementById('prompt-section');
+    const sectionVal = sectionEl ? sectionEl.value : '';
+    const sectionNum = sectionVal === '' ? null : (parseInt(sectionVal, 10) || null);
+    const textEl = document.getElementById('prompt-text');
+    const promptText = textEl ? textEl.value.trim() : '';
+    if (!promptText) {
+        document.getElementById('prompt-save-status').textContent = 'Enter suggestion text.';
+        return;
+    }
+    const statusEl = document.getElementById('prompt-save-status');
+    const btn = document.getElementById('save-prompt-btn');
+    statusEl.textContent = 'Saving…';
+    if (btn) btn.disabled = true;
+    const body = { user_id: readerId, book_id: bookId, page_number: pageNum, prompt_text: promptText };
+    if (sectionNum != null) body.section_number = sectionNum;
+    fetch('/api/consultant/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+    })
+    .then(async function(r) {
+        const text = await r.text();
+        if (!r.ok) {
+            let msg = r.status === 401 ? 'Session expired. Please log in again.' : ('Failed to save (' + r.status + ').');
+            try {
+                const data = text ? JSON.parse(text) : {};
+                if (data.error) msg = data.error;
+            } catch (e) {}
+            throw new Error(msg);
+        }
+        return text ? JSON.parse(text) : {};
+    })
+    .then(function() {
+        statusEl.textContent = 'Saved.';
+        if (textEl) textEl.value = '';
+        loadConsultantPrompts();
+    })
+    .catch(function(err) {
+        statusEl.textContent = err.message || 'Failed to save.';
+        console.error('saveConsultantPrompt:', err);
+    })
+    .finally(function() { if (btn) btn.disabled = false; });
+}
+
+// Re-trigger consultant prompt (clears dismissed; reader will see the hint again — new cycle)
+function retriggerConsultantPrompt(id) {
+    const token = getAuthToken();
+    if (!token || !id) return;
+    fetch('/api/consultant/prompt-retrigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ prompt_id: id })
+    })
+    .then(r => {
+        if (!r.ok) throw new Error(r.statusText);
+        loadConsultantPrompts();
+    })
+    .catch(err => {
+        console.error('retriggerConsultantPrompt:', err);
+        alert('Failed to re-trigger.');
+    });
+}
+
+// Delete consultant prompt
+function deleteConsultantPrompt(id) {
+    const token = getAuthToken();
+    if (!token || !id) return;
+    if (!confirm('Remove this suggestion for the reader?')) return;
+    fetch('/api/consultant/prompts/' + encodeURIComponent(id), {
+        method: 'DELETE',
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(r => {
+        if (!r.ok) throw new Error(r.statusText);
+        loadConsultantPrompts();
+    })
+    .catch(err => {
+        console.error('deleteConsultantPrompt:', err);
+        alert('Failed to delete.');
     });
 }
 

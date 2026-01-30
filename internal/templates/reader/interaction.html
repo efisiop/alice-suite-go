@@ -114,6 +114,58 @@ html {
 #camera-preview {
     border-radius: 8px;
     border: 2px solid #dee2e6;
+    display: block;
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}
+
+/* Scan frame: wrapper so we can overlay the target area */
+.scan-camera-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.scan-camera-wrapper video {
+    display: block;
+    width: 100%;
+    vertical-align: top;
+}
+
+/* Overlay showing where to put the text - pointer for the user */
+.scan-frame-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* The visible "window" where text should go - matches crop we use for OCR */
+.scan-frame-window {
+    position: relative;
+    width: 88%;
+    height: 32%;
+    max-width: 400px;
+    border: 3px solid rgba(0, 200, 83, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+}
+
+.scan-frame-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #495057;
+    text-align: center;
 }
 
 /* Scan Progress Styling */
@@ -1240,6 +1292,102 @@ html {
     position: relative;
 }
 
+/* Consultant prompt: light bubble with AI sparkles icon, easily dismissed */
+.consultant-prompt-bubble {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    max-width: 320px;
+    padding: 12px 36px 12px 14px;
+    background: linear-gradient(145deg, rgba(248, 250, 255, 0.98) 0%, rgba(242, 245, 252, 0.98) 100%);
+    border: 1px solid rgba(200, 210, 230, 0.6);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #3d3a36;
+    z-index: 20;
+    animation: consultant-bubble-in 0.25s ease-out;
+}
+.consultant-prompt-bubble .consultant-prompt-ai-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    margin-bottom: 2px;
+    vertical-align: middle;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+.consultant-prompt-bubble .consultant-prompt-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #8a8580;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+}
+.consultant-prompt-bubble .consultant-prompt-close:hover {
+    color: #5c5752;
+    background: rgba(0, 0, 0, 0.06);
+}
+.consultant-prompt-bubble .consultant-prompt-text-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+}
+.consultant-prompt-bubble .consultant-prompt-text {
+    margin: 0 0 10px 0;
+    flex: 1;
+}
+.consultant-prompt-bubble .consultant-prompt-action {
+    font-size: 0.8rem;
+    color: #6b6560;
+    text-decoration: none;
+    border-bottom: 1px dotted #9a948e;
+    cursor: pointer;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    padding: 0;
+}
+.consultant-prompt-bubble .consultant-prompt-action:hover {
+    color: #4a4540;
+}
+@keyframes consultant-bubble-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@media (max-width: 768px) {
+    .consultant-prompt-bubble {
+        max-width: calc(100% - 24px);
+        bottom: 8px;
+        right: 8px;
+        left: 8px;
+        margin-left: 0;
+    }
+}
+
 /* Improve text selection on mobile */
 @media (max-width: 768px) {
     .reading-content {
@@ -1355,6 +1503,17 @@ html {
                 <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
             </div>
             <div class="card-body" id="reading-container">
+                <!-- Consultant suggestion: light bubble, easily dismissed -->
+                <div id="consultant-prompt-banner" class="consultant-prompt-bubble" style="display: none;" role="complementary" aria-label="AI suggestion for this passage">
+                    <button type="button" class="consultant-prompt-close" onclick="dismissConsultantPromptBubble()" aria-label="Dismiss">×</button>
+                    <div class="consultant-prompt-text-wrap">
+                        <span class="consultant-prompt-ai-icon" aria-hidden="true" title="AI suggestion">✨</span>
+                        <div>
+                            <p id="consultant-prompt-text" class="consultant-prompt-text"></p>
+                            <button type="button" class="consultant-prompt-action" onclick="acceptConsultantPromptAndOpenAIHelp();">Open AI Help</button>
+                        </div>
+                    </div>
+                </div>
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
                 </div>
@@ -1388,13 +1547,31 @@ html {
             </div>
             <div class="modal-body">
                 <div id="scan-instructions" class="mb-3">
-                    <p class="text-muted">Point your camera at the text on the page you're reading. Make sure the text is clear and well-lit.</p>
+                    <p class="text-muted">Point your camera at the text on the page you're reading, or upload a screenshot/image of text from <strong>Alice in Wonderland</strong>.</p>
+                </div>
+                <div id="scan-upload-area" class="mb-3" style="display: none;">
+                    <input type="file" id="scan-file-input" accept="image/*" class="d-none" onchange="handleScanFileSelected(event)">
+                    <div class="mb-2">
+                        <img id="scan-upload-preview" alt="Preview" style="max-width: 100%; max-height: 280px; border: 1px solid #dee2e6; border-radius: 8px; display: none;">
+                    </div>
+                    <button type="button" class="btn btn-success" id="scan-upload-btn" onclick="document.getElementById('scan-file-input').click();">📁 Upload image of text</button>
+                    <button type="button" class="btn btn-primary ms-2" id="scan-this-image-btn" onclick="scanUploadedImage();" style="display: none;">Scan this image</button>
                 </div>
                 <div id="camera-container" style="display: none;">
-                    <video id="camera-preview" autoplay playsinline style="width: 100%; max-height: 400px; background: #000;"></video>
+                    <div class="scan-camera-wrapper">
+                        <video id="camera-preview" autoplay playsinline></video>
+                        <div class="scan-frame-overlay">
+                            <div class="scan-frame-window" id="scan-frame-window"></div>
+                        </div>
+                    </div>
+                    <p class="scan-frame-hint">Align 1–2 lines of text inside the green frame, then tap Capture &amp; Scan</p>
                     <canvas id="capture-canvas" style="display: none;"></canvas>
                 </div>
                 <div id="scan-progress" style="display: none;">
+                    <div id="binarized-preview-wrap" style="display: none; margin-bottom: 1rem;">
+                        <p class="small text-muted mb-1">What we're reading (black &amp; white):</p>
+                        <img id="binarized-preview-img" alt="Binarized image" style="max-width: 100%; max-height: 220px; border: 1px solid #dee2e6; border-radius: 4px; display: block;">
+                    </div>
                     <div class="text-center">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Processing...</span>
@@ -1418,6 +1595,7 @@ html {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancel-scan-btn">Cancel</button>
                 <button type="button" class="btn btn-primary" id="start-camera-btn" onclick="initCamera()">Start Camera</button>
+                <button type="button" class="btn btn-outline-primary" id="upload-image-btn" onclick="showUploadArea()">Upload image of text</button>
                 <button type="button" class="btn btn-success" id="capture-btn" onclick="captureImage()" style="display: none;">Capture & Scan</button>
                 <button type="button" class="btn btn-primary" id="retry-btn" onclick="resetScanModal()" style="display: none;">Try Again</button>
             </div>
@@ -1834,10 +2012,83 @@ function loadPage(pageNumber) {
             page_number: pageNumber,
             section_index: currentSectionIndex
         });
+        loadConsultantPromptForPage();
     })
     .catch(err => {
         console.error('Error loading page:', err);
         document.getElementById('page-content').innerHTML = '<p class="text-danger">Error loading page content: ' + err.message + '</p>';
+    });
+}
+
+// Current consultant prompt id (so we can send dismiss feedback to consultant)
+var currentConsultantPromptId = null;
+
+// Dismiss the consultant prompt bubble (reader closed hint without using) — send feedback to consultant
+function dismissConsultantPromptBubble() {
+    const banner = document.getElementById('consultant-prompt-banner');
+    const promptId = currentConsultantPromptId;
+    currentConsultantPromptId = null;
+    if (banner) banner.style.display = 'none';
+    if (!promptId) return;
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : (sessionStorage.getItem('auth_token') || '');
+    if (!token) return;
+    fetch('/api/reader/prompt-dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ prompt_id: promptId })
+    }).catch(function() {});
+}
+
+// Accept the consultant prompt (reader clicked Open AI Help and is using it) — send feedback, show prompt in chat, open AI Help
+function acceptConsultantPromptAndOpenAIHelp() {
+    const banner = document.getElementById('consultant-prompt-banner');
+    const textEl = document.getElementById('consultant-prompt-text');
+    const promptId = currentConsultantPromptId;
+    currentConsultantPromptId = null;
+    const promptText = (textEl && textEl.textContent) ? textEl.textContent.trim() : '';
+    if (banner) banner.style.display = 'none';
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : (sessionStorage.getItem('auth_token') || '');
+    if (token && promptId) {
+        fetch('/api/reader/prompt-accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ prompt_id: promptId })
+        }).catch(function() {});
+    }
+    if (promptText) {
+        window.pendingConsultantPromptInChat = promptText;
+    }
+    showAIHelp();
+}
+
+// Load consultant-originated AI prompt for current page/section (shown as light bubble, easily dismissed)
+function loadConsultantPromptForPage() {
+    const banner = document.getElementById('consultant-prompt-banner');
+    const textEl = document.getElementById('consultant-prompt-text');
+    if (!banner || !textEl) return;
+    currentConsultantPromptId = null;
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : (sessionStorage.getItem('auth_token') || '');
+    if (!token) {
+        banner.style.display = 'none';
+        return;
+    }
+    const sectionNum = typeof currentSectionIndex === 'number' ? currentSectionIndex + 1 : 1;
+    const url = `/api/reader/prompts?book_id=${encodeURIComponent(bookId)}&page_number=${currentPage}&section_number=${sectionNum}`;
+    fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.json())
+    .then(data => {
+        const prompts = data.prompts || [];
+        if (prompts.length === 0) {
+            banner.style.display = 'none';
+            return;
+        }
+        const first = prompts[0];
+        currentConsultantPromptId = first.id || null;
+        textEl.textContent = first.prompt_text || '';
+        banner.style.display = 'block';
+    })
+    .catch(() => {
+        banner.style.display = 'none';
     });
 }
 
@@ -1999,7 +2250,7 @@ function showSection(sectionIndex) {
         page_number: currentPage,
         section_index: sectionIndex
     });
-    
+    loadConsultantPromptForPage();
     console.log('========== [showSection] END ==========');
 }
 
@@ -3226,14 +3477,16 @@ function handleOutsideChatInteraction(e) {
 }
 
 // Show AI Help - WhatsApp style floating chat
+// When opening from consultant prompt, window.pendingConsultantPromptInChat is set so the prompt appears as first AI message
 function showAIHelp() {
     const chatContainer = document.getElementById('ai-chat-container');
     const minimizedBar = document.getElementById('ai-chat-minimized');
+    const hasPendingPrompt = !!(window.pendingConsultantPromptInChat && window.pendingConsultantPromptInChat.trim());
     
-    // If minimized, expand it
+    // If minimized, expand it (but don't return early if we have a consultant prompt to show — we need to load history and add it)
     if (isChatMinimized && minimizedBar && minimizedBar.style.display !== 'none') {
         expandAIChatFromBottom();
-        return;
+        if (!hasPendingPrompt) return;
     }
     
     // Show the floating chat container
@@ -3283,8 +3536,23 @@ function showAIHelp() {
             }
         }, 100);
         
-        // Load conversation history
+        // Load conversation history (and add consultant prompt when loadConversationForUser runs)
         loadAIConversationHistory();
+        
+        // Fallback: if consultant prompt was set but async load didn't add it (e.g. error or no userId), add it after a delay
+        if (hasPendingPrompt) {
+            setTimeout(function() {
+                if (!window.pendingConsultantPromptInChat) return;
+                var container = document.getElementById('ai-chat-messages');
+                if (!container) return;
+                // Only add if history load didn't add any chat messages (still loading or error)
+                if (container.querySelector('.chat-message')) return;
+                var text = window.pendingConsultantPromptInChat;
+                window.pendingConsultantPromptInChat = null;
+                container.innerHTML = '';
+                addChatMessage('ai', text, new Date().toISOString(), null, false);
+            }, 1500);
+        }
         
         // Initialize drag and resize functionality
         setTimeout(() => {
@@ -3680,8 +3948,15 @@ function loadConversationForUser(userId) {
         messagesContainer.innerHTML = '';
         
         if (!Array.isArray(interactions) || interactions.length === 0) {
-            emptyState.style.display = 'block';
-            messagesContainer.appendChild(emptyState);
+            if (window.pendingConsultantPromptInChat) {
+                emptyState.style.display = 'none';
+                addChatMessage('ai', window.pendingConsultantPromptInChat, new Date().toISOString(), null, false);
+                window.pendingConsultantPromptInChat = null;
+            } else {
+                emptyState.style.display = 'block';
+                messagesContainer.appendChild(emptyState);
+            }
+            scrollChatToBottom();
             return;
         }
         
@@ -3695,6 +3970,12 @@ function loadConversationForUser(userId) {
             // AI message
             addChatMessage('ai', interaction.response || 'No response', interaction.created_at, interaction.provider);
         });
+        
+        // If consultant prompt was passed (reader clicked "Open AI Help" from bubble), add it as opening message from AI
+        if (window.pendingConsultantPromptInChat) {
+            addChatMessage('ai', window.pendingConsultantPromptInChat, new Date().toISOString(), null, false);
+            window.pendingConsultantPromptInChat = null;
+        }
         
         // Scroll to bottom
         scrollChatToBottom();
@@ -6428,18 +6709,115 @@ async function startScanToLocate() {
 }
 
 // Reset scan modal to initial state
+let scanUploadObjectURL = null;
+
 function resetScanModal() {
     document.getElementById('scan-instructions').style.display = 'block';
     document.getElementById('camera-container').style.display = 'none';
+    document.getElementById('scan-upload-area').style.display = 'none';
     document.getElementById('scan-progress').style.display = 'none';
     document.getElementById('scan-result').style.display = 'none';
     document.getElementById('scan-error').style.display = 'none';
-    document.getElementById('start-camera-btn').style.display = 'block';
+    document.getElementById('start-camera-btn').style.display = 'inline-block';
+    document.getElementById('upload-image-btn').style.display = 'inline-block';
     document.getElementById('capture-btn').style.display = 'none';
     document.getElementById('retry-btn').style.display = 'none';
     
-    // Stop camera if running
+    var fileInput = document.getElementById('scan-file-input');
+    if (fileInput) fileInput.value = '';
+    var preview = document.getElementById('scan-upload-preview');
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    document.getElementById('scan-this-image-btn').style.display = 'none';
+    if (scanUploadObjectURL) {
+        URL.revokeObjectURL(scanUploadObjectURL);
+        scanUploadObjectURL = null;
+    }
+    var binarizedWrap = document.getElementById('binarized-preview-wrap');
+    if (binarizedWrap) { binarizedWrap.style.display = 'none'; }
+    var binarizedImg = document.getElementById('binarized-preview-img');
+    if (binarizedImg) { binarizedImg.src = ''; }
+    
     stopCamera();
+}
+
+function showUploadArea() {
+    document.getElementById('scan-instructions').style.display = 'none';
+    document.getElementById('camera-container').style.display = 'none';
+    stopCamera();
+    document.getElementById('scan-upload-area').style.display = 'block';
+    document.getElementById('start-camera-btn').style.display = 'none';
+    document.getElementById('upload-image-btn').style.display = 'none';
+    document.getElementById('scan-upload-preview').style.display = 'none';
+    document.getElementById('scan-this-image-btn').style.display = 'none';
+}
+
+function handleScanFileSelected(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    if (scanUploadObjectURL) URL.revokeObjectURL(scanUploadObjectURL);
+    scanUploadObjectURL = URL.createObjectURL(file);
+    var preview = document.getElementById('scan-upload-preview');
+    preview.src = scanUploadObjectURL;
+    preview.style.display = 'block';
+    document.getElementById('scan-this-image-btn').style.display = 'inline-block';
+}
+
+async function scanUploadedImage() {
+    var preview = document.getElementById('scan-upload-preview');
+    if (!preview || !preview.src || preview.src === window.location.href) {
+        showScanError('Please upload an image first.');
+        return;
+    }
+    document.getElementById('scan-upload-area').style.display = 'none';
+    document.getElementById('scan-progress').style.display = 'block';
+    document.getElementById('progress-text').textContent = 'Loading image...';
+    try {
+        if (!preview.complete || preview.naturalWidth === 0) {
+            await new Promise(function(resolve, reject) {
+                preview.onload = function() { resolve(); };
+                preview.onerror = function() { reject(new Error('Image failed to load.')); };
+                if (preview.complete && preview.naturalWidth > 0) resolve();
+            });
+        }
+        document.getElementById('progress-text').textContent = 'Extracting text from image...';
+        var worker = await initTesseract();
+        document.getElementById('progress-text').textContent = 'Processing text...';
+        var w = preview.naturalWidth;
+        var h = preview.naturalHeight;
+        var scale = 1;
+        if (w < 400 || h < 200) scale = Math.max(2, Math.ceil(600 / Math.max(w, h)));
+        var c = document.getElementById('capture-canvas');
+        c.width = w * scale;
+        c.height = h * scale;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(preview, 0, 0, w, h, 0, 0, c.width, c.height);
+        binarizeCanvas(c, 128);
+        var binarizedWrap = document.getElementById('binarized-preview-wrap');
+        var binarizedImg = document.getElementById('binarized-preview-img');
+        if (binarizedWrap && binarizedImg) {
+            binarizedImg.src = c.toDataURL('image/png');
+            binarizedWrap.style.display = 'block';
+        }
+        var result = await worker.recognize(c);
+        var text = result && result.data && result.data.text ? result.data.text.trim() : '';
+        if (!text || text.length < 10) {
+            throw new Error('No text was recognized from the image. Try: a higher-resolution screenshot, strong contrast (dark text on light background), and a crop that shows 1–2 full lines of text from Alice in Wonderland.');
+        }
+        document.getElementById('progress-text').textContent = 'Finding location in book...';
+        var pageResult = await findPageByText(text);
+        if (pageResult && pageResult.page && pageResult.section) {
+            showScanResult(pageResult);
+        } else {
+            throw new Error('Could not find matching page. Make sure the image shows text from Alice in Wonderland.');
+        }
+    } catch (err) {
+        console.error('Error scanning uploaded image:', err);
+        document.getElementById('scan-progress').style.display = 'none';
+        document.getElementById('scan-upload-area').style.display = 'block';
+        showScanError(err.message || 'An error occurred. Please try again.');
+    }
 }
 
 // Initialize camera - prioritize back camera
@@ -6558,18 +6936,54 @@ function stopCamera() {
     }
 }
 
-// Capture image and process
+// Scan frame crop: same region as the green overlay (88% width, 32% height, centered)
+var SCAN_FRAME_MARGIN_X = 0.06;  // 6% each side
+var SCAN_FRAME_MARGIN_TOP = 0.34; // 34% from top
+var SCAN_FRAME_WIDTH = 0.88;
+var SCAN_FRAME_HEIGHT = 0.32;
+
+// Binarize canvas to pure black & white for better OCR (Tesseract works better on high-contrast)
+function binarizeCanvas(canvas, threshold) {
+    if (threshold == null) threshold = 128;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width;
+    var h = canvas.height;
+    var imgData = ctx.getImageData(0, 0, w, h);
+    var data = imgData.data;
+    for (var i = 0; i < data.length; i += 4) {
+        var r = data[i];
+        var g = data[i + 1];
+        var b = data[i + 2];
+        var luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+        var v = luminance < threshold ? 0 : 255;
+        data[i] = data[i + 1] = data[i + 2] = v;
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
+// Capture image and process (only the area inside the scan frame)
 async function captureImage() {
     const video = document.getElementById('camera-preview');
     const canvas = document.getElementById('capture-canvas');
     const ctx = canvas.getContext('2d');
     
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const sx = Math.floor(vw * SCAN_FRAME_MARGIN_X);
+    const sy = Math.floor(vh * SCAN_FRAME_MARGIN_TOP);
+    const sw = Math.floor(vw * SCAN_FRAME_WIDTH);
+    const sh = Math.floor(vh * SCAN_FRAME_HEIGHT);
     
-    // Draw video frame to canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.width = sw;
+    canvas.height = sh;
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+    binarizeCanvas(canvas, 128);
+    var binarizedWrap = document.getElementById('binarized-preview-wrap');
+    var binarizedImg = document.getElementById('binarized-preview-img');
+    if (binarizedWrap && binarizedImg) {
+        binarizedImg.src = canvas.toDataURL('image/png');
+        binarizedWrap.style.display = 'block';
+    }
     
     // Stop camera
     stopCamera();

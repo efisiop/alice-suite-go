@@ -83,9 +83,9 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 	// 2. Cache lookup (previously fetched)
 	// 3. External API lookup (common words)
 	glossaryTerm, source, err := dictionaryService.LookupWordInContextWithSource(bookID, term, nil, sectionID)
-	
+
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	if err != nil || glossaryTerm == nil {
 		// Word not found in glossary, cache, or external API
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -101,7 +101,7 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 		"definition": glossaryTerm.Definition,
 		"source":     source, // "glossary", "cache", or "external"
 	}
-	
+
 	// Include example if available
 	if glossaryTerm.Example != "" {
 		response["example"] = glossaryTerm.Example
@@ -160,7 +160,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	         WHERE page_number = ?
 	         ORDER BY section_number`
 	rows, queryErr = database.DB.Query(query, pageNum)
-	
+
 	if queryErr != nil {
 		log.Printf("New structure query failed: %v, trying old structure", queryErr)
 		// Try old structure (with start_page/end_page)
@@ -178,7 +178,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 			return
 		}
 		defer rows.Close()
-		
+
 		// Build sections from old structure
 		log.Printf("Using old structure (start_page/end_page)")
 		for rows.Next() {
@@ -198,7 +198,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		}
 	} else {
 		defer rows.Close()
-		
+
 		// Build sections from new structure
 		log.Printf("Using new structure (page_number)")
 		for rows.Next() {
@@ -208,7 +208,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 				log.Printf("Error scanning section: %v", err)
 				continue
 			}
-			log.Printf("Found section: id=%s, page_number=%d, section_number=%d, content_length=%d", 
+			log.Printf("Found section: id=%s, page_number=%d, section_number=%d, content_length=%d",
 				id, pageNum2, sectionNum, len(content))
 			foundSections = append(foundSections, models.Section{
 				ID:            id,
@@ -233,7 +233,7 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 		})
 		return
 	}
-	
+
 	log.Printf("✅ Successfully found %d sections for page %d", len(foundSections), pageNum)
 
 	// Return a page object with the found sections
@@ -265,15 +265,21 @@ func handleFindPageByText(w http.ResponseWriter, r *http.Request, params map[str
 
 	// Search for page and section containing the text
 	page, section, err := database.FindPageByText(bookID, text)
-	
+
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	if err != nil {
 		log.Printf("Error finding page by text: %v", err)
 		w.WriteHeader(http.StatusNotFound)
+		msg := err.Error()
+		if strings.Contains(msg, "no searchable") {
+			msg = "Not enough clear text from the scan. Try a clearer, well-lit section of the page with several words visible."
+		} else if strings.Contains(msg, "no matching") {
+			msg = "No matching page found. Make sure you're scanning text from Alice in Wonderland and try a different paragraph or line."
+		}
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   "Page not found",
-			"message": err.Error(),
+			"message": msg,
 		})
 		return
 	}
@@ -282,7 +288,7 @@ func handleFindPageByText(w http.ResponseWriter, r *http.Request, params map[str
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   "Page not found",
-			"message": "No matching page or section found for the scanned text",
+			"message": "No matching page found. Make sure you're scanning text from Alice in Wonderland and try a different paragraph or line.",
 		})
 		return
 	}
@@ -290,10 +296,10 @@ func handleFindPageByText(w http.ResponseWriter, r *http.Request, params map[str
 	// Return the found page and section
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"page": map[string]interface{}{
-			"id":           page.ID,
-			"book_id":      page.BookID,
-			"page_number":  page.PageNumber,
-			"chapter_id":   page.ChapterID,
+			"id":            page.ID,
+			"book_id":       page.BookID,
+			"page_number":   page.PageNumber,
+			"chapter_id":    page.ChapterID,
 			"chapter_title": page.ChapterTitle,
 		},
 		"section": map[string]interface{}{

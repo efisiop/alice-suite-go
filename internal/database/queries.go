@@ -3,8 +3,10 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/efisiopittau/alice-suite-go/internal/models"
 	"github.com/google/uuid"
@@ -305,7 +307,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 
 	var sourceSentence, example, chapterRef sql.NullString
 	var createdAt, updatedAt string
-	
+
 	err := DB.QueryRow(query, bookID, term).Scan(
 		&glossary.ID, &glossary.BookID, &glossary.Term, &glossary.Definition,
 		&sourceSentence, &example, &chapterRef,
@@ -317,7 +319,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Handle NULL values
 	if sourceSentence.Valid {
 		glossary.SourceSentence = sourceSentence.String
@@ -328,7 +330,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 	if chapterRef.Valid {
 		glossary.ChapterReference = chapterRef.String
 	}
-	
+
 	// Parse timestamps
 	if createdAt != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
@@ -344,7 +346,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 			glossary.UpdatedAt = t
 		}
 	}
-	
+
 	return glossary, nil
 }
 
@@ -383,7 +385,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 	if DB == nil {
 		return nil, fmt.Errorf("database connection is not initialized")
 	}
-	
+
 	query := `SELECT id, book_id, term, definition, source_sentence, example, chapter_reference, created_at, updated_at
 	          FROM alice_glossary 
 	          WHERE book_id = ?
@@ -400,7 +402,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 		term := &models.AliceGlossary{}
 		var sourceSentence, example, chapterRef sql.NullString
 		var createdAt, updatedAt string
-		
+
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
 			&sourceSentence, &example, &chapterRef,
@@ -409,7 +411,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Handle NULL values
 		if sourceSentence.Valid {
 			term.SourceSentence = sourceSentence.String
@@ -420,7 +422,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 		if chapterRef.Valid {
 			term.ChapterReference = chapterRef.String
 		}
-		
+
 		// Parse timestamps (SQLite stores as string)
 		if createdAt != "" {
 			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
@@ -436,7 +438,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 				term.UpdatedAt = t
 			}
 		}
-		
+
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()
@@ -461,7 +463,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 		term := &models.AliceGlossary{}
 		var sourceSentence, example, chapterRef sql.NullString
 		var createdAt, updatedAt string
-		
+
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
 			&sourceSentence, &example, &chapterRef,
@@ -470,7 +472,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Handle NULL values
 		if sourceSentence.Valid {
 			term.SourceSentence = sourceSentence.String
@@ -481,7 +483,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 		if chapterRef.Valid {
 			term.ChapterReference = chapterRef.String
 		}
-		
+
 		// Parse timestamps
 		if createdAt != "" {
 			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
@@ -497,7 +499,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 				term.UpdatedAt = t
 			}
 		}
-		
+
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()
@@ -523,7 +525,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 		term := &models.AliceGlossary{}
 		var sourceSentence, example, chapterRef sql.NullString
 		var createdAt, updatedAt string
-		
+
 		err := rows.Scan(
 			&term.ID, &term.BookID, &term.Term, &term.Definition,
 			&sourceSentence, &example, &chapterRef,
@@ -532,7 +534,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Handle NULL values
 		if sourceSentence.Valid {
 			term.SourceSentence = sourceSentence.String
@@ -543,7 +545,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 		if chapterRef.Valid {
 			term.ChapterReference = chapterRef.String
 		}
-		
+
 		// Parse timestamps
 		if createdAt != "" {
 			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
@@ -559,7 +561,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 				term.UpdatedAt = t
 			}
 		}
-		
+
 		terms = append(terms, term)
 	}
 	return terms, rows.Err()
@@ -582,7 +584,7 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	term = &models.AliceGlossary{}
 	var sourceSentence, example, chapterRef sql.NullString
 	var createdAt, updatedAt string
-	
+
 	err = DB.QueryRow(query, bookID, word).Scan(
 		&term.ID, &term.BookID, &term.Term, &term.Definition,
 		&sourceSentence, &example, &chapterRef,
@@ -594,7 +596,7 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Handle NULL values
 	if sourceSentence.Valid {
 		term.SourceSentence = sourceSentence.String
@@ -605,7 +607,7 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	if chapterRef.Valid {
 		term.ChapterReference = chapterRef.String
 	}
-	
+
 	// Parse timestamps
 	if createdAt != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
@@ -621,7 +623,7 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 			term.UpdatedAt = t
 		}
 	}
-	
+
 	return term, nil
 }
 
@@ -864,7 +866,7 @@ func GetAIInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 	          FROM ai_interactions WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
 	rows, err := DB.Query(query, userID, bookID)
 	hasProviderColumn := true
-	
+
 	if err != nil {
 		// If that fails, try without provider column (old schema)
 		queryOld := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at
@@ -882,7 +884,7 @@ func GetAIInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 		interaction := &models.AIInteraction{}
 		var sectionID sql.NullString
 		var provider sql.NullString
-		
+
 		if hasProviderColumn {
 			// Scan with provider field
 			err := rows.Scan(
@@ -1164,6 +1166,93 @@ func CacheDefinition(cache *models.DictionaryCache) error {
 	return err
 }
 
+// normalizeScanText normalizes OCR text for matching: Unicode punctuation to ASCII, collapse spaces
+func normalizeScanText(s string) string {
+	// Replace common Unicode punctuation that OCR may produce
+	s = strings.ReplaceAll(s, "\u2019", "'")  // curly apostrophe
+	s = strings.ReplaceAll(s, "\u2018", "'")  // left single quote
+	s = strings.ReplaceAll(s, "\u2014", "-")  // em dash
+	s = strings.ReplaceAll(s, "\u2013", "-")  // en dash
+	s = strings.ReplaceAll(s, "\u201c", "\"") // left double quote
+	s = strings.ReplaceAll(s, "\u201d", "\"") // right double quote
+	// Collapse runs of spaces/newlines/tabs to single space
+	var b strings.Builder
+	lastSpace := true
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			if !lastSpace {
+				b.WriteRune(' ')
+				lastSpace = true
+			}
+		} else {
+			b.WriteRune(r)
+			lastSpace = false
+		}
+	}
+	return strings.ToLower(strings.TrimSpace(b.String()))
+}
+
+// extractKeyWords returns significant words (2+ chars), longest first; skips very common words only when we have plenty
+var commonStopWords = map[string]bool{"the": true, "and": true, "for": true, "with": true, "was": true, "are": true, "but": true, "not": true, "you": true, "all": true, "can": true, "had": true, "her": true, "his": true, "she": true, "that": true, "this": true, "from": true, "have": true, "has": true}
+
+func extractKeyWords(normalizedSearch string) []string {
+	words := strings.Fields(normalizedSearch)
+	var keyWords []string
+	for _, word := range words {
+		// Trim punctuation from both ends
+		word = strings.TrimFunc(word, func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '\''
+		})
+		if len(word) >= 2 {
+			keyWords = append(keyWords, word)
+		}
+	}
+	// Drop stop words only if we have many words, so we keep distinctive ones
+	if len(keyWords) > 4 {
+		var filtered []string
+		for _, w := range keyWords {
+			if !commonStopWords[w] {
+				filtered = append(filtered, w)
+			}
+		}
+		if len(filtered) >= 2 {
+			keyWords = filtered
+		}
+	}
+	// Prefer longer words (more specific); sort by length descending
+	sort.Slice(keyWords, func(i, j int) bool { return len(keyWords[i]) > len(keyWords[j]) })
+	return keyWords
+}
+
+// firstSentenceOrSegment returns the first sentence (or first segment) of text.
+// Sections in the DB are short; OCR often has multiple sentences. We match only
+// the first sentence so the section content can contain it.
+func firstSentenceOrSegment(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	for _, sep := range []string{". ", "! ", "? ", "; "} {
+		if i := strings.Index(s, sep); i >= 0 {
+			out := strings.TrimSpace(s[:i+len(sep)])
+			if len(out) >= 15 {
+				return out
+			}
+		}
+	}
+	// No sentence end: take first ~200 chars or first 40 words
+	words := strings.Fields(s)
+	if len(words) > 40 {
+		s = strings.Join(words[:40], " ")
+	} else if len(s) > 220 {
+		s = s[:220]
+		if j := strings.LastIndex(s, " "); j > 100 {
+			s = s[:j]
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
 // FindPageByText searches for a page and section containing the given text
 // Uses fuzzy matching by searching for text within page and section content
 // Returns the best matching page and section
@@ -1172,125 +1261,167 @@ func FindPageByText(bookID, searchText string) (*models.Page, *models.Section, e
 		return nil, nil, fmt.Errorf("search text cannot be empty")
 	}
 
-	// Normalize search text: remove extra whitespace, convert to lowercase for matching
-	normalizedSearch := strings.ToLower(strings.TrimSpace(searchText))
-	
-	// Extract key words from search text (words with 3+ characters)
-	words := strings.Fields(normalizedSearch)
-	var keyWords []string
-	for _, word := range words {
-		word = strings.Trim(word, ".,!?;:\"'()[]{}")
-		if len(word) >= 3 {
-			keyWords = append(keyWords, word)
+	normalizedSearch := normalizeScanText(searchText)
+	if normalizedSearch == "" {
+		return nil, nil, fmt.Errorf("no searchable text after cleaning")
+	}
+
+	// Use only the first sentence/segment for matching (scanned text often has more than one section)
+	firstSegment := firstSentenceOrSegment(normalizedSearch)
+	if len(firstSegment) < 10 {
+		firstSegment = normalizedSearch
+		if len(firstSegment) > 220 {
+			firstSegment = firstSegment[:220]
+			if j := strings.LastIndex(firstSegment, " "); j > 100 {
+				firstSegment = firstSegment[:j]
+			}
 		}
 	}
 
+	keyWords := extractKeyWords(firstSegment)
 	if len(keyWords) == 0 {
 		return nil, nil, fmt.Errorf("no searchable words found in text")
 	}
 
-	// Build a search pattern: look for pages/sections containing multiple key words
-	// We'll search for sections that contain at least 2 key words
+	// Build search patterns; use longest (most specific) words first
 	var searchPatterns []string
 	for _, word := range keyWords {
 		searchPatterns = append(searchPatterns, "%"+word+"%")
 	}
 
-	// Query sections table to find matches
-	// Search sections that belong to pages of the given book
-	// We'll look for sections where content contains the search text or key words
-	query := `SELECT s.id, s.page_id, s.page_number, s.section_number, s.content, s.word_count,
-	                 p.id as page_id_full, p.chapter_id, p.chapter_title, p.content as page_content
-	          FROM sections s
-	          LEFT JOIN pages p ON (s.page_id = p.id OR s.page_number = p.page_number) AND p.book_id = ?
-	          WHERE s.page_number IN (
-	              SELECT page_number FROM pages WHERE book_id = ?
-	          )
-	          AND (
-	              LOWER(s.content) LIKE ? OR LOWER(s.content) LIKE ?
-	          )
-	          ORDER BY s.page_number, s.section_number
-	          LIMIT 50`
+	// Phrase: from first segment only (so section content can contain it)
+	phrase := firstSegment
+	if len(phrase) > 55 {
+		phrase = phrase[:55]
+		if i := strings.LastIndex(phrase, " "); i > 20 {
+			phrase = phrase[:i]
+		}
+	}
+	phrasePattern := "%" + phrase + "%"
+	phraseShort := firstSegment
+	if len(phraseShort) > 35 {
+		phraseShort = phraseShort[:35]
+		if i := strings.LastIndex(phraseShort, " "); i > 15 {
+			phraseShort = phraseShort[:i]
+		}
+	}
+	phraseShortPattern := "%" + phraseShort + "%"
 
-	// Use first two key words for initial filtering
 	pattern1 := searchPatterns[0]
-	pattern2 := searchPatterns[0]
+	pattern2 := pattern1
 	if len(searchPatterns) > 1 {
 		pattern2 = searchPatterns[1]
 	}
 
-	rows, err := DB.Query(query, bookID, bookID, pattern1, pattern2)
+	runQuery := func(patterns ...string) (*models.Page, *models.Section, error) {
+		placeholders := strings.Repeat("LOWER(s.content) LIKE ? OR ", len(patterns))
+		placeholders = strings.TrimSuffix(placeholders, " OR ")
+		q := `SELECT s.id, s.page_id, s.page_number, s.section_number, s.content, s.word_count,
+	                 p.id as page_id_full, p.chapter_id, p.chapter_title, p.content as page_content
+	          FROM sections s
+	          LEFT JOIN pages p ON (s.page_id = p.id OR s.page_number = p.page_number) AND p.book_id = ?
+	          WHERE s.page_number IN (SELECT page_number FROM pages WHERE book_id = ?)
+	          AND (` + placeholders + `)
+	          ORDER BY s.page_number, s.section_number
+	          LIMIT 50`
+		args := []interface{}{bookID, bookID}
+		for _, p := range patterns {
+			args = append(args, p)
+		}
+		rows, err := DB.Query(q, args...)
+		if err != nil {
+			return nil, nil, err
+		}
+		defer rows.Close()
+
+		var bestMatch *models.Section
+		var bestPage *models.Page
+		bestScore := 0
+
+		for rows.Next() {
+			var section models.Section
+			var pageIDFull, chapterID, chapterTitle, pageContent sql.NullString
+			var sectionCreatedAtStr string
+			err := rows.Scan(
+				&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
+				&section.Content, &section.WordCount, &pageIDFull, &chapterID, &chapterTitle,
+				&pageContent, &sectionCreatedAtStr,
+			)
+			if err != nil {
+				continue
+			}
+			sectionLower := strings.ToLower(section.Content)
+			sectionLower = strings.ReplaceAll(sectionLower, "\u2019", "'")
+			sectionLower = strings.ReplaceAll(sectionLower, "\u2018", "'")
+			score := 0
+			for _, word := range keyWords {
+				if strings.Contains(sectionLower, word) {
+					score++
+				}
+			}
+			if len(phrase) >= 8 && strings.Contains(sectionLower, phrase) {
+				score += len(keyWords)
+			} else if len(phraseShort) >= 8 && strings.Contains(sectionLower, phraseShort) {
+				score += 2
+			}
+			if score > bestScore {
+				bestScore = score
+				bestMatch = &section
+				pageID := section.PageID
+				if pageIDFull.Valid {
+					pageID = pageIDFull.String
+				}
+				if pageID == "" {
+					pageID = fmt.Sprintf("page-%d", section.PageNumber)
+				}
+				bestPage = &models.Page{
+					ID:         pageID,
+					BookID:     bookID,
+					PageNumber: section.PageNumber,
+				}
+				if chapterID.Valid {
+					bestPage.ChapterID = &chapterID.String
+				}
+				if chapterTitle.Valid {
+					bestPage.ChapterTitle = &chapterTitle.String
+				}
+				if pageContent.Valid {
+					bestPage.Content = pageContent.String
+				}
+			}
+		}
+		// Require at least 1 key word (or phrase) match; 2+ when we have few key words to avoid false positives
+		minScore := 1
+		if len(keyWords) == 1 {
+			minScore = 1
+		} else if len(keyWords) <= 3 {
+			minScore = 2
+		}
+		if bestMatch == nil || bestPage == nil || bestScore < minScore {
+			return nil, nil, nil
+		}
+		return bestPage, bestMatch, nil
+	}
+
+	// Try main search: two key words + phrase
+	bestPage, bestMatch, err := runQuery(pattern1, pattern2, phrasePattern)
 	if err != nil {
 		return nil, nil, fmt.Errorf("database query error: %w", err)
 	}
-	defer rows.Close()
-
-	var bestMatch *models.Section
-	var bestPage *models.Page
-	bestScore := 0
-
-	for rows.Next() {
-		var section models.Section
-		var pageIDFull, chapterID, chapterTitle, pageContent sql.NullString
-		var sectionCreatedAtStr string
-
-		err := rows.Scan(
-			&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
-			&section.Content, &section.WordCount, &pageIDFull, &chapterID, &chapterTitle,
-			&pageContent, &sectionCreatedAtStr,
-		)
+	// Fallback: single best word only
+	if bestMatch == nil && len(searchPatterns) >= 1 {
+		bestPage, bestMatch, err = runQuery(pattern1)
 		if err != nil {
-			continue
-		}
-
-		// Calculate match score: count how many key words appear in the section
-		sectionLower := strings.ToLower(section.Content)
-		score := 0
-		for _, word := range keyWords {
-			if strings.Contains(sectionLower, word) {
-				score++
-			}
-		}
-
-		// Also check if the full search text appears (higher score)
-		if strings.Contains(sectionLower, normalizedSearch) {
-			score += len(keyWords) // Bonus for exact phrase match
-		}
-
-		// Update best match if this is better
-		if score > bestScore {
-			bestScore = score
-			bestMatch = &section
-
-			// Build page object
-			pageID := section.PageID
-			if pageIDFull.Valid {
-				pageID = pageIDFull.String
-			}
-			if pageID == "" {
-				pageID = fmt.Sprintf("page-%d", section.PageNumber)
-			}
-
-			bestPage = &models.Page{
-				ID:         pageID,
-				BookID:     bookID,
-				PageNumber: section.PageNumber,
-			}
-
-			if chapterID.Valid {
-				chapterIDStr := chapterID.String
-				bestPage.ChapterID = &chapterIDStr
-			}
-			if chapterTitle.Valid {
-				chapterTitleStr := chapterTitle.String
-				bestPage.ChapterTitle = &chapterTitleStr
-			}
-			if pageContent.Valid {
-				bestPage.Content = pageContent.String
-			}
+			return nil, nil, fmt.Errorf("database query error: %w", err)
 		}
 	}
-
+	// Fallback: phrase only (OCR text often matches as substring even if some words are wrong)
+	if bestMatch == nil && len(phraseShort) >= 10 {
+		bestPage, bestMatch, err = runQuery(phraseShortPattern)
+		if err != nil {
+			return nil, nil, fmt.Errorf("database query error: %w", err)
+		}
+	}
 	if bestMatch == nil || bestPage == nil {
 		return nil, nil, fmt.Errorf("no matching page or section found")
 	}
