@@ -312,6 +312,7 @@ html {
 
 #ai-chat-messages {
     background-color: transparent !important;
+    outline: none; /* never show focus outline; input should keep focus, not messages area */
 }
 
 #ai-chat-empty-state {
@@ -484,10 +485,14 @@ html {
     background: white;
     border-top: 1px solid #e0e0e0;
     flex-shrink: 0;
+    pointer-events: auto; /* ensure typing area is always interactive */
 }
 
 .ai-chat-input {
     border: 1px solid #e0e0e0 !important;
+    pointer-events: auto !important;
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .ai-chat-send-btn {
@@ -1522,16 +1527,62 @@ html {
         </div>
     </div>
 
-    <!-- Tools - Third Column (Right) -->
+    <!-- Services - Third Column (Right) -->
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
-                <h5>Tools</h5>
+                <h5 class="mb-0">Services</h5>
             </div>
-            <div class="card-body">
-                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showDictionary()">Dictionary</button>
-                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="showAIHelp()">AI Help</button>
-                <button class="btn btn-sm btn-outline-primary w-100" onclick="requestHelp()">Request Help</button>
+            <div class="card-body p-0">
+                <div class="accordion accordion-flush" id="servicesAccordion">
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesHelpCenter" aria-expanded="false" aria-controls="servicesHelpCenter">
+                                Help Center
+                            </button>
+                        </h2>
+                        <div id="servicesHelpCenter" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
+                            <div class="accordion-body pt-0 pb-2 px-3">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showAIHelp()">AI Help</button>
+                                    </li>
+                                    <li class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="requestHelp()">Human Consultant</button>
+                                    </li>
+                                    <li class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showDictionary()">Dictionary</button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start" onclick="readerServiceComingSoon('Test your knowledge')">Test your knowledge</button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesInfoCenter" aria-expanded="false" aria-controls="servicesInfoCenter">
+                                Info Center
+                            </button>
+                        </h2>
+                        <div id="servicesInfoCenter" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
+                            <div class="accordion-body pt-0 pb-2 px-3">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="readerServiceComingSoon('Ah Ah Moments')">Ah Ah Moments</button>
+                                    </li>
+                                    <li class="mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="readerServiceComingSoon('Lectures in town')">Lectures in town</button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="readerServiceComingSoon('Publisher connection')">Publisher connection</button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1719,7 +1770,9 @@ html {
                     rows="1" 
                     placeholder="Type a message..."
                     style="resize: none; max-height: 120px; background: white; border-radius: 20px; padding: 0.5rem 1rem;"
-                    onkeydown="handleChatInputKeydown(event)"></textarea>
+                    tabindex="0"
+                    autocomplete="off"
+                    aria-label="Type a message to the AI assistant"></textarea>
             </div>
             <button 
                 class="btn ai-chat-send-btn" 
@@ -3476,91 +3529,87 @@ function handleOutsideChatInteraction(e) {
     }
 }
 
-// Show AI Help - WhatsApp style floating chat
-// When opening from consultant prompt, window.pendingConsultantPromptInChat is set so the prompt appears as first AI message
+// Show AI Help - WhatsApp style floating chat (same flow for Tools button and consultant "Open AI Help")
+// When opening from consultant prompt, window.pendingConsultantPromptInChat is set; the prompt is added when history loads (no extra DOM updates here = no focus issues)
 function showAIHelp() {
     const chatContainer = document.getElementById('ai-chat-container');
     const minimizedBar = document.getElementById('ai-chat-minimized');
-    const hasPendingPrompt = !!(window.pendingConsultantPromptInChat && window.pendingConsultantPromptInChat.trim());
     
-    // If minimized, expand it (but don't return early if we have a consultant prompt to show — we need to load history and add it)
     if (isChatMinimized && minimizedBar && minimizedBar.style.display !== 'none') {
         expandAIChatFromBottom();
-        if (!hasPendingPrompt) return;
+        return;
     }
     
-    // Show the floating chat container
+    // Show the floating chat container (same as when clicking Tools "AI Help")
     if (chatContainer) {
         chatContainer.style.display = 'flex';
         if (minimizedBar) minimizedBar.style.display = 'none';
         isChatMinimized = false;
         
-        // Add click listener to page content to minimize when clicking text
         const pageContent = document.getElementById('page-content');
         if (pageContent && !pageContent.dataset.chatMinimizeListener) {
             pageContent.dataset.chatMinimizeListener = 'true';
             pageContent.addEventListener('click', function handlePageClick(e) {
-                // Don't minimize if clicking inside chat
                 const chatContainer = document.getElementById('ai-chat-container');
-                if (chatContainer && chatContainer.contains(e.target)) {
-                    return;
-                }
-                // Don't minimize if clicking on selection toolbar or other UI elements
-                if (e.target.closest('.selection-toolbar') || 
-                    e.target.closest('.selection-mode-indicator') ||
-                    e.target.closest('.dictionary-popup')) {
-                    return;
-                }
-                // Minimize chat when clicking on page content
+                if (chatContainer && chatContainer.contains(e.target)) return;
+                if (e.target.closest('.selection-toolbar') || e.target.closest('.selection-mode-indicator') || e.target.closest('.dictionary-popup')) return;
                 minimizeAIChatToBottom();
             });
         }
         
-        // Clear input
         const questionInput = document.getElementById('ai-question');
         if (questionInput) {
             questionInput.value = '';
             questionInput.style.height = 'auto';
-            
-            // Auto-resize textarea on input
-            questionInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            if (!questionInput.dataset.inputResizeInit) {
+                questionInput.dataset.inputResizeInit = 'true';
+                questionInput.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                });
+            }
+        }
+        
+        if (questionInput) questionInput.focus();
+        setTimeout(function() {
+            if (questionInput && document.activeElement !== questionInput) questionInput.focus();
+        }, 300);
+        
+        const inputArea = chatContainer.querySelector('.ai-chat-input-area');
+        if (inputArea && questionInput && !inputArea.dataset.focusListener) {
+            inputArea.dataset.focusListener = 'true';
+            inputArea.addEventListener('click', function(e) {
+                if (e.target === questionInput || questionInput.contains(e.target)) return;
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                questionInput.focus();
             });
         }
         
-        // Focus on input after a short delay
-        setTimeout(() => {
-            if (questionInput) {
-                questionInput.focus();
-            }
-        }, 100);
-        
-        // Load conversation history (and add consultant prompt when loadConversationForUser runs)
-        loadAIConversationHistory();
-        
-        // Fallback: if consultant prompt was set but async load didn't add it (e.g. error or no userId), add it after a delay
-        if (hasPendingPrompt) {
-            setTimeout(function() {
-                if (!window.pendingConsultantPromptInChat) return;
-                var container = document.getElementById('ai-chat-messages');
-                if (!container) return;
-                // Only add if history load didn't add any chat messages (still loading or error)
-                if (container.querySelector('.chat-message')) return;
-                var text = window.pendingConsultantPromptInChat;
-                window.pendingConsultantPromptInChat = null;
-                container.innerHTML = '';
-                addChatMessage('ai', text, new Date().toISOString(), null, false);
-            }, 1500);
+        // Keep cursor in the input: refocus when focus is stolen (e.g. by messages area); allow focus on buttons
+        if (questionInput && !chatContainer.dataset.focusKeeperInit) {
+            chatContainer.dataset.focusKeeperInit = 'true';
+            questionInput.addEventListener('focusout', function() {
+                var self = questionInput;
+                setTimeout(function() {
+                    var chat = document.getElementById('ai-chat-container');
+                    if (!chat || chat.style.display === 'none') return;
+                    var active = document.activeElement;
+                    if (active === self) return;
+                    if (active && chat.contains(active) && (active.tagName === 'BUTTON' || active.closest('button'))) return;
+                    self.focus();
+                }, 100);
+            });
         }
         
-        // Initialize drag and resize functionality
-        setTimeout(() => {
+        initChatInputKeydown();
+        // Same as Tools: always show "Loading..." then load history; consultant prompt is added in loadConversationForUser when pendingConsultantPromptInChat is set
+        loadAIConversationHistory(false);
+        
+        setTimeout(function() {
             initAIChatDrag();
             initAIChatResize();
         }, 100);
         
-        // Scroll to bottom
         scrollChatToBottom();
     }
 }
@@ -3895,7 +3944,8 @@ function disableAIChatTextSelection() {
 }
 
 // Load conversation history for current book
-function loadAIConversationHistory() {
+// skipLoadingState: when true (e.g. consultant prompt already shown), don't overwrite with "Loading..."
+function loadAIConversationHistory(skipLoadingState) {
     const token = getAuthToken();
     if (!token || !bookId) {
         return;
@@ -3904,8 +3954,9 @@ function loadAIConversationHistory() {
     const messagesContainer = document.getElementById('ai-chat-messages');
     const emptyState = document.getElementById('ai-chat-empty-state');
     
-    // Show loading state
-    messagesContainer.innerHTML = '<div class="text-center text-muted py-5">Loading conversation...</div>';
+    if (!skipLoadingState) {
+        messagesContainer.innerHTML = '<div class="text-center text-muted py-5">Loading conversation...</div>';
+    }
     
     // Get user ID (try cached first, then fetch if needed)
     let userId = getCurrentUserID();
@@ -3922,12 +3973,17 @@ function loadAIConversationHistory() {
                 window.currentUser = user;
                 loadConversationForUser(user.id);
             } else {
-                messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error: Could not get user ID</div>';
+                if (!messagesContainer.querySelector('.chat-message')) {
+                    messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error: Could not get user ID</div>';
+                }
             }
         })
         .catch(err => {
             console.error('Error fetching user:', err);
-            messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error loading conversation</div>';
+            // Don't overwrite if we already showed the consultant prompt
+            if (!messagesContainer.querySelector('.chat-message')) {
+                messagesContainer.innerHTML = '<div class="text-center text-danger py-5">Error loading conversation</div>';
+            }
         });
         return;
     }
@@ -3957,6 +4013,8 @@ function loadConversationForUser(userId) {
                 messagesContainer.appendChild(emptyState);
             }
             scrollChatToBottom();
+            var q = document.getElementById('ai-question');
+            if (q) { setTimeout(function() { q.focus(); }, 0); setTimeout(function() { q.focus(); }, 100); }
             return;
         }
         
@@ -3977,17 +4035,30 @@ function loadConversationForUser(userId) {
             window.pendingConsultantPromptInChat = null;
         }
         
-        // Scroll to bottom
         scrollChatToBottom();
+        // Restore focus so cursor stays in input (DOM update often steals focus)
+        (function() {
+            var q = document.getElementById('ai-question');
+            if (q) {
+                setTimeout(function() { q.focus(); }, 0);
+                setTimeout(function() { q.focus(); }, 100);
+            }
+        })();
     })
     .catch(err => {
         // Silently fail - don't show error message
         console.error('Error loading conversation history:', err);
-        // Just show empty state
-        if (emptyState) {
+        messagesContainer.innerHTML = '';
+        // If we had a consultant prompt (e.g. already shown), keep it visible
+        if (window.pendingConsultantPromptInChat) {
+            addChatMessage('ai', window.pendingConsultantPromptInChat, new Date().toISOString(), null, false);
+            window.pendingConsultantPromptInChat = null;
+        } else if (emptyState) {
             emptyState.style.display = 'block';
             messagesContainer.appendChild(emptyState);
         }
+        var q = document.getElementById('ai-question');
+        if (q) { setTimeout(function() { q.focus(); }, 0); setTimeout(function() { q.focus(); }, 100); }
     });
 }
 
@@ -4143,23 +4214,18 @@ function removeTypingIndicator() {
 }
 
 // Scroll chat to bottom - ensure latest message is visible
+// IMPORTANT: Do NOT use scrollIntoView() here - it steals focus from the chat input
+// when the user is typing, so the cursor "jumps" after the first letter.
 function scrollChatToBottom() {
     const messagesContainer = document.getElementById('ai-chat-messages');
     if (!messagesContainer) return;
     
-    // Use requestAnimationFrame for smoother scrolling
-    requestAnimationFrame(() => {
+    const scrollToEnd = function() {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        // Also ensure scroll after a brief delay to handle dynamic content
-        setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // Scroll with smooth behavior to the very bottom
-            const lastMessage = messagesContainer.lastElementChild;
-            if (lastMessage) {
-                lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
-        }, 150);
-    });
+    };
+    requestAnimationFrame(scrollToEnd);
+    setTimeout(scrollToEnd, 100);
+    setTimeout(scrollToEnd, 300);
 }
 
 // Clear chat conversation
@@ -5348,16 +5414,23 @@ function toggleAIChatSelectionMode() {
 
 // Handle global Enter key press (when selection mode is active)
 function handleGlobalEnterKey(e) {
-    // Only handle if selection mode is active and Enter is pressed (not in input fields)
+    const target = e.target;
+    const activeEl = document.activeElement;
+    // Never interfere when user is typing in any input or textarea (e.g. AI chat message box)
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+    }
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+    }
+    if (target && target.id === 'ai-question') {
+        return;
+    }
+    if (activeEl && activeEl.id === 'ai-question') {
+        return;
+    }
+    // Only handle if selection mode is active and Enter is pressed
     if (aiChatSelectionModeActive && e.key === 'Enter' && selectedText) {
-        const target = e.target;
-        // Don't interfere if user is typing in an input/textarea
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-            // If it's the chat input, handle it in handleChatInputKeydown
-            return;
-        }
-        
-        // Copy selected text to chat input
         e.preventDefault();
         e.stopPropagation();
         copySelectedTextToChatInput();
@@ -6468,20 +6541,112 @@ function openAIHelpWithSelection() {
     selectedText = '';
 }
 
-// Handle chat input keyboard events
+// Handle chat input keyboard: Enter sends/copies; letters, punctuation, Backspace, Delete, arrows all handled manually.
+// Use capture phase so we run first; handle everything so nothing else can block typing.
 function handleChatInputKeydown(e) {
-    // If selection mode is active and Enter is pressed, copy selected text to input
-    if (aiChatSelectionModeActive && e.key === 'Enter' && !e.shiftKey && selectedText) {
+    if (!e.target || e.target.id !== 'ai-question') return;
+    var el = e.target;
+    var start = el.selectionStart;
+    var end = el.selectionEnd;
+    var val = el.value || '';
+    // Enter: send message or copy selected text
+    if (e.key === 'Enter') {
+        if (aiChatSelectionModeActive && !e.shiftKey && selectedText) {
+            e.preventDefault();
+            e.stopPropagation();
+            copySelectedTextToChatInput();
+            return;
+        }
+        if (!e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            askAI();
+            return;
+        }
+        // Shift+Enter: insert newline
         e.preventDefault();
-        copySelectedTextToChatInput();
+        e.stopPropagation();
+        var before = val.substring(0, start);
+        var after = val.substring(end);
+        el.value = before + '\n' + after;
+        el.setSelectionRange(start + 1, start + 1);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
         return;
     }
-    
-    // Otherwise, normal behavior: Enter sends message
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Backspace
+    if (e.key === 'Backspace') {
         e.preventDefault();
-        askAI();
+        e.stopPropagation();
+        if (start !== end) {
+            el.value = val.substring(0, start) + val.substring(end);
+            el.setSelectionRange(start, start);
+        } else if (start > 0) {
+            el.value = val.substring(0, start - 1) + val.substring(start);
+            el.setSelectionRange(start - 1, start - 1);
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
     }
+    // Delete
+    if (e.key === 'Delete') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (start !== end) {
+            el.value = val.substring(0, start) + val.substring(end);
+            el.setSelectionRange(start, start);
+        } else if (end < val.length) {
+            el.value = val.substring(0, start) + val.substring(start + 1);
+            el.setSelectionRange(start, start);
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+    // Arrow keys, Home, End: move cursor
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        e.stopPropagation();
+        var len = val.length;
+        var newPos = start;
+        if (e.key === 'ArrowLeft') newPos = start > 0 ? start - 1 : 0;
+        else if (e.key === 'ArrowRight') newPos = end < len ? end + 1 : len;
+        else if (e.key === 'Home') newPos = 0;
+        else if (e.key === 'End') newPos = len;
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            var lines = val.substring(0, start).split('\n');
+            var col = lines[lines.length - 1].length;
+            if (e.key === 'ArrowUp') {
+                if (lines.length > 1) {
+                    var prevLine = lines[lines.length - 2];
+                    newPos = start - prevLine.length - 1 + Math.min(col, prevLine.length);
+                } else newPos = 0;
+            } else {
+                var afterCursor = val.substring(start);
+                var nextNewline = afterCursor.indexOf('\n');
+                if (nextNewline === -1) newPos = len;
+                else newPos = start + nextNewline + 1 + Math.min(col, (val.substring(start + nextNewline + 1).split('\n')[0] || '').length);
+            }
+        }
+        el.setSelectionRange(newPos, newPos);
+        return;
+    }
+    // Printable character (letters, numbers, punctuation, space): insert manually
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        var before = val.substring(0, start);
+        var after = val.substring(end);
+        el.value = before + e.key + after;
+        el.setSelectionRange(start + 1, start + 1);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+}
+
+// Attach in capture phase so we run before anything that might block typing
+function initChatInputKeydown() {
+    if (window._chatInputKeydownInited) return;
+    window._chatInputKeydownInited = true;
+    document.addEventListener('keydown', handleChatInputKeydown, true);
 }
 
 // Copy selected text to chat input field
@@ -6524,6 +6689,11 @@ function updateAIChatSelectionStatus(text) {
             statusDiv.style.display = 'none';
         }
     }
+}
+
+// Placeholder for services not yet implemented (e.g. Test your knowledge, Ah Ah Moments)
+function readerServiceComingSoon(serviceName) {
+    alert(serviceName + ' — coming soon. We\'ll add this in a later update.');
 }
 
 function requestHelp() {
@@ -6571,6 +6741,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('[interaction.html] loadGlossaryTerms:', typeof loadGlossaryTerms);
     console.log('[interaction.html] loadPage:', typeof loadPage);
     console.log('[interaction.html] getAuthToken:', typeof getAuthToken);
+    
+    // Attach AI chat input keydown (so typing works; Enter still sends)
+    if (typeof initChatInputKeydown === 'function') {
+        initChatInputKeydown();
+    }
     
     // Attach logout handler (backup - app.js also handles this via event delegation)
     const logoutLink = document.getElementById('logout-link-reader');
