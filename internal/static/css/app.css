@@ -19,6 +19,11 @@
     --consultant-primary: #800020;
     --consultant-primary-light: #a00030;
     --consultant-primary-dark: #600015;
+
+    /* Administrator app colors - Dark blue */
+    --admin-primary: #1a365d;
+    --admin-primary-light: #2c5282;
+    --admin-primary-dark: #0d2137;
 }
 
 /* Reader app theme - Dark Green */
@@ -196,6 +201,124 @@ body[data-app="consultant"] .bg-primary {
 body.consultant-app .border-primary,
 body[data-app="consultant"] .border-primary {
     border-color: var(--consultant-primary) !important;
+}
+
+/* Administrator app theme - Dark blue */
+body.admin-app,
+body[data-app="admin"] {
+    --primary-color: var(--admin-primary);
+}
+
+body.admin-app .btn-primary,
+body[data-app="admin"] .btn-primary {
+    background-color: var(--admin-primary);
+    border-color: var(--admin-primary);
+}
+
+body.admin-app .btn-primary:hover,
+body[data-app="admin"] .btn-primary:hover {
+    background-color: var(--admin-primary-dark);
+    border-color: var(--admin-primary-dark);
+}
+
+body.admin-app .btn-outline-primary,
+body[data-app="admin"] .btn-outline-primary {
+    color: var(--admin-primary);
+    border-color: var(--admin-primary);
+}
+
+body.admin-app .btn-outline-primary:hover,
+body[data-app="admin"] .btn-outline-primary:hover {
+    background-color: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: white;
+}
+
+body.admin-app .navbar-light,
+body[data-app="admin"] .navbar-light {
+    background-color: var(--admin-primary) !important;
+}
+
+body.admin-app .navbar-light .navbar-brand,
+body.admin-app .navbar-light .nav-link,
+body[data-app="admin"] .navbar-light .navbar-brand,
+body[data-app="admin"] .navbar-light .nav-link {
+    color: white !important;
+}
+
+body.admin-app .text-primary,
+body[data-app="admin"] .text-primary {
+    color: var(--admin-primary) !important;
+}
+
+body.admin-app #user-name-display,
+body[data-app="admin"] #user-name-display {
+    color: white !important;
+}
+
+body.admin-app #user-info-nav .nav-link,
+body[data-app="admin"] #user-info-nav .nav-link {
+    color: white !important;
+}
+
+body.admin-app .card-header,
+body[data-app="admin"] .card-header {
+    background-color: var(--admin-primary);
+    color: white;
+}
+
+body.admin-app .card-header h5,
+body.admin-app .card-header .card-title,
+body[data-app="admin"] .card-header h5,
+body[data-app="admin"] .card-header .card-title {
+    color: white;
+}
+
+body.admin-app .badge.bg-secondary,
+body[data-app="admin"] .badge.bg-secondary {
+    background-color: var(--admin-primary-light) !important;
+}
+
+body.admin-app .bg-primary,
+body[data-app="admin"] .bg-primary {
+    background-color: var(--admin-primary) !important;
+}
+
+body.admin-app .border-primary,
+body[data-app="admin"] .border-primary {
+    border-color: var(--admin-primary) !important;
+}
+
+/* Admin login page: dark blue background */
+body.admin-app main,
+body[data-app="admin"] main {
+    background-color: var(--admin-primary-dark);
+    min-height: calc(100vh - 200px);
+    margin-top: 0;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+body.admin-app .card,
+body[data-app="admin"] .card {
+    border-color: var(--admin-primary-light);
+}
+
+body.admin-app .card-title,
+body[data-app="admin"] .card-title {
+    color: var(--admin-primary);
+}
+
+body.admin-app footer.bg-light,
+body[data-app="admin"] footer.bg-light {
+    background-color: var(--admin-primary-dark) !important;
+    color: rgba(255, 255, 255, 0.8);
+    border-top: 1px solid var(--admin-primary);
+}
+
+body.admin-app footer .mb-0,
+body[data-app="admin"] footer .mb-0 {
+    color: inherit;
 }
 
 body {

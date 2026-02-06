@@ -180,16 +180,86 @@ func IsUserOnline(userID string) (bool, error) {
 	return count > 0, nil
 }
 
-// GetOnlineReaderIDs returns a map of reader IDs that are currently online
-func GetOnlineReaderIDs() (map[string]bool, error) {
-	onlineMap := make(map[string]bool)
-	
-	// Get all readers with active sessions (not expired and active within last 10 minutes)
-	query := `SELECT DISTINCT s.user_id 
+// OnlineReaderSession represents one online reader session (user + device/session info).
+type OnlineReaderSession struct {
+	UserID       string
+	Email        string
+	FirstName    string
+	LastName     string
+	UserAgent    string
+	LastActiveAt time.Time
+}
+
+// GetOnlineReaderSessions returns all reader sessions active in the last 15 minutes (one row per session/device).
+func GetOnlineReaderSessions() ([]OnlineReaderSession, error) {
+	query := `SELECT u.id, u.email, COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(s.user_agent,''), s.last_active_at
 	          FROM sessions s
 	          INNER JOIN users u ON s.user_id = u.id
 	          WHERE u.role = 'reader'
-	          AND s.expires_at > datetime('now') 
+	          AND s.expires_at > datetime('now')
+	          AND s.last_active_at >= datetime('now', '-15 minutes')
+	          ORDER BY s.last_active_at DESC`
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get online reader sessions: %w", err)
+	}
+	defer rows.Close()
+	timeLayout := "2006-01-02 15:04:05"
+	var result []OnlineReaderSession
+	for rows.Next() {
+		var o OnlineReaderSession
+		var lastActiveStr string
+		if err := rows.Scan(&o.UserID, &o.Email, &o.FirstName, &o.LastName, &o.UserAgent, &lastActiveStr); err != nil {
+			continue
+		}
+		if t, err := time.Parse(timeLayout, lastActiveStr); err == nil {
+			o.LastActiveAt = t
+		}
+		result = append(result, o)
+	}
+	return result, rows.Err()
+}
+
+// CountReadersOnline returns the number of readers with an active session in the last 15 minutes.
+func CountReadersOnline() (int, error) {
+	var count int
+	query := `SELECT COUNT(DISTINCT s.user_id) FROM sessions s
+	          INNER JOIN users u ON s.user_id = u.id
+	          WHERE u.role = 'reader'
+	          AND s.expires_at > datetime('now')
+	          AND s.last_active_at >= datetime('now', '-15 minutes')`
+	err := DB.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count readers online: %w", err)
+	}
+	return count, nil
+}
+
+// CountConsultantsOnline returns the number of consultants with an active session in the last 15 minutes.
+func CountConsultantsOnline() (int, error) {
+	var count int
+	query := `SELECT COUNT(DISTINCT s.user_id) FROM sessions s
+	          INNER JOIN users u ON s.user_id = u.id
+	          WHERE u.role = 'consultant'
+	          AND s.expires_at > datetime('now')
+	          AND s.last_active_at >= datetime('now', '-15 minutes')`
+	err := DB.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count consultants online: %w", err)
+	}
+	return count, nil
+}
+
+// GetOnlineReaderIDs returns a map of reader IDs that are currently online
+func GetOnlineReaderIDs() (map[string]bool, error) {
+	onlineMap := make(map[string]bool)
+
+	// Get all readers with active sessions (not expired and active within last 10 minutes)
+	query := `SELECT DISTINCT s.user_id
+	          FROM sessions s
+	          INNER JOIN users u ON s.user_id = u.id
+	          WHERE u.role = 'reader'
+	          AND s.expires_at > datetime('now')
 	          AND s.last_active_at >= datetime('now', '-10 minutes')`
 	
 	rows, err := DB.Query(query)

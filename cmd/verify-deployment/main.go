@@ -1,10 +1,8 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/efisiopittau/alice-suite-go/internal/config"
 	"github.com/efisiopittau/alice-suite-go/internal/database"

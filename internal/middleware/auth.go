@@ -77,6 +77,10 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 							http.Redirect(w, r, "/consultant/login", http.StatusFound)
 							return
 						}
+						if requiredRole == "administrator" {
+							http.Redirect(w, r, "/admin/login", http.StatusFound)
+							return
+						}
 						http.Error(w, "Authorization required", http.StatusUnauthorized)
 						return
 					}
@@ -92,9 +96,13 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 
 			token, err := auth.ExtractTokenFromHeader(authHeader)
 			if err != nil {
-				// For consultant routes, redirect to login instead of showing error
+				// For consultant/admin routes, redirect to login instead of showing error
 				if requiredRole == "consultant" {
 					http.Redirect(w, r, "/consultant/login", http.StatusFound)
+					return
+				}
+				if requiredRole == "administrator" {
+					http.Redirect(w, r, "/admin/login", http.StatusFound)
 					return
 				}
 				http.Error(w, "Authorization required", http.StatusUnauthorized)
@@ -104,9 +112,13 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 			// Validate token and get claims
 			claims, err := auth.ValidateJWT(token)
 			if err != nil {
-				// For consultant routes, redirect to login instead of showing error
+				// For consultant/admin routes, redirect to login instead of showing error
 				if requiredRole == "consultant" {
 					http.Redirect(w, r, "/consultant/login", http.StatusFound)
+					return
+				}
+				if requiredRole == "administrator" {
+					http.Redirect(w, r, "/admin/login", http.StatusFound)
 					return
 				}
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
@@ -115,9 +127,13 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 
 			// Check role
 			if !auth.RequireRole(claims.Role, requiredRole) {
-				// For consultant routes, redirect to login if wrong role
+				// For consultant/admin routes, redirect to login if wrong role
 				if requiredRole == "consultant" {
 					http.Redirect(w, r, "/consultant/login", http.StatusFound)
+					return
+				}
+				if requiredRole == "administrator" {
+					http.Redirect(w, r, "/admin/login", http.StatusFound)
 					return
 				}
 				http.Error(w, "Insufficient permissions", http.StatusForbidden)
@@ -180,4 +196,9 @@ func RequireConsultant(next http.Handler) http.Handler {
 // RequireReader requires reader role
 func RequireReader(next http.Handler) http.Handler {
 	return RequireRole("reader")(next)
+}
+
+// RequireAdmin requires administrator role
+func RequireAdmin(next http.Handler) http.Handler {
+	return RequireRole("administrator")(next)
 }

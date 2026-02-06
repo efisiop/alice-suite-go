@@ -2,24 +2,42 @@ package middleware
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
 
 // HeartbeatMiddleware updates last_active_at on every authenticated request
-// This enables "who's online" queries for consultants
+// This enables "who's online" queries for consultants and admin presence
 func HeartbeatMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract token from Authorization header or cookie
+		// Extract token from Authorization header or cookie (same logic as auth middleware)
 		authHeader := r.Header.Get("Authorization")
 		token, err := auth.ExtractTokenFromHeader(authHeader)
-		
+
 		// If not in header, try cookie
 		if err != nil || token == "" {
 			cookie, cookieErr := r.Cookie("auth_token")
-			if cookieErr == nil && cookie.Value != "" {
-				token = cookie.Value
+			if cookieErr != nil || cookie == nil || cookie.Value == "" {
+				// Fallback: parse Cookie header manually (Safari sometimes doesn't parse correctly)
+				if cookies := r.Header.Get("Cookie"); cookies != "" {
+					for _, c := range parseCookies(cookies) {
+						if c.Name == "auth_token" && c.Value != "" {
+							cookie = c
+							cookieErr = nil
+							break
+						}
+					}
+				}
+			}
+			if cookieErr == nil && cookie != nil && cookie.Value != "" {
+				tokenValue := cookie.Value
+				// URL-decode cookie value so it matches the token we hashed at login
+				if decoded, decodeErr := url.QueryUnescape(tokenValue); decodeErr == nil && decoded != tokenValue {
+					tokenValue = decoded
+				}
+				token = tokenValue
 				err = nil
 			}
 		}

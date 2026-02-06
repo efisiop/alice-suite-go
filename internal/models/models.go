@@ -9,7 +9,7 @@ type User struct {
 	PasswordHash string    `json:"-"` // Never return in JSON
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
-	Role         string    `json:"role"` // "reader" or "consultant"
+	Role         string    `json:"role"` // "reader", "consultant", or "administrator"
 	IsVerified   bool      `json:"is_verified"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -171,8 +171,8 @@ type ConsultantPrompt struct {
 	PromptText    string     `json:"prompt_text"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
-	DismissedAt   *time.Time `json:"dismissed_at,omitempty"`   // when reader closed hint without using
-	AcceptedAt    *time.Time `json:"accepted_at,omitempty"`    // when reader clicked Open AI Help and interacted
+	DismissedAt   *time.Time `json:"dismissed_at,omitempty"` // when reader closed hint without using
+	AcceptedAt    *time.Time `json:"accepted_at,omitempty"`  // when reader clicked Open AI Help and interacted
 }
 
 // ReadingStats represents reading statistics for a user

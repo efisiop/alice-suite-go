@@ -23,7 +23,7 @@ type SessionStore struct {
 
 var (
 	globalSessionStore *SessionStore
-	once                sync.Once
+	once               sync.Once
 )
 
 // GetSessionStore returns the global session store
@@ -109,6 +109,11 @@ func IsReader(role string) bool {
 	return role == "reader"
 }
 
+// IsAdmin checks if a user is an administrator
+func IsAdmin(role string) bool {
+	return role == "administrator"
+}
+
 // RequireRole checks if a user has the required role
 func RequireRole(userRole, requiredRole string) bool {
 	if requiredRole == "consultant" {
@@ -117,7 +122,8 @@ func RequireRole(userRole, requiredRole string) bool {
 	if requiredRole == "reader" {
 		return IsReader(userRole)
 	}
-	// Admin role can be added later
+	if requiredRole == "administrator" {
+		return IsAdmin(userRole)
+	}
 	return false
 }
-

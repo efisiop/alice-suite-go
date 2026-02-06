@@ -156,6 +156,9 @@ func main() {
 	// Leave login page without authentication (public access)
 	mux.HandleFunc("/consultant/login", handlers.HandleConsultantLogin)
 
+	// Administrator app routes (login + dashboard)
+	handlers.SetupAdminRoutes(mux)
+
 	// Wrap entire mux with heartbeat middleware (updates last_active_at on every request)
 	// Then wrap with rate limiting middleware
 	handler := middleware.RateLimit(middleware.HeartbeatMiddleware(mux))
@@ -165,5 +168,6 @@ func main() {
 	log.Printf("Health check: http://localhost:%s/health", cfg.Port)
 	log.Printf("Reader app: http://localhost:%s/reader", cfg.Port)
 	log.Printf("Consultant dashboard: http://localhost:%s/consultant", cfg.Port)
+	log.Printf("Administrator login: http://localhost:%s/admin/login", cfg.Port)
 	log.Fatal(http.ListenAndServe(""+":"+cfg.Port, handler))
 }

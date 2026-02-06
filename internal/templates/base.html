@@ -164,7 +164,12 @@
         // Hide default Login/Register links for consultant and reader pages
         const defaultLoginLinks = document.querySelectorAll('.default-login-link, .default-register-link');
         
-        if (path.startsWith('/consultant')) {
+        if (path.startsWith('/admin')) {
+            brandLink.href = '/admin';
+            body.classList.add('admin-app');
+            body.setAttribute('data-app', 'admin');
+            defaultLoginLinks.forEach(link => link.style.display = 'none');
+        } else if (path.startsWith('/consultant')) {
             brandLink.href = '/consultant';
             body.classList.add('consultant-app');
             body.setAttribute('data-app', 'consultant');

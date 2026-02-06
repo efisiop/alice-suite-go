@@ -100,6 +100,32 @@ func main() {
 		log.Fatalf("Error checking for existing consultant: %v", err)
 	}
 
+	// Create test administrator user
+	adminEmail := "admin@example.com"
+	adminPassword := "admin123"
+	adminID := uuid.New().String()
+
+	hashedPassword, err = bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("Failed to hash password: %v", err)
+	}
+
+	err = db.QueryRow("SELECT id FROM users WHERE email = ?", adminEmail).Scan(&existingID)
+	if err == nil {
+		fmt.Printf("✅ Administrator user already exists: %s (ID: %s)\n", adminEmail, existingID)
+	} else if err == sql.ErrNoRows {
+		_, err = db.Exec(`
+			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+		`, adminID, adminEmail, string(hashedPassword), "Admin", "User", "administrator", 1)
+		if err != nil {
+			log.Fatalf("Failed to create administrator user: %v", err)
+		}
+		fmt.Printf("✅ Created administrator user: %s (Password: %s)\n", adminEmail, adminPassword)
+	} else {
+		log.Fatalf("Error checking for existing administrator: %v", err)
+	}
+
 	// Create verification code for reader
 	verificationCode := "ALICE2024"
 	_, err = db.Exec(`
@@ -145,6 +171,7 @@ func main() {
 	fmt.Println("Reader: reader@example.com / reader123")
 	fmt.Println("Efisio: efisio@efisio.com / efisio123")
 	fmt.Println("Consultant: consultant@example.com / consultant123")
+	fmt.Println("Administrator: admin@example.com / admin123")
 	fmt.Println("Verification Code: ALICE2024")
 	fmt.Println("\n✅ Test users initialized successfully!")
 }
