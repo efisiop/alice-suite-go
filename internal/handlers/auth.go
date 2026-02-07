@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/email"
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
 
@@ -109,6 +111,25 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 		// Broadcast login event with user info
 		BroadcastLogin(user.ID, user.Email, user.FirstName, user.LastName)
+	}
+
+	// Optional: email admin when a reader or consultant logs in (only on Render when enabled)
+	if user.Role == "reader" || user.Role == "consultant" {
+		go func() {
+			enabled, err := database.GetLoginEmailNotificationsEnabled()
+			if err != nil || !enabled || !email.ShouldSendLoginEmails() {
+				return
+			}
+			to, _ := database.GetAdminSetting("login_email_recipient")
+			if to == "" {
+				to = "efisio@mylivemail.net"
+			}
+			name := strings.TrimSpace(user.FirstName + " " + user.LastName)
+			if name == "" {
+				name = user.Email
+			}
+			email.SendLoginNotification(to, user.Role, name, user.Email)
+		}()
 	}
 
 	// Supabase-compatible response format

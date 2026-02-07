@@ -60,3 +60,21 @@ After adding:
 ### Need Screenshots?
 
 If you're still stuck, tell me what you see on your Render dashboard and I can guide you more specifically!
+
+---
+
+## Optional: Login email notifications (Admin)
+
+If you turn on **“Notify me when readers or consultants log in”** in the Admin dashboard, the app will send an email to the configured recipient (e.g. efisio@mylivemail.net) each time a reader or consultant logs in. **Emails are only sent when the app runs on Render** (not on localhost).
+
+To enable sending, add these environment variables in Render (same Environment tab as above):
+
+| Key | Value |
+|-----|--------|
+| `SMTP_HOST` | Your SMTP server hostname (e.g. `smtp.gmail.com`) |
+| `SMTP_PORT` | Usually `587` (or `465` for SSL) |
+| `SMTP_USER` | Your SMTP login / email |
+| `SMTP_PASSWORD` | Your SMTP password or app password |
+| `SMTP_FROM` | (Optional) From address; defaults to `SMTP_USER` |
+
+Then in the Admin dashboard, switch the **“Notify me when readers or consultants log in”** toggle **On**. If SMTP is not set, the toggle can still be turned on but no email will be sent until these variables are configured.

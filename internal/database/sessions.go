@@ -235,6 +235,46 @@ func CountReadersOnline() (int, error) {
 	return count, nil
 }
 
+// OnlineConsultantSession represents one online consultant session (user + device/session info).
+type OnlineConsultantSession struct {
+	UserID       string
+	Email        string
+	FirstName    string
+	LastName     string
+	UserAgent    string
+	LastActiveAt time.Time
+}
+
+// GetOnlineConsultantSessions returns all consultant sessions active in the last 15 minutes (one row per session/device).
+func GetOnlineConsultantSessions() ([]OnlineConsultantSession, error) {
+	query := `SELECT u.id, u.email, COALESCE(u.first_name,''), COALESCE(u.last_name,''), COALESCE(s.user_agent,''), s.last_active_at
+	          FROM sessions s
+	          INNER JOIN users u ON s.user_id = u.id
+	          WHERE u.role = 'consultant'
+	          AND s.expires_at > datetime('now')
+	          AND s.last_active_at >= datetime('now', '-15 minutes')
+	          ORDER BY s.last_active_at DESC`
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get online consultant sessions: %w", err)
+	}
+	defer rows.Close()
+	timeLayout := "2006-01-02 15:04:05"
+	var result []OnlineConsultantSession
+	for rows.Next() {
+		var o OnlineConsultantSession
+		var lastActiveStr string
+		if err := rows.Scan(&o.UserID, &o.Email, &o.FirstName, &o.LastName, &o.UserAgent, &lastActiveStr); err != nil {
+			continue
+		}
+		if t, err := time.Parse(timeLayout, lastActiveStr); err == nil {
+			o.LastActiveAt = t
+		}
+		result = append(result, o)
+	}
+	return result, rows.Err()
+}
+
 // CountConsultantsOnline returns the number of consultants with an active session in the last 15 minutes.
 func CountConsultantsOnline() (int, error) {
 	var count int

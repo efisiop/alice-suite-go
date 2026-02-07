@@ -20,6 +20,8 @@ func SetupAdminRoutes(mux *http.ServeMux) {
 
 	// Admin API: presence (protected)
 	mux.Handle("/api/admin/presence", middleware.RequireAdmin(http.HandlerFunc(HandleAdminPresence)))
+	// Admin API: settings (protected)
+	mux.Handle("/api/admin/settings", middleware.RequireAdmin(http.HandlerFunc(HandleAdminSettings)))
 
 	// Admin dashboard and pages (protected)
 	mux.Handle("/admin", middleware.RequireAdmin(http.HandlerFunc(HandleAdminDashboard)))
@@ -38,20 +40,26 @@ func HandleAdminPresence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get readers count", http.StatusInternalServerError)
 		return
 	}
-	consultants, err := database.CountConsultantsOnline()
+	consultantsCount, err := database.CountConsultantsOnline()
 	if err != nil {
 		log.Printf("admin presence: count consultants: %v", err)
 		http.Error(w, "Failed to get consultants count", http.StatusInternalServerError)
 		return
 	}
-	sessions, err := database.GetOnlineReaderSessions()
+	readerSessions, err := database.GetOnlineReaderSessions()
 	if err != nil {
 		log.Printf("admin presence: get reader sessions: %v", err)
 		http.Error(w, "Failed to get reader sessions", http.StatusInternalServerError)
 		return
 	}
-	readersList := make([]map[string]interface{}, 0, len(sessions))
-	for _, s := range sessions {
+	consultantSessions, err := database.GetOnlineConsultantSessions()
+	if err != nil {
+		log.Printf("admin presence: get consultant sessions: %v", err)
+		http.Error(w, "Failed to get consultant sessions", http.StatusInternalServerError)
+		return
+	}
+	readersList := make([]map[string]interface{}, 0, len(readerSessions))
+	for _, s := range readerSessions {
 		name := s.FirstName + " " + s.LastName
 		if name == " " {
 			name = s.Email
@@ -62,19 +70,98 @@ func HandleAdminPresence(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		readersList = append(readersList, map[string]interface{}{
-			"user_id":    s.UserID,
-			"email":     s.Email,
-			"name":      name,
-			"device":    useragent.DeviceLabel(s.UserAgent),
+			"user_id":   s.UserID,
+			"email":    s.Email,
+			"name":     name,
+			"device":   useragent.DeviceLabel(s.UserAgent),
+			"last_seen": s.LastActiveAt.Format("15:04"),
+		})
+	}
+	consultantsList := make([]map[string]interface{}, 0, len(consultantSessions))
+	for _, s := range consultantSessions {
+		name := s.FirstName + " " + s.LastName
+		if name == " " {
+			name = s.Email
+		} else {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				name = s.Email
+			}
+		}
+		consultantsList = append(consultantsList, map[string]interface{}{
+			"user_id":   s.UserID,
+			"email":    s.Email,
+			"name":     name,
+			"device":   useragent.DeviceLabel(s.UserAgent),
 			"last_seen": s.LastActiveAt.Format("15:04"),
 		})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"readers_online":     readersCount,
-		"consultants_online": consultants,
+		"consultants_online": consultantsCount,
 		"readers":            readersList,
+		"consultants":       consultantsList,
 	})
+}
+
+// HandleAdminSettings returns or updates admin settings (e.g. login email notifications). Admin-only.
+func HandleAdminSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		enabled, err := database.GetLoginEmailNotificationsEnabled()
+		if err != nil {
+			enabled = false
+		}
+		recipient, err := database.GetAdminSetting("login_email_recipient")
+		if err != nil || recipient == "" {
+			recipient = "efisio@mylivemail.net"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"login_email_notifications": enabled,
+			"login_email_recipient":     recipient,
+		})
+		return
+	case http.MethodPut, http.MethodPatch:
+		var req struct {
+			LoginEmailNotifications *bool   `json:"login_email_notifications"`
+			LoginEmailRecipient     *string `json:"login_email_recipient"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		if req.LoginEmailNotifications != nil {
+			if err := database.SetLoginEmailNotificationsEnabled(*req.LoginEmailNotifications); err != nil {
+				log.Printf("admin settings: set login_email_notifications: %v", err)
+				http.Error(w, "Failed to update setting", http.StatusInternalServerError)
+				return
+			}
+		}
+		if req.LoginEmailRecipient != nil && strings.TrimSpace(*req.LoginEmailRecipient) != "" {
+			if err := database.SetAdminSetting("login_email_recipient", strings.TrimSpace(*req.LoginEmailRecipient)); err != nil {
+				log.Printf("admin settings: set login_email_recipient: %v", err)
+				http.Error(w, "Failed to update recipient", http.StatusInternalServerError)
+				return
+			}
+		}
+		// Return current state
+		enabled, _ := database.GetLoginEmailNotificationsEnabled()
+		recipient, _ := database.GetAdminSetting("login_email_recipient")
+		if recipient == "" {
+			recipient = "efisio@mylivemail.net"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"login_email_notifications": enabled,
+			"login_email_recipient":     recipient,
+		})
+		return
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 // HandleAdminLogin handles GET/POST /admin/login
