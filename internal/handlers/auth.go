@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -117,7 +118,15 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if user.Role == "reader" || user.Role == "consultant" {
 		go func() {
 			enabled, err := database.GetLoginEmailNotificationsEnabled()
-			if err != nil || !enabled || !email.ShouldSendLoginEmails() {
+			if err != nil {
+				log.Printf("email: login notification skipped (reader/consultant login): failed to get setting: %v", err)
+				return
+			}
+			if !enabled {
+				return // toggle off, no log needed
+			}
+			if !email.ShouldSendLoginEmails() {
+				log.Printf("email: login notification skipped: not on Render or SMTP not configured (RENDER=%q, SMTP_HOST set=%v)", os.Getenv("RENDER"), os.Getenv("SMTP_HOST") != "")
 				return
 			}
 			to, _ := database.GetAdminSetting("login_email_recipient")
@@ -128,6 +137,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 			if name == "" {
 				name = user.Email
 			}
+			log.Printf("email: sending login notification to %s for %s %s", to, user.Role, user.Email)
 			email.SendLoginNotification(to, user.Role, name, user.Email)
 		}()
 	}

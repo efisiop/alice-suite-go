@@ -82,6 +82,8 @@
                 <label class="form-check-label" for="login-email-toggle">Notify me when readers or consultants log in</label>
             </div>
             <p class="mt-2 mb-0 text-muted small">Emails are sent only when this app runs on Render (not on localhost). Recipient: <span id="login-email-recipient">efisio@mylivemail.net</span></p>
+            <p id="email-status-hint" class="mt-2 mb-0 small text-info" style="display: none;"></p>
+            <p class="mt-1 mb-0"><a href="#" id="email-status-detail-link" target="_blank" rel="noopener" class="small">View email diagnostics (JSON)</a></p>
         </div>
     </div>
 
@@ -167,11 +169,29 @@
             .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
             .then(function(data) {
                 document.getElementById('login-email-recipient').textContent = data.login_email_recipient || 'efisio@mylivemail.net';
+                loadEmailStatus();
             })
             .catch(function() { document.getElementById('login-email-toggle').checked = !enabled; });
     }
 
+    function loadEmailStatus() {
+        fetch('/api/admin/email-status', { credentials: 'same-origin', headers: headers })
+            .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
+            .then(function(data) {
+                var hintEl = document.getElementById('email-status-hint');
+                var linkEl = document.getElementById('email-status-detail-link');
+                if (data.hint) {
+                    hintEl.textContent = data.hint;
+                    hintEl.style.display = 'block';
+                    hintEl.className = 'mt-2 mb-0 small ' + (data.will_send_on_next_login ? 'text-success' : 'text-info');
+                }
+                linkEl.href = window.location.origin + '/api/admin/email-status';
+            })
+            .catch(function() {});
+    }
+
     loadSettings();
+    loadEmailStatus();
     document.getElementById('login-email-toggle').addEventListener('change', function() {
         var enabled = this.checked;
         saveLoginEmailSetting(enabled);

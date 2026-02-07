@@ -5,10 +5,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/email"
 	"github.com/efisiopittau/alice-suite-go/internal/middleware"
 	"github.com/efisiopittau/alice-suite-go/internal/useragent"
 )
@@ -22,6 +24,8 @@ func SetupAdminRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/admin/presence", middleware.RequireAdmin(http.HandlerFunc(HandleAdminPresence)))
 	// Admin API: settings (protected)
 	mux.Handle("/api/admin/settings", middleware.RequireAdmin(http.HandlerFunc(HandleAdminSettings)))
+	// Admin API: email status (for debugging why login emails might not send)
+	mux.Handle("/api/admin/email-status", middleware.RequireAdmin(http.HandlerFunc(HandleAdminEmailStatus)))
 
 	// Admin dashboard and pages (protected)
 	mux.Handle("/admin", middleware.RequireAdmin(http.HandlerFunc(HandleAdminDashboard)))
@@ -162,6 +166,51 @@ func HandleAdminSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+}
+
+// HandleAdminEmailStatus returns why login emails may or may not be sent (admin-only, for debugging).
+func HandleAdminEmailStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	enabled, _ := database.GetLoginEmailNotificationsEnabled()
+	recipient, _ := database.GetAdminSetting("login_email_recipient")
+	if recipient == "" {
+		recipient = "efisio@mylivemail.net"
+	}
+	onRender := os.Getenv("RENDER") == "true"
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpConfigured := smtpHost != "" && smtpUser != "" && os.Getenv("SMTP_PASSWORD") != ""
+	willSend := enabled && email.ShouldSendLoginEmails()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"login_email_notifications_enabled": enabled,
+		"login_email_recipient":              recipient,
+		"on_render":                         onRender,
+		"smtp_configured":                   smtpConfigured,
+		"smtp_host_set":                     smtpHost != "",
+		"smtp_user_set":                     smtpUser != "",
+		"will_send_on_next_login":           willSend,
+		"hint":                              emailStatusHint(enabled, onRender, smtpConfigured, willSend),
+	})
+}
+
+func emailStatusHint(enabled, onRender, smtpConfigured, willSend bool) string {
+	if willSend {
+		return "Emails will be sent on reader/consultant login."
+	}
+	if !enabled {
+		return "Turn on the toggle in Email notifications to enable."
+	}
+	if !onRender {
+		return "Not running on Render (RENDER not true). Emails only send on Render."
+	}
+	if !smtpConfigured {
+		return "Set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in Render Environment."
+	}
+	return "Check Render logs for send errors."
 }
 
 // HandleAdminLogin handles GET/POST /admin/login
