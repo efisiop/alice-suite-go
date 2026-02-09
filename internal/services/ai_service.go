@@ -649,6 +649,71 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 	return responseText, nil
 }
 
+// QuizQuestion represents one multiple-choice question for the "Test your knowledge" quiz
+type QuizQuestion struct {
+	Question    string   `json:"question"`
+	Options     []string `json:"options"`
+	CorrectIndex int     `json:"correct_index"` // 0-based index into Options
+}
+
+// GenerateQuizFromPassage asks the AI to generate 3-5 multiple-choice comprehension questions from the given passage.
+// Returns a slice of QuizQuestion or an error.
+func (s *AIService) GenerateQuizFromPassage(passage string) ([]QuizQuestion, error) {
+	if passage == "" || len(strings.TrimSpace(passage)) == 0 {
+		return nil, errors.New("passage is empty")
+	}
+	// Truncate very long passages to avoid token limits (keep ~6000 chars)
+	truncated := passage
+	if len(truncated) > 6000 {
+		truncated = truncated[:6000] + "\n\n[... text truncated for quiz generation ...]"
+	}
+	prompt := `You are a reading comprehension assistant for "Alice's Adventures in Wonderland".
+Given the following passage from the book, create exactly 3 to 5 multiple-choice questions to check understanding.
+Focus on main ideas, key events, and character actions—nothing trivial.
+
+RULES:
+- Each question must have exactly 4 options (A, B, C, D).
+- correct_index is 0 for the first option, 1 for the second, etc.
+- Return ONLY a valid JSON array, no other text or markdown. No code fence.
+- Format: [{"question":"...","options":["option A","option B","option C","option D"],"correct_index":0}]
+
+PASSAGE:
+` + truncated
+
+	response, _, err := s.callAI(prompt)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAIServiceUnavailable, err)
+	}
+	// Extract JSON from response (AI might wrap in ```json ... ```)
+	raw := strings.TrimSpace(response)
+	if idx := strings.Index(raw, "["); idx >= 0 {
+		raw = raw[idx:]
+	}
+	if idx := strings.LastIndex(raw, "]"); idx >= 0 {
+		raw = raw[:idx+1]
+	}
+	// Remove markdown code block if present
+	raw = strings.TrimPrefix(raw, "```json")
+	raw = strings.TrimPrefix(raw, "```")
+	raw = strings.TrimSpace(raw)
+
+	var questions []QuizQuestion
+	if err := json.Unmarshal([]byte(raw), &questions); err != nil {
+		log.Printf("GenerateQuizFromPassage: failed to parse AI response as JSON: %v", err)
+		return nil, fmt.Errorf("AI returned invalid quiz format: %w", err)
+	}
+	// Validate and fix each question
+	for i := range questions {
+		if questions[i].CorrectIndex < 0 || questions[i].CorrectIndex >= len(questions[i].Options) {
+			questions[i].CorrectIndex = 0
+		}
+		if len(questions[i].Options) < 2 {
+			questions[i].Options = append(questions[i].Options, "Yes", "No")
+		}
+	}
+	return questions, nil
+}
+
 // GetUserInteractions retrieves AI interactions for a user
 func (s *AIService) GetUserInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 	return database.GetAIInteractions(userID, bookID)

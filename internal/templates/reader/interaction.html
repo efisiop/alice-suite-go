@@ -1554,7 +1554,7 @@ html {
                                         <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showDictionary()">Dictionary</button>
                                     </li>
                                     <li>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start" onclick="readerServiceComingSoon('Test your knowledge')">Test your knowledge</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="openQuizModal()">Test your knowledge</button>
                                     </li>
                                 </ul>
                             </div>
@@ -1649,6 +1649,62 @@ html {
                 <button type="button" class="btn btn-outline-primary" id="upload-image-btn" onclick="showUploadArea()">Upload image of text</button>
                 <button type="button" class="btn btn-success" id="capture-btn" onclick="captureImage()" style="display: none;">Capture & Scan</button>
                 <button type="button" class="btn btn-primary" id="retry-btn" onclick="resetScanModal()" style="display: none;">Try Again</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test your knowledge (Quiz) Modal -->
+<div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quizModalLabel">Test your knowledge</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="quiz-choose-scope">
+                    <p class="text-muted mb-3">Choose what to quiz yourself on:</p>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="quizScope" id="quizScopeSection" value="section" checked>
+                            <label class="form-check-label" for="quizScopeSection"><strong>This section</strong> — the part you're reading right now</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="quizScope" id="quizScopePage" value="page">
+                            <label class="form-check-label" for="quizScopePage"><strong>This page</strong> — the full current page</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="quizScope" id="quizScopeSoFar" value="so_far">
+                            <label class="form-check-label" for="quizScopeSoFar"><strong>What I've read so far</strong> — from page 1 up to this page</label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="quiz-generate-btn" onclick="generateQuiz()">Generate quiz</button>
+                </div>
+                <div id="quiz-loading" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 mb-0">Generating quiz...</p>
+                    </div>
+                </div>
+                <div id="quiz-questions-wrap" style="display: none;">
+                    <p class="text-muted small mb-3" id="quiz-scope-label"></p>
+                    <form id="quiz-form">
+                        <div id="quiz-questions-container"></div>
+                        <button type="button" class="btn btn-primary mt-3" onclick="submitQuiz()">Submit answers</button>
+                    </form>
+                </div>
+                <div id="quiz-results-wrap" style="display: none;">
+                    <div class="alert mb-3" id="quiz-results-alert" role="alert"></div>
+                    <div id="quiz-results-detail"></div>
+                    <button type="button" class="btn btn-outline-primary mt-3" onclick="quizBackToScope()">Try another quiz</button>
+                </div>
+                <div id="quiz-error" style="display: none;">
+                    <div class="alert alert-danger" role="alert">
+                        <p id="quiz-error-message" class="mb-0"></p>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="quizBackToScope()">Back</button>
+                </div>
             </div>
         </div>
     </div>
@@ -6691,9 +6747,143 @@ function updateAIChatSelectionStatus(text) {
     }
 }
 
-// Placeholder for services not yet implemented (e.g. Test your knowledge, Ah Ah Moments)
+// Placeholder for services not yet implemented (e.g. Ah Ah Moments)
 function readerServiceComingSoon(serviceName) {
     alert(serviceName + ' — coming soon. We\'ll add this in a later update.');
+}
+
+// --- Test your knowledge (Quiz) ---
+let quizQuestionsData = []; // Store questions from API for scoring
+
+function openQuizModal() {
+    document.getElementById('quiz-choose-scope').style.display = 'block';
+    document.getElementById('quiz-loading').style.display = 'none';
+    document.getElementById('quiz-questions-wrap').style.display = 'none';
+    document.getElementById('quiz-results-wrap').style.display = 'none';
+    document.getElementById('quiz-error').style.display = 'none';
+    document.getElementById('quizScopeSection').checked = true;
+    var modal = new bootstrap.Modal(document.getElementById('quizModal'));
+    modal.show();
+}
+
+function getQuizScopeLabel() {
+    var scope = document.querySelector('input[name="quizScope"]:checked').value;
+    if (scope === 'section') return 'Quiz on this section (Section ' + (currentSectionIndex + 1) + ')';
+    if (scope === 'page') return 'Quiz on this page (Page ' + currentPage + ')';
+    return 'Quiz on what you\'ve read so far (Pages 1–' + currentPage + ')';
+}
+
+function generateQuiz() {
+    var token = getAuthToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    var scope = document.querySelector('input[name="quizScope"]:checked').value;
+    document.getElementById('quiz-choose-scope').style.display = 'none';
+    document.getElementById('quiz-loading').style.display = 'block';
+    document.getElementById('quiz-questions-wrap').style.display = 'none';
+    document.getElementById('quiz-results-wrap').style.display = 'none';
+    document.getElementById('quiz-error').style.display = 'none';
+
+    var payload = {
+        book_id: bookId,
+        scope: scope,
+        page_number: currentPage,
+        section_number: scope === 'section' ? (currentSectionIndex + 1) : 1
+    };
+
+    fetch('/api/reader/quiz', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+        if (!res.ok) {
+            return res.text().then(function(t) { throw new Error(t || 'Failed to generate quiz'); });
+        }
+        return res.json();
+    })
+    .then(function(data) {
+        document.getElementById('quiz-loading').style.display = 'none';
+        quizQuestionsData = data.questions || [];
+        if (quizQuestionsData.length === 0) {
+            document.getElementById('quiz-error').style.display = 'block';
+            document.getElementById('quiz-error-message').textContent = 'No questions were generated. Try a different scope or try again.';
+            document.getElementById('quiz-choose-scope').style.display = 'block';
+            return;
+        }
+        document.getElementById('quiz-scope-label').textContent = getQuizScopeLabel();
+        var container = document.getElementById('quiz-questions-container');
+        container.innerHTML = '';
+        quizQuestionsData.forEach(function(q, i) {
+            var div = document.createElement('div');
+            div.className = 'mb-4';
+            div.innerHTML = '<p class="fw-bold">' + (i + 1) + '. ' + escapeHtml(q.question) + '</p>';
+            var opts = q.options || [];
+            opts.forEach(function(opt, j) {
+                var id = 'quiz-q' + i + '-opt' + j;
+                div.innerHTML += '<div class="form-check"><input class="form-check-input" type="radio" name="quiz-q' + i + '" id="' + id + '" value="' + j + '"><label class="form-check-label" for="' + id + '">' + escapeHtml(opt) + '</label></div>';
+            });
+            container.appendChild(div);
+        });
+        document.getElementById('quiz-questions-wrap').style.display = 'block';
+    })
+    .catch(function(err) {
+        document.getElementById('quiz-loading').style.display = 'none';
+        document.getElementById('quiz-error').style.display = 'block';
+        document.getElementById('quiz-error-message').textContent = err.message || 'Something went wrong. Please try again.';
+        document.getElementById('quiz-choose-scope').style.display = 'block';
+    });
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+function submitQuiz() {
+    var correct = 0;
+    var detail = [];
+    quizQuestionsData.forEach(function(q, i) {
+        var selected = document.querySelector('input[name="quiz-q' + i + '"]:checked');
+        var chosen = selected ? parseInt(selected.value, 10) : -1;
+        var right = (chosen === q.correct_index);
+        if (right) correct++;
+        var opts = q.options || [];
+        var correctText = opts[q.correct_index] || '';
+        detail.push({
+            question: q.question,
+            chosen: chosen,
+            correct_index: q.correct_index,
+            correctText: correctText,
+            right: right
+        });
+    });
+    var total = quizQuestionsData.length;
+    document.getElementById('quiz-questions-wrap').style.display = 'none';
+    document.getElementById('quiz-results-wrap').style.display = 'block';
+    var alertEl = document.getElementById('quiz-results-alert');
+    alertEl.className = correct === total ? 'alert alert-success' : 'alert alert-info';
+    alertEl.textContent = 'You got ' + correct + ' out of ' + total + ' correct.';
+    var detailEl = document.getElementById('quiz-results-detail');
+    detailEl.innerHTML = detail.map(function(d, i) {
+        var icon = d.right ? '✓' : '✗';
+        var cls = d.right ? 'text-success' : 'text-danger';
+        return '<p class="small ' + cls + '">' + icon + ' Q' + (i + 1) + ': ' + escapeHtml(d.question) + (d.right ? '' : ' — Correct: ' + escapeHtml(d.correctText)) + '</p>';
+    }).join('');
+}
+
+function quizBackToScope() {
+    document.getElementById('quiz-results-wrap').style.display = 'none';
+    document.getElementById('quiz-error').style.display = 'none';
+    document.getElementById('quiz-choose-scope').style.display = 'block';
+    document.getElementById('quiz-questions-wrap').style.display = 'none';
 }
 
 function requestHelp() {

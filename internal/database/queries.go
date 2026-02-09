@@ -297,6 +297,32 @@ func GetSectionByPage(bookID string, page int) (*models.Section, error) {
 	return nil, nil
 }
 
+// GetSectionsByPageNumber returns sections for a page number when sections are stored by page_number
+// (same fallback as get_sections_for_page RPC). Use when GetPageByNumber returns no rows.
+func GetSectionsByPageNumber(pageNumber int) ([]models.Section, error) {
+	query := `SELECT id, content, page_number, section_number FROM sections 
+	         WHERE page_number = ?
+	         ORDER BY section_number`
+	rows, err := DB.Query(query, pageNumber)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []models.Section
+	for rows.Next() {
+		var s models.Section
+		var pageNum, sectionNum int
+		if err := rows.Scan(&s.ID, &s.Content, &pageNum, &sectionNum); err != nil {
+			continue
+		}
+		s.PageID = fmt.Sprintf("page-%d", pageNum)
+		s.PageNumber = pageNum
+		s.SectionNumber = sectionNum
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
 // Glossary Queries
 
 // GetGlossaryTerm retrieves a glossary term

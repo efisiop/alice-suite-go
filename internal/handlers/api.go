@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -91,6 +92,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/reader/prompts", middleware.RequireAuth(http.HandlerFunc(HandleReaderPrompts)))
 	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptDismiss)))
 	mux.Handle("/api/reader/prompt-accept", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptAccept)))
+	mux.Handle("/api/reader/quiz", middleware.RequireAuth(http.HandlerFunc(HandleReaderQuiz)))
 	mux.Handle("/api/consultant/prompt-retrigger", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantPromptRetrigger)))
 
 	// Help requests API
@@ -713,6 +715,110 @@ func HandleReaderPromptAccept(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"status": "accepted"})
+}
+
+// HandleReaderQuiz handles POST /api/reader/quiz — generates a quiz from the given scope (section, page, or so_far).
+// Body: { "book_id": "...", "scope": "section"|"page"|"so_far", "page_number": 1, "section_number": 1 (optional, for scope=section) }
+func HandleReaderQuiz(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		BookID        string `json:"book_id"`
+		Scope         string `json:"scope"` // "section", "page", "so_far"
+		PageNumber    int    `json:"page_number"`
+		SectionNumber int    `json:"section_number"` // 1-based, used when scope=section
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.BookID == "" || req.PageNumber < 1 {
+		http.Error(w, "book_id and page_number (>=1) required", http.StatusBadRequest)
+		return
+	}
+	scope := strings.ToLower(strings.TrimSpace(req.Scope))
+	if scope != "section" && scope != "page" && scope != "so_far" {
+		http.Error(w, "scope must be section, page, or so_far", http.StatusBadRequest)
+		return
+	}
+
+	// getPageSections returns sections for the given page, using the same fallback as the reader RPC:
+	// try pages+sections by book_id/page_number first, then sections by page_number only.
+	getPageSections := func(bookID string, pageNum int) ([]models.Section, bool) {
+		page, err := bookService.GetPage(bookID, pageNum)
+		if err == nil && page != nil && len(page.Sections) > 0 {
+			return page.Sections, true
+		}
+		sections, err := database.GetSectionsByPageNumber(pageNum)
+		if err != nil || len(sections) == 0 {
+			return nil, false
+		}
+		return sections, true
+	}
+
+	var passage string
+	switch scope {
+	case "section":
+		sections, ok := getPageSections(req.BookID, req.PageNumber)
+		if !ok || len(sections) == 0 {
+			http.Error(w, "Page not found", http.StatusNotFound)
+			return
+		}
+		secIdx := req.SectionNumber - 1
+		if secIdx < 0 {
+			secIdx = 0
+		}
+		if secIdx >= len(sections) {
+			secIdx = len(sections) - 1
+		}
+		passage = sections[secIdx].Content
+	case "page":
+		sections, ok := getPageSections(req.BookID, req.PageNumber)
+		if !ok || len(sections) == 0 {
+			http.Error(w, "Page not found", http.StatusNotFound)
+			return
+		}
+		for _, sec := range sections {
+			passage += sec.Content + "\n\n"
+		}
+		passage = strings.TrimSpace(passage)
+	case "so_far":
+		for p := 1; p <= req.PageNumber; p++ {
+			sections, ok := getPageSections(req.BookID, p)
+			if !ok {
+				continue
+			}
+			for _, sec := range sections {
+				passage += sec.Content + "\n\n"
+			}
+		}
+		passage = strings.TrimSpace(passage)
+	}
+
+	if passage == "" {
+		http.Error(w, "No content available for the selected scope", http.StatusBadRequest)
+		return
+	}
+
+	questions, err := aiService.GenerateQuizFromPassage(passage)
+	if err != nil {
+		log.Printf("HandleReaderQuiz GenerateQuizFromPassage error: %v", err)
+		if errors.Is(err, services.ErrAIServiceUnavailable) {
+			http.Error(w, "Quiz generation is temporarily unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Failed to generate quiz: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"questions": questions})
 }
 
 // HandleInteractions handles GET/POST /rest/v1/interactions
