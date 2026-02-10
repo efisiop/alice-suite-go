@@ -1570,7 +1570,7 @@ html {
                             <div class="accordion-body pt-0 pb-2 px-3">
                                 <ul class="list-unstyled mb-0">
                                     <li class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="readerServiceComingSoon('Ah Ah Moments')">Ah Ah Moments</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="openAhAhMomentsModal()">Ah Ah Moments</button>
                                     </li>
                                     <li class="mb-2">
                                         <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="readerServiceComingSoon('Lectures in town')">Lectures in town</button>
@@ -1705,6 +1705,50 @@ html {
                     </div>
                     <button type="button" class="btn btn-outline-secondary" onclick="quizBackToScope()">Back</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ah Ah Moments Modal (z-index above selection toolbar so the textarea is typeable) -->
+<style>#ahAhMomentsModal.modal { z-index: 1070 !important; }</style>
+<div class="modal fade" id="ahAhMomentsModal" tabindex="-1" aria-labelledby="ahAhMomentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ahAhMomentsModalLabel">✨ Ah Ah Moments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Share your successes and realizations with other readers. Others can see moments you mark as shared.</p>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Add your moment</h6>
+                        <div class="mb-2">
+                            <label for="ahah-content" class="form-label">What was your ah ah moment?</label>
+                            <textarea class="form-control" id="ahah-content" rows="3" placeholder="e.g. I finally understood why Alice followed the rabbit..."></textarea>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label for="ahah-page" class="form-label small">Page (optional)</label>
+                                <input type="number" class="form-control form-control-sm" id="ahah-page" min="1" placeholder="Page">
+                            </div>
+                            <div class="col-6">
+                                <label for="ahah-section" class="form-label small">Section (optional)</label>
+                                <input type="number" class="form-control form-control-sm" id="ahah-section" min="1" placeholder="Section">
+                            </div>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="ahah-shared" checked>
+                            <label class="form-check-label" for="ahah-shared">Share with other readers</label>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="submitAhAhMoment()">Share moment</button>
+                    </div>
+                </div>
+                <h6 class="mb-2">Moments from you and other readers</h6>
+                <div id="ahah-feed-loading" class="text-muted small">Loading...</div>
+                <div id="ahah-feed" class="d-none"></div>
+                <div id="ahah-feed-empty" class="d-none text-muted small">No moments yet. Be the first to share one!</div>
             </div>
         </div>
     </div>
@@ -6884,6 +6928,117 @@ function quizBackToScope() {
     document.getElementById('quiz-error').style.display = 'none';
     document.getElementById('quiz-choose-scope').style.display = 'block';
     document.getElementById('quiz-questions-wrap').style.display = 'none';
+}
+
+// --- Ah Ah Moments ---
+function openAhAhMomentsModal() {
+    document.getElementById('ahah-content').value = '';
+    document.getElementById('ahah-page').value = currentPage || '';
+    document.getElementById('ahah-section').value = (typeof currentSectionIndex === 'number' ? currentSectionIndex + 1 : '');
+    document.getElementById('ahah-shared').checked = true;
+    var modalEl = document.getElementById('ahAhMomentsModal');
+    var modal = new bootstrap.Modal(modalEl);
+    // Hide selection toolbar and overlay so they don't sit on top and block typing
+    var toolbar = document.getElementById('selection-toolbar');
+    var indicator = document.getElementById('selection-mode-indicator');
+    var overlay = document.getElementById('touch-selection-overlay');
+    if (toolbar) { toolbar.style.display = 'none'; }
+    if (indicator) { indicator.style.display = 'none'; }
+    if (overlay) { overlay.classList.remove('active'); }
+    modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        if (toolbar) { toolbar.style.display = ''; }
+        if (indicator) { indicator.style.display = ''; }
+    }, { once: true });
+    modal.show();
+    loadAhAhMomentsFeed();
+}
+
+function loadAhAhMomentsFeed() {
+    var token = getAuthToken();
+    if (!token) return;
+    var feedEl = document.getElementById('ahah-feed');
+    var loadingEl = document.getElementById('ahah-feed-loading');
+    var emptyEl = document.getElementById('ahah-feed-empty');
+    feedEl.classList.add('d-none');
+    feedEl.innerHTML = '';
+    emptyEl.classList.add('d-none');
+    loadingEl.classList.remove('d-none');
+    fetch('/api/reader/ah-ah-moments?book_id=' + encodeURIComponent(bookId) + '&limit=30', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(res) { return res.ok ? res.json() : Promise.reject(new Error('Failed to load moments')); })
+    .then(function(data) {
+        loadingEl.classList.add('d-none');
+        var moments = data.moments || [];
+        if (moments.length === 0) {
+            emptyEl.classList.remove('d-none');
+            return;
+        }
+        moments.forEach(function(m) {
+            var card = document.createElement('div');
+            card.className = 'card mb-2';
+            var who = m.is_mine ? 'You' : (m.author_first_name || 'A reader');
+            var pageInfo = '';
+            if (m.page_number) pageInfo = ' · Page ' + m.page_number;
+            if (m.section_number) pageInfo += ', Section ' + m.section_number;
+            var sharedLabel = m.shared ? ' · Shared' : '';
+            var dateStr = '';
+            if (m.created_at) {
+                try {
+                    var d = new Date(m.created_at);
+                    if (!isNaN(d.getTime())) dateStr = ' · ' + d.toLocaleDateString();
+                } catch (e) {}
+            }
+            card.innerHTML = '<div class="card-body py-2"><p class="mb-1 small text-muted">' + escapeHtml(who) + pageInfo + sharedLabel + dateStr + '</p><p class="mb-0">' + escapeHtml(m.content) + '</p></div>';
+            feedEl.appendChild(card);
+        });
+        feedEl.classList.remove('d-none');
+    })
+    .catch(function() {
+        loadingEl.classList.add('d-none');
+        emptyEl.textContent = 'Could not load moments. Try again.';
+        emptyEl.classList.remove('d-none');
+    });
+}
+
+function submitAhAhMoment() {
+    var token = getAuthToken();
+    if (!token) return;
+    var content = document.getElementById('ahah-content').value.trim();
+    if (!content) {
+        alert('Please write your moment.');
+        return;
+    }
+    var pageVal = document.getElementById('ahah-page').value.trim();
+    var sectionVal = document.getElementById('ahah-section').value.trim();
+    var payload = {
+        book_id: bookId,
+        content: content,
+        shared: document.getElementById('ahah-shared').checked
+    };
+    if (pageVal) payload.page_number = parseInt(pageVal, 10);
+    if (sectionVal) payload.section_number = parseInt(sectionVal, 10);
+    fetch('/api/reader/ah-ah-moments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+        if (!res.ok) return res.text().then(function(t) { throw new Error(t || 'Failed to share'); });
+        return res.json();
+    })
+    .then(function() {
+        document.getElementById('ahah-content').value = '';
+        loadAhAhMomentsFeed();
+    })
+    .catch(function(err) {
+        alert(err.message || 'Could not share moment.');
+    });
 }
 
 function requestHelp() {

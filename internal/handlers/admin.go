@@ -26,6 +26,8 @@ func SetupAdminRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/admin/settings", middleware.RequireAdmin(http.HandlerFunc(HandleAdminSettings)))
 	// Admin API: email status (for debugging why login emails might not send)
 	mux.Handle("/api/admin/email-status", middleware.RequireAdmin(http.HandlerFunc(HandleAdminEmailStatus)))
+	// Admin API: last simulated email (when SIMULATE_LOGIN_EMAILS=true on localhost)
+	mux.Handle("/api/admin/last-simulated-email", middleware.RequireAdmin(http.HandlerFunc(HandleAdminLastSimulatedEmail)))
 
 	// Admin dashboard and pages (protected)
 	mux.Handle("/admin", middleware.RequireAdmin(http.HandlerFunc(HandleAdminDashboard)))
@@ -180,37 +182,68 @@ func HandleAdminEmailStatus(w http.ResponseWriter, r *http.Request) {
 		recipient = "efisio@mylivemail.net"
 	}
 	onRender := os.Getenv("RENDER") == "true"
+	simulationMode := email.IsSimulationMode()
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpUser := os.Getenv("SMTP_USER")
 	smtpConfigured := smtpHost != "" && smtpUser != "" && os.Getenv("SMTP_PASSWORD") != ""
 	willSend := enabled && email.ShouldSendLoginEmails()
+	hint := emailStatusHint(enabled, onRender, smtpConfigured, willSend, simulationMode)
+	if simulationMode && enabled {
+		hint = "Simulation mode: login emails are written to " + email.SimulatedEmailPath() + " (no real email sent)."
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"login_email_notifications_enabled": enabled,
 		"login_email_recipient":              recipient,
 		"on_render":                         onRender,
+		"simulation_mode":                   simulationMode,
 		"smtp_configured":                   smtpConfigured,
 		"smtp_host_set":                     smtpHost != "",
 		"smtp_user_set":                     smtpUser != "",
 		"will_send_on_next_login":           willSend,
-		"hint":                              emailStatusHint(enabled, onRender, smtpConfigured, willSend),
+		"hint":                              hint,
+		"simulated_email_path":             email.SimulatedEmailPath(),
 	})
 }
 
-func emailStatusHint(enabled, onRender, smtpConfigured, willSend bool) string {
+func emailStatusHint(enabled, onRender, smtpConfigured, willSend, simulationMode bool) string {
+	if simulationMode && enabled {
+		return "Simulation: emails written to file (set SIMULATE_LOGIN_EMAILS=true)."
+	}
 	if willSend {
 		return "Emails will be sent on reader/consultant login."
 	}
 	if !enabled {
 		return "Turn on the toggle in Email notifications to enable."
 	}
-	if !onRender {
-		return "Not running on Render (RENDER not true). Emails only send on Render."
+	if !onRender && !simulationMode {
+		return "Not running on Render. Set SIMULATE_LOGIN_EMAILS=true locally to simulate, or deploy to Render for real emails."
 	}
-	if !smtpConfigured {
+	if !smtpConfigured && !simulationMode {
 		return "Set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in Render Environment."
 	}
 	return "Check Render logs for send errors."
+}
+
+// HandleAdminLastSimulatedEmail returns the contents of the last simulated login email file (admin-only).
+// Returns 404 if simulation is off or file does not exist.
+func HandleAdminLastSimulatedEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !email.IsSimulationMode() {
+		http.Error(w, "Simulation not enabled", http.StatusNotFound)
+		return
+	}
+	path := email.SimulatedEmailPath()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		http.Error(w, "No simulated email yet (log in as reader or consultant to generate one)", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write(body)
 }
 
 // HandleAdminLogin handles GET/POST /admin/login

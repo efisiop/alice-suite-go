@@ -307,6 +307,273 @@
 .ai-response-content br {
     line-height: 1.8;
 }
+
+/* Reader snapshot: elevated profile strip */
+.reader-snapshot-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid #0d6efd;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+.reader-snapshot-card .card-body {
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+}
+.reader-snapshot-card strong { color: #1e293b; font-weight: 600; }
+.reader-snapshot-card .snapshot-status {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.reader-snapshot-card .snapshot-status.online { background: #dcfce7; color: #166534; }
+.reader-snapshot-card .snapshot-status.offline { background: #f1f5f9; color: #64748b; }
+.reader-snapshot-card input.form-control-sm {
+    font-size: 0.875rem;
+    border-radius: 6px;
+}
+
+/* Accordion: elevated subject panels */
+#readerInspectorAccordion {
+    --accordion-radius: 10px;
+    --accordion-border: 1px solid #e2e8f0;
+}
+#readerInspectorAccordion .accordion-item {
+    border: var(--accordion-border);
+    border-radius: var(--accordion-radius) !important;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+#readerInspectorAccordion .accordion-item:first-of-type { border-radius: var(--accordion-radius) var(--accordion-radius) 0 0 !important; }
+#readerInspectorAccordion .accordion-item:last-of-type { border-radius: 0 0 var(--accordion-radius) var(--accordion-radius) !important; margin-bottom: 0; }
+#readerInspectorAccordion .accordion-item:only-of-type { border-radius: var(--accordion-radius) !important; }
+#readerInspectorAccordion .accordion-button {
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    padding: 0.9rem 1.1rem;
+    background: #fff;
+    color: #1e293b;
+    border: none;
+    box-shadow: none;
+}
+#readerInspectorAccordion .accordion-button:not(.collapsed) {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #0d6efd;
+    border-bottom: 1px solid #e2e8f0;
+}
+#readerInspectorAccordion .accordion-button:hover { background: #f8fafc; }
+#readerInspectorAccordion .accordion-button:not(.collapsed):hover { background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%); }
+#readerInspectorAccordion .accordion-button::after { filter: none; opacity: 0.6; }
+#readerInspectorAccordion .accordion-collapse { border: none; }
+#readerInspectorAccordion .accordion-body {
+    background: #fff;
+    padding: 1.1rem;
+    border-top: none;
+}
+
+/* Cards inside accordion: consistent elevation */
+#readerInspectorAccordion .card {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+#readerInspectorAccordion .card-header {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #334155;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.6rem 0.85rem;
+}
+#readerInspectorAccordion .card-body { padding: 0.85rem; }
+#readerInspectorAccordion .card-header.bg-primary,
+#readerInspectorAccordion .card-header.bg-info,
+#readerInspectorAccordion .card-header.bg-success {
+    border-radius: 8px 8px 0 0;
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+#readerInspectorAccordion .card:has(.bg-primary) { overflow: hidden; }
+#readerInspectorAccordion .card:has(.bg-info) { overflow: hidden; }
+#readerInspectorAccordion .card:has(.bg-success) { overflow: hidden; }
+
+/* Stat cards: refined blocks */
+#readerInspectorAccordion .stat-card {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 0.65rem 0.85rem;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+#readerInspectorAccordion .stat-card:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-color: #cbd5e1;
+}
+#readerInspectorAccordion .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+#readerInspectorAccordion .stat-value-small {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+}
+
+/* Activity timeline: elevated list */
+.activity-timeline {
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    background: #fafbfc;
+}
+.activity-item {
+    border-left: 3px solid #0d6efd;
+    padding: 0.65rem 0.9rem;
+    margin-bottom: 0.5rem;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.activity-item:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-left-color: #0a58ca;
+}
+.activity-item .activity-time {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+.activity-item .activity-detail {
+    font-size: 0.875rem;
+    color: #334155;
+    line-height: 1.45;
+}
+
+/* Breakdown bars: smoother */
+.activity-breakdown { margin-top: 0.85rem; }
+.breakdown-bar-wrap {
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+}
+.breakdown-label {
+    font-size: 0.78rem;
+    color: #64748b;
+    min-width: 95px;
+    font-weight: 500;
+}
+.breakdown-bar {
+    flex: 1;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.breakdown-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+.breakdown-value {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    min-width: 28px;
+    text-align: right;
+}
+
+/* Calendar: refined controls */
+.inspector-calendar-nav-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    transition: background 0.2s, border-color 0.2s;
+}
+.inspector-calendar-nav-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+.inspector-activity-day {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    transition: transform 0.15s;
+}
+.inspector-activity-day:hover { transform: scale(1.1); }
+.recent-events-list {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.75rem;
+}
+.recent-event-item {
+    padding: 0.45rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.8rem;
+}
+.recent-event-time { color: #64748b; font-weight: 500; }
+.recent-event-detail { color: #334155; }
+
+/* Back button & page title */
+.back-button .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    transition: background 0.2s, color 0.2s;
+}
+.back-button .btn:hover {
+    background: #f1f5f9;
+    color: #0d6efd;
+    border-color: #cbd5e1;
+}
+#pageTitle {
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+}
+.inspector-subtitle {
+    color: #64748b !important;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-weight: 500;
+}
+#readerInspectorAccordion .btn-sm {
+    border-radius: 6px;
+    font-weight: 500;
+}
+#readerInspectorAccordion .btn-outline-primary {
+    border-color: #cbd5e1;
+    color: #475569;
+}
+#readerInspectorAccordion .btn-outline-primary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0d6efd;
+}
+
+/* Empty / loading states */
+#readerInspectorAccordion .text-muted:only-child,
+.activity-timeline .text-muted { color: #94a3b8 !important; font-style: italic; }
 </style>
 {{end}}
 
@@ -326,222 +593,240 @@
     </div>
     
     <div id="contentArea" style="display: none;">
-        <h1 class="mb-4" id="pageTitle">Reader Inspector</h1>
-        
-        <!-- Top row: Activity over time (left) + Reader Information form (right, top) -->
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <!-- Activity over time (calendar + recent events) -->
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Activity over time</h5>
-                        <div class="small text-muted">
-                            <span class="me-1" style="background:#28a745;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>High
-                            <span class="me-1 ms-2" style="background:#17a2b8;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Med
-                            <span class="me-1 ms-1" style="background:#6c757d;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Low
-                        </div>
+        <h1 class="mb-2" id="pageTitle">Reader Inspector</h1>
+        <p class="text-muted mb-4 inspector-subtitle">Focus on one subject at a time — expand a section below to see details.</p>
+
+        <!-- Compact reader snapshot (always visible) -->
+        <div class="card mb-4 reader-snapshot-card">
+            <div class="card-body py-3 px-4">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-md-auto d-flex align-items-center flex-wrap gap-2">
+                        <strong id="readerName">–</strong>
+                        <span id="readerStatusWrap"><span class="snapshot-status offline" id="readerStatus">–</span></span>
                     </div>
-                    <div class="card-body">
-                        <div id="inspectorCalendarWrap">
-                            <div class="inspector-calendar-container">
-                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-back" title="Go back 30 days">◀</button>
-                                <span class="small text-muted" id="inspector-calendar-range">–</span>
-                                <div class="inspector-activity-calendar" id="inspectorActivityCalendar">
-                                    <!-- Days rendered by JS -->
+                    <div class="col-12 col-md">
+                        <span class="small text-muted" id="readerEmail">–</span>
+                    </div>
+                    <div class="col-12 col-md-auto small text-muted">
+                        <span>Account</span> <span id="readerCreated" class="text-dark">–</span>
+                    </div>
+                    <div class="col-12 col-md-auto d-flex align-items-center flex-wrap gap-2">
+                        <span class="small text-muted">Purchase</span>
+                        <input type="date" class="form-control form-control-sm" id="purchaseDateInput" style="width: 132px;">
+                        <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
+                        <span class="small text-muted" id="purchaseDateDisplay">Not set</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subjects: one open at a time to reduce overwhelm -->
+        <div class="accordion mb-4" id="readerInspectorAccordion">
+            <!-- 1. Overview (activity over time + summary stats) -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#subject-overview" aria-expanded="true" aria-controls="subject-overview">
+                        📊 Overview — activity &amp; summary
+                    </button>
+                </h2>
+                <div id="subject-overview" class="accordion-collapse collapse show" data-bs-parent="#readerInspectorAccordion">
+                    <div class="accordion-body">
+                        <div class="row">
+                            <div class="col-lg-8 mb-3 mb-lg-0">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <h6 class="mb-0">Activity over time</h6>
+                                        <div class="small text-muted">
+                                            <span class="me-1" style="background:#28a745;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>High
+                                            <span class="me-1 ms-2" style="background:#17a2b8;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Med
+                                            <span class="me-1 ms-1" style="background:#6c757d;width:8px;height:8px;border-radius:2px;display:inline-block;"></span>Low
+                                        </div>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div id="inspectorCalendarWrap">
+                                            <div class="inspector-calendar-container">
+                                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-back" title="Go back 30 days">◀</button>
+                                                <span class="small text-muted" id="inspector-calendar-range">–</span>
+                                                <div class="inspector-activity-calendar" id="inspectorActivityCalendar"></div>
+                                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-forward" title="Go forward 30 days">▶</button>
+                                            </div>
+                                            <div class="recent-events-list" id="recentEventsList">
+                                                <p class="text-muted small mb-0">Loading recent events...</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <button type="button" class="inspector-calendar-nav-btn" id="inspector-cal-forward" title="Go forward 30 days">▶</button>
                             </div>
-                            <div class="recent-events-list" id="recentEventsList">
-                                <p class="text-muted small mb-0">Loading recent events...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <!-- Reader Information: one well-organized form (top right) -->
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">Reader Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="reader-info-form">
-                            <div class="reader-info-row">
-                                <span class="reader-info-label">Name</span>
-                                <span class="reader-info-value" id="readerName">–</span>
-                            </div>
-                            <div class="reader-info-row">
-                                <span class="reader-info-label">Email</span>
-                                <span class="reader-info-value" id="readerEmail">–</span>
-                            </div>
-                            <div class="reader-info-row">
-                                <span class="reader-info-label">Account created</span>
-                                <span class="reader-info-value" id="readerCreated">–</span>
-                            </div>
-                            <div class="reader-info-row">
-                                <span class="reader-info-label">Status</span>
-                                <span class="reader-info-value" id="readerStatus">–</span>
-                            </div>
-                            <div class="reader-info-row">
-                                <span class="reader-info-label">Book purchase date</span>
-                                <div class="reader-info-actions">
-                                    <input type="date" class="form-control form-control-sm" id="purchaseDateInput" style="max-width: 140px;">
-                                    <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
-                                    <span class="text-muted small" id="purchaseDateDisplay">Not set</span>
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Activity summary (30 days)</h6>
+                                        <small class="text-muted" id="lastUpdated">–</small>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <div class="stat-card py-2">
+                                                    <div class="stat-label small">Total</div>
+                                                    <div class="stat-value-small" id="totalActivities">0</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card py-2">
+                                                    <div class="stat-label small">Active days</div>
+                                                    <div class="stat-value-small" id="activeDays">0</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card py-2">
+                                                    <div class="stat-label small">Word lookups</div>
+                                                    <div class="stat-value-small" id="wordLookups">0</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card py-2">
+                                                    <div class="stat-label small">Page views</div>
+                                                    <div class="stat-value-small" id="pageViews">0</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="activity-breakdown mt-2" id="activityBreakdown">
+                                            <div class="breakdown-bar-wrap">
+                                                <span class="breakdown-label">Total</span>
+                                                <div class="breakdown-bar"><div class="breakdown-bar-fill bg-primary" id="breakdownTotal" style="width: 0%;"></div></div>
+                                                <span class="breakdown-value" id="breakdownTotalVal">0</span>
+                                            </div>
+                                            <div class="breakdown-bar-wrap">
+                                                <span class="breakdown-label">Word lookups</span>
+                                                <div class="breakdown-bar"><div class="breakdown-bar-fill bg-info" id="breakdownWords" style="width: 0%;"></div></div>
+                                                <span class="breakdown-value" id="breakdownWordsVal">0</span>
+                                            </div>
+                                            <div class="breakdown-bar-wrap">
+                                                <span class="breakdown-label">Page views</span>
+                                                <div class="breakdown-bar"><div class="breakdown-bar-fill bg-success" id="breakdownPages" style="width: 0%;"></div></div>
+                                                <span class="breakdown-value" id="breakdownPagesVal">0</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- AI Insight for this reader -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">AI insight for this reader</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <select id="ai-insight-hours" class="form-select form-select-sm" style="width: auto;">
-                        <option value="168">Last 7 days</option>
-                        <option value="72">Last 3 days</option>
-                        <option value="24">Last 24 hours</option>
-                    </select>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="ai-insight-btn" onclick="generateAIInsight()">Generate insight</button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="ai-insight-loading" class="text-muted small" style="display: none;">Analysing this reader...</div>
-                <div id="ai-insight-error" class="text-danger small" style="display: none;"></div>
-                <div id="ai-insight-result" class="small" style="display: none; white-space: pre-wrap;"></div>
-                <div id="ai-insight-placeholder" class="text-muted small">Click "Generate insight" to get an AI summary of this reader's activity and how you can assist.</div>
-            </div>
-        </div>
-
-        <!-- Suggest help to reader (AI prompt) - consultant-originated suggestion shown to reader on that page -->
-        <div class="card mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">💡 Suggest help to reader (AI prompt)</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">Create a short suggestion that the reader will see when they open this page/section. It will look like an AI-style tip and can nudge them to use AI Help on that part of the text.</p>
-                <div class="row mb-3">
-                    <div class="col-md-2">
-                        <label for="prompt-page-number" class="form-label small">Page</label>
-                        <input type="number" class="form-control form-control-sm" id="prompt-page-number" min="1" value="1" placeholder="e.g. 5">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="prompt-section" class="form-label small">Section</label>
-                        <select class="form-select form-select-sm" id="prompt-section">
-                            <option value="">Whole page</option>
-                            <option value="1">Section 1</option>
-                            <option value="2">Section 2</option>
-                            <option value="3">Section 3</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="prompt-text" class="form-label small">Suggestion text (shown to reader as AI-style tip)</label>
-                    <textarea class="form-control" id="prompt-text" rows="3" placeholder="e.g. You might find it helpful to use AI Help on this passage to practice conditional sentences."></textarea>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm" id="save-prompt-btn" onclick="saveConsultantPrompt()">Save prompt</button>
-                <span class="ms-2 text-muted small" id="prompt-save-status"></span>
-                <hr class="my-3">
-                <div class="small fw-bold mb-2">Existing prompts for this reader</div>
-                <div id="consultant-prompts-list" style="max-height: 200px; overflow-y: auto;">
-                    <p class="text-muted small mb-0">Loading...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Activity Summary Section -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Activity Summary (Last 30 Days)</h5>
-                <small class="text-muted" id="lastUpdated">Last updated: -</small>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Total Activities</div>
-                            <div class="stat-value" id="totalActivities">0</div>
+            <!-- 2. Activity timeline (detailed list) -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-activity" aria-expanded="false" aria-controls="subject-activity">
+                        📋 Activity timeline — recent actions
+                    </button>
+                </h2>
+                <div id="subject-activity" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
+                    <div class="accordion-body">
+                        <div class="d-flex justify-content-end mb-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshAll()">Refresh</button>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Active Days</div>
-                            <div class="stat-value" id="activeDays">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Word Lookups</div>
-                            <div class="stat-value" id="wordLookups">0</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Page Views</div>
-                            <div class="stat-value" id="pageViews">0</div>
+                        <div class="activity-timeline" id="activitiesTimeline">
+                            <p class="text-muted">Loading activities...</p>
                         </div>
                     </div>
                 </div>
-                <!-- Visual activity breakdown bars -->
-                <div class="activity-breakdown" id="activityBreakdown">
-                    <div class="breakdown-bar-wrap">
-                        <span class="breakdown-label">Total</span>
-                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-primary" id="breakdownTotal" style="width: 0%;"></div></div>
-                        <span class="breakdown-value" id="breakdownTotalVal">0</span>
-                    </div>
-                    <div class="breakdown-bar-wrap">
-                        <span class="breakdown-label">Word lookups</span>
-                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-info" id="breakdownWords" style="width: 0%;"></div></div>
-                        <span class="breakdown-value" id="breakdownWordsVal">0</span>
-                    </div>
-                    <div class="breakdown-bar-wrap">
-                        <span class="breakdown-label">Page views</span>
-                        <div class="breakdown-bar"><div class="breakdown-bar-fill bg-success" id="breakdownPages" style="width: 0%;"></div></div>
-                        <span class="breakdown-value" id="breakdownPagesVal">0</span>
+            </div>
+
+            <!-- 3. AI & prompts (insight, suggest prompt, prompts list, AI interactions) -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-ai" aria-expanded="false" aria-controls="subject-ai">
+                        🤖 AI &amp; prompts — insight, suggestions, chats
+                    </button>
+                </h2>
+                <div id="subject-ai" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
+                    <div class="accordion-body">
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                <h6 class="mb-0">AI insight for this reader</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select id="ai-insight-hours" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="168">Last 7 days</option>
+                                        <option value="72">Last 3 days</option>
+                                        <option value="24">Last 24 hours</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="ai-insight-btn" onclick="generateAIInsight()">Generate insight</button>
+                                </div>
+                            </div>
+                            <div class="card-body py-2">
+                                <div id="ai-insight-loading" class="text-muted small" style="display: none;">Analysing...</div>
+                                <div id="ai-insight-error" class="text-danger small" style="display: none;"></div>
+                                <div id="ai-insight-result" class="small" style="display: none; white-space: pre-wrap;"></div>
+                                <div id="ai-insight-placeholder" class="text-muted small">Click "Generate insight" for an AI summary of this reader and how you can assist.</div>
+                            </div>
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white py-2">
+                                <h6 class="mb-0">💡 Suggest help to reader (AI prompt)</h6>
+                            </div>
+                            <div class="card-body py-2">
+                                <p class="text-muted small mb-2">Create a suggestion the reader will see as an AI-style tip on a page/section.</p>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-auto">
+                                        <label for="prompt-page-number" class="form-label small mb-0">Page</label>
+                                        <input type="number" class="form-control form-control-sm" id="prompt-page-number" min="1" value="1" placeholder="e.g. 5" style="width: 80px;">
+                                    </div>
+                                    <div class="col-auto">
+                                        <label for="prompt-section" class="form-label small mb-0">Section</label>
+                                        <select class="form-select form-select-sm" id="prompt-section" style="width: auto;">
+                                            <option value="">Whole page</option>
+                                            <option value="1">Section 1</option>
+                                            <option value="2">Section 2</option>
+                                            <option value="3">Section 3</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="prompt-text" class="form-label small mb-0">Suggestion text</label>
+                                    <textarea class="form-control form-control-sm" id="prompt-text" rows="2" placeholder="e.g. Use AI Help here to practice conditionals."></textarea>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm" id="save-prompt-btn" onclick="saveConsultantPrompt()">Save prompt</button>
+                                <span class="ms-2 text-muted small" id="prompt-save-status"></span>
+                                <hr class="my-2">
+                                <div class="small fw-bold mb-1">Existing prompts</div>
+                                <div id="consultant-prompts-list" style="max-height: 160px; overflow-y: auto;">
+                                    <p class="text-muted small mb-0">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">🤖 AI interactions</h6>
+                                <button class="btn btn-sm btn-light" onclick="loadAIInteractions()">Refresh</button>
+                            </div>
+                            <div class="card-body py-2">
+                                <div id="aiInteractionsContainer" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted small mb-0">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Recent Activities Section -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Activities</h5>
-                <button class="btn btn-sm btn-outline-primary" onclick="refreshAll()">Refresh All</button>
-            </div>
-            <div class="card-body">
-                <div class="activity-timeline" id="activitiesTimeline">
-                    <p class="text-muted">Loading activities...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Interactions Section -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">🤖 AI Interactions</h5>
-                <button class="btn btn-sm btn-light" onclick="loadAIInteractions()">Refresh</button>
-            </div>
-            <div class="card-body">
-                <div id="aiInteractionsContainer" style="max-height: 600px; overflow-y: auto;">
-                    <p class="text-muted">Loading AI interactions...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Help Requests Section -->
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">🆘 Help Requests</h5>
-                <button class="btn btn-sm btn-light" onclick="loadHelpRequests()">Refresh</button>
-            </div>
-            <div class="card-body">
-                <div id="helpRequestsContainer" style="max-height: 600px; overflow-y: auto;">
-                    <p class="text-muted">Loading help requests...</p>
+            <!-- 4. Help requests -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-help" aria-expanded="false" aria-controls="subject-help">
+                        🆘 Help requests — support needed
+                    </button>
+                </h2>
+                <div id="subject-help" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
+                    <div class="accordion-body">
+                        <div class="d-flex justify-content-end mb-2">
+                            <button class="btn btn-sm btn-outline-success" onclick="loadHelpRequests()">Refresh</button>
+                        </div>
+                        <div id="helpRequestsContainer" style="max-height: 500px; overflow-y: auto;">
+                            <p class="text-muted">Loading help requests...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -930,7 +1215,16 @@ function loadReaderDetails() {
             document.getElementById('readerCreated').textContent = 'N/A';
         }
         
-        document.getElementById('readerStatus').textContent = reader.is_verified ? '✓ Verified' : 'Not Verified';
+        const statusEl = document.getElementById('readerStatus');
+        const statusWrap = document.getElementById('readerStatusWrap');
+        if (reader.is_verified) {
+            statusEl.textContent = 'Verified';
+            statusEl.className = 'snapshot-status online';
+        } else {
+            statusEl.textContent = 'Not verified';
+            statusEl.className = 'snapshot-status offline';
+        }
+        if (statusWrap) statusWrap.replaceChildren(statusEl);
         
         // Set purchase date if available
         if (readingProgress) {

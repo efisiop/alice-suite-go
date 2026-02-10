@@ -188,6 +188,20 @@ type ReadingStats struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+// AhAhMoment represents a reader's "ah ah moment" (success or realization) that can be shared with other readers
+type AhAhMoment struct {
+	ID           string     `json:"id"`
+	UserID       string     `json:"user_id"`
+	BookID       string     `json:"book_id"`
+	Content      string     `json:"content"`
+	PageNumber   *int       `json:"page_number,omitempty"`
+	SectionNumber *int      `json:"section_number,omitempty"`
+	Shared       bool       `json:"shared"` // if true, visible to other readers in the feed
+	CreatedAt    time.Time  `json:"created_at"`
+	// Display only (joined): first name of author for feed
+	AuthorFirstName string `json:"author_first_name,omitempty"`
+}
+
 // DictionaryCache represents a cached definition from external dictionary API
 type DictionaryCache struct {
 	ID           string    `json:"id"`

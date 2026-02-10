@@ -12,6 +12,7 @@ alice-suite-server
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/simulated_login_email.txt
 *.db
 *.db-shm
 *.db-wal

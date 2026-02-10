@@ -59,6 +59,10 @@ func InitDB(dbPath string) error {
 	if err := ensureConsultantPromptsTable(); err != nil {
 		return fmt.Errorf("ensure consultant_prompts table: %w", err)
 	}
+	// Ensure ah_ah_moments table exists (migration 015)
+	if err := ensureAhAhMomentsTable(); err != nil {
+		return fmt.Errorf("ensure ah_ah_moments table: %w", err)
+	}
 
 	return nil
 }
@@ -92,6 +96,35 @@ func ensureConsultantPromptsTable() error {
 	}
 	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN dismissed_at TEXT`)
 	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN accepted_at TEXT`)
+	return nil
+}
+
+// ensureAhAhMomentsTable creates the ah_ah_moments table if it doesn't exist (migration 015)
+func ensureAhAhMomentsTable() error {
+	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS ah_ah_moments (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		book_id TEXT NOT NULL,
+		content TEXT NOT NULL,
+		page_number INTEGER,
+		section_number INTEGER,
+		shared INTEGER NOT NULL DEFAULT 1,
+		created_at TEXT NOT NULL DEFAULT (datetime('now')),
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+	)`)
+	if err != nil {
+		return err
+	}
+	for _, idx := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_ah_ah_moments_user_book ON ah_ah_moments(user_id, book_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_ah_ah_moments_book_shared ON ah_ah_moments(book_id, shared)`,
+		`CREATE INDEX IF NOT EXISTS idx_ah_ah_moments_created ON ah_ah_moments(created_at DESC)`,
+	} {
+		if _, err := DB.Exec(idx); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -93,6 +93,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptDismiss)))
 	mux.Handle("/api/reader/prompt-accept", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptAccept)))
 	mux.Handle("/api/reader/quiz", middleware.RequireAuth(http.HandlerFunc(HandleReaderQuiz)))
+	mux.Handle("/api/reader/ah-ah-moments", middleware.RequireAuth(http.HandlerFunc(HandleReaderAhAhMoments)))
 	mux.Handle("/api/consultant/prompt-retrigger", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantPromptRetrigger)))
 
 	// Help requests API
@@ -819,6 +820,119 @@ func HandleReaderQuiz(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"questions": questions})
+}
+
+// HandleReaderAhAhMoments handles GET (list) and POST (create) /api/reader/ah-ah-moments
+// GET: ?book_id= &limit= (optional). Returns feed: own moments + shared moments from others.
+// POST: body { book_id, content, page_number?, section_number?, shared? }. Creates a moment (shared defaults true).
+func HandleReaderAhAhMoments(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if c, _ := r.Cookie("auth_token"); c != nil && c.Value != "" {
+			authHeader = "Bearer " + c.Value
+		}
+	}
+	if authHeader == "" {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.UserID
+
+	if r.Method == http.MethodGet {
+		bookID := r.URL.Query().Get("book_id")
+		if bookID == "" {
+			http.Error(w, "book_id required", http.StatusBadRequest)
+			return
+		}
+		limit := 50
+		if l := r.URL.Query().Get("limit"); l != "" {
+			if n, _ := strconv.Atoi(l); n > 0 && n <= 100 {
+				limit = n
+			}
+		}
+		list, err := database.GetAhAhMomentsForFeed(bookID, userID, limit)
+		if err != nil {
+			log.Printf("GetAhAhMomentsForFeed error: %v", err)
+			http.Error(w, "Failed to load moments", http.StatusInternalServerError)
+			return
+		}
+		if list == nil {
+			list = []*models.AhAhMoment{}
+		}
+		// Add is_mine for each moment so the UI can show "You" vs author name
+		out := make([]map[string]interface{}, 0, len(list))
+		for _, m := range list {
+			item := map[string]interface{}{
+				"id":                 m.ID,
+				"content":            m.Content,
+				"page_number":       m.PageNumber,
+				"section_number":    m.SectionNumber,
+				"shared":             m.Shared,
+				"created_at":         m.CreatedAt,
+				"author_first_name":  m.AuthorFirstName,
+				"is_mine":            m.UserID == userID,
+			}
+			out = append(out, item)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"moments": out})
+		return
+	}
+
+	// POST: create
+	var req struct {
+		BookID        string `json:"book_id"`
+		Content       string `json:"content"`
+		PageNumber    *int   `json:"page_number"`
+		SectionNumber *int   `json:"section_number"`
+		Shared        *bool  `json:"shared"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.BookID == "" || strings.TrimSpace(req.Content) == "" {
+		http.Error(w, "book_id and content required", http.StatusBadRequest)
+		return
+	}
+	shared := true
+	if req.Shared != nil {
+		shared = *req.Shared
+	}
+	m := &models.AhAhMoment{
+		UserID:        userID,
+		BookID:        req.BookID,
+		Content:       strings.TrimSpace(req.Content),
+		PageNumber:    req.PageNumber,
+		SectionNumber: req.SectionNumber,
+		Shared:        shared,
+	}
+	if err := database.CreateAhAhMoment(m); err != nil {
+		log.Printf("CreateAhAhMoment error: %v", err)
+		http.Error(w, "Failed to save moment", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(m)
 }
 
 // HandleInteractions handles GET/POST /rest/v1/interactions

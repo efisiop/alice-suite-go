@@ -323,6 +323,78 @@ func GetSectionsByPageNumber(pageNumber int) ([]models.Section, error) {
 	return out, rows.Err()
 }
 
+// Ah Ah Moments Queries
+
+// CreateAhAhMoment inserts a new ah ah moment (reader success/realization)
+func CreateAhAhMoment(m *models.AhAhMoment) error {
+	m.ID = uuid.New().String()
+	shared := 0
+	if m.Shared {
+		shared = 1
+	}
+	var pageNum, sectionNum interface{}
+	if m.PageNumber != nil {
+		pageNum = *m.PageNumber
+	} else {
+		pageNum = nil
+	}
+	if m.SectionNumber != nil {
+		sectionNum = *m.SectionNumber
+	} else {
+		sectionNum = nil
+	}
+	query := `INSERT INTO ah_ah_moments (id, user_id, book_id, content, page_number, section_number, shared, created_at)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+	_, err := DB.Exec(query, m.ID, m.UserID, m.BookID, m.Content, pageNum, sectionNum, shared)
+	return err
+}
+
+// GetAhAhMomentsForFeed returns moments for the feed: current user's moments plus shared moments from others (same book)
+func GetAhAhMomentsForFeed(bookID, currentUserID string, limit int) ([]*models.AhAhMoment, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	query := `SELECT m.id, m.user_id, m.book_id, m.content, m.page_number, m.section_number, m.shared, m.created_at,
+	          COALESCE(u.first_name, 'A reader') AS author_first_name
+	          FROM ah_ah_moments m
+	          LEFT JOIN users u ON u.id = m.user_id
+	          WHERE m.book_id = ? AND (m.user_id = ? OR m.shared = 1)
+	          ORDER BY m.created_at DESC
+	          LIMIT ?`
+	rows, err := DB.Query(query, bookID, currentUserID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*models.AhAhMoment
+	for rows.Next() {
+		var m models.AhAhMoment
+		var pageNum, sectionNum sql.NullInt64
+		var shared int
+		var createdAt string
+		err := rows.Scan(&m.ID, &m.UserID, &m.BookID, &m.Content, &pageNum, &sectionNum, &shared, &createdAt, &m.AuthorFirstName)
+		if err != nil {
+			continue
+		}
+		m.Shared = shared == 1
+		if pageNum.Valid {
+			p := int(pageNum.Int64)
+			m.PageNumber = &p
+		}
+		if sectionNum.Valid {
+			s := int(sectionNum.Int64)
+			m.SectionNumber = &s
+		}
+		if createdAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+				m.CreatedAt = t
+			}
+		}
+		out = append(out, &m)
+	}
+	return out, rows.Err()
+}
+
 // Glossary Queries
 
 // GetGlossaryTerm retrieves a glossary term

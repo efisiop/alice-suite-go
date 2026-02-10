@@ -89,6 +89,28 @@ Then open **http://127.0.0.1:8080/admin/login** and sign in with **admin@example
 
 ---
 
+## Simulate login emails on localhost
+
+To test the “Notify me when readers or consultants log in” feature without sending real email (and without configuring SMTP):
+
+1. Start the server with:
+   ```bash
+   SIMULATE_LOGIN_EMAILS=true make start
+   ```
+   (or `SIMULATE_LOGIN_EMAILS=true go run ./cmd/server`)
+
+2. In the Admin dashboard, turn **on** the “Notify me when readers or consultants log in” toggle.
+
+3. In another browser or tab, log in as a **reader** or **consultant** (e.g. reader@example.com / reader123).
+
+4. The “email” is written to **data/simulated_login_email.txt** (and logged in the terminal). No real email is sent.
+
+5. In the Admin dashboard, use **“View last simulated email”** (shown when simulation is on) to open the file contents in the browser.
+
+On Render, do **not** set `SIMULATE_LOGIN_EMAILS`; use real SMTP env vars and the same toggle to send real emails.
+
+---
+
 ## If something goes wrong
 
 - **“Database not found”** when running `init-users`  

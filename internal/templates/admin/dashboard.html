@@ -72,7 +72,7 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4">
+    <div id="email-notifications-card" class="card border-0 shadow-sm mb-4" style="display: none;">
         <div class="card-header bg-light">
             <h5 class="mb-0">Email notifications</h5>
         </div>
@@ -81,8 +81,9 @@
                 <input class="form-check-input" type="checkbox" id="login-email-toggle" role="switch">
                 <label class="form-check-label" for="login-email-toggle">Notify me when readers or consultants log in</label>
             </div>
-            <p class="mt-2 mb-0 text-muted small">Emails are sent only when this app runs on Render (not on localhost). Recipient: <span id="login-email-recipient">efisio@mylivemail.net</span></p>
+            <p class="mt-2 mb-0 text-muted small">When the switch is ON and SMTP is configured, you get an email at each reader/consultant login. Recipient: <span id="login-email-recipient">efisio@mylivemail.net</span></p>
             <p id="email-status-hint" class="mt-2 mb-0 small text-info" style="display: none;"></p>
+            <p id="email-simulation-box" class="mt-2 mb-0 small" style="display: none;"></p>
             <p class="mt-1 mb-0"><a href="#" id="email-status-detail-link" target="_blank" rel="noopener" class="small">View email diagnostics (JSON)</a></p>
         </div>
     </div>
@@ -178,14 +179,26 @@
         fetch('/api/admin/email-status', { credentials: 'same-origin', headers: headers })
             .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
             .then(function(data) {
+                var card = document.getElementById('email-notifications-card');
                 var hintEl = document.getElementById('email-status-hint');
                 var linkEl = document.getElementById('email-status-detail-link');
+                var simBox = document.getElementById('email-simulation-box');
+                var lastSimLink = document.getElementById('last-simulated-email-link');
+                if (data.on_render) {
+                    card.style.display = 'block';
+                }
                 if (data.hint) {
                     hintEl.textContent = data.hint;
                     hintEl.style.display = 'block';
                     hintEl.className = 'mt-2 mb-0 small ' + (data.will_send_on_next_login ? 'text-success' : 'text-info');
                 }
                 linkEl.href = window.location.origin + '/api/admin/email-status';
+                if (data.simulation_mode) {
+                    simBox.innerHTML = 'Simulation: <a href="' + window.location.origin + '/api/admin/last-simulated-email" target="_blank" rel="noopener" class="small">View last simulated email</a>';
+                    simBox.style.display = 'block';
+                } else {
+                    simBox.style.display = 'none';
+                }
             })
             .catch(function() {});
     }
