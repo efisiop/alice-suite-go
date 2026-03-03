@@ -22,7 +22,7 @@ func GetVerificationCode(code string) (*VerificationCode, error) {
 
 	query := `SELECT code, book_id, is_used, used_by, created_at
 	          FROM verification_codes WHERE code = ?`
-	err := DB.QueryRow(query, code).Scan(
+	err := DB.QueryRow(Rebind(query), code).Scan(
 		&vc.Code, &vc.BookID, &vc.IsUsed, &usedBy, &createdAtStr,
 	)
 	if err == sql.ErrNoRows {
@@ -48,7 +48,7 @@ func GetVerificationCode(code string) (*VerificationCode, error) {
 // MarkVerificationCodeUsed marks a verification code as used
 func MarkVerificationCodeUsed(code, userID string) error {
 	query := `UPDATE verification_codes SET is_used = 1, used_by = ? WHERE code = ?`
-	_, err := DB.Exec(query, userID, code)
+	_, err := DB.Exec(Rebind(query), userID, code)
 	return err
 }
 
@@ -56,7 +56,7 @@ func MarkVerificationCodeUsed(code, userID string) error {
 func CreateVerificationCode(vc *VerificationCode) error {
 	query := `INSERT INTO verification_codes (code, book_id, is_used, used_by, created_at)
 	          VALUES (?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, vc.Code, vc.BookID, vc.IsUsed, vc.UsedBy, vc.CreatedAt)
+	_, err := DB.Exec(Rebind(query), vc.Code, vc.BookID, vc.IsUsed, vc.UsedBy, vc.CreatedAt)
 	return err
 }
 
@@ -67,7 +67,7 @@ func UpdateUserVerification(userID string, verified bool) error {
 	if verified {
 		verifiedInt = 1
 	}
-	_, err := DB.Exec(query, verifiedInt, time.Now(), userID)
+	_, err := DB.Exec(Rebind(query), verifiedInt, time.Now(), userID)
 	return err
 }
 

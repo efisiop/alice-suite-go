@@ -19,7 +19,7 @@ func CreateUser(user *models.User) error {
 	user.ID = uuid.New().String()
 	query := `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, user.ID, user.Email, user.PasswordHash, user.FirstName, user.LastName,
+	_, err := DB.Exec(Rebind(query), user.ID, user.Email, user.PasswordHash, user.FirstName, user.LastName,
 		user.Role, user.IsVerified, time.Now(), time.Now())
 	return err
 }
@@ -30,7 +30,7 @@ func GetUserByEmail(email string) (*models.User, error) {
 	var createdAtStr, updatedAtStr string
 	query := `SELECT id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at
 	          FROM users WHERE email = ?`
-	err := DB.QueryRow(query, email).Scan(
+	err := DB.QueryRow(Rebind(query), email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName,
 		&user.Role, &user.IsVerified, &createdAtStr, &updatedAtStr,
 	)
@@ -60,7 +60,7 @@ func GetUserByID(id string) (*models.User, error) {
 	var createdAtStr, updatedAtStr string
 	query := `SELECT id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at
 	          FROM users WHERE id = ?`
-	err := DB.QueryRow(query, id).Scan(
+	err := DB.QueryRow(Rebind(query), id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName,
 		&user.Role, &user.IsVerified, &createdAtStr, &updatedAtStr,
 	)
@@ -92,7 +92,7 @@ func GetBookByID(id string) (*models.Book, error) {
 	query := `SELECT id, title, author, description, total_pages, created_at
 	          FROM books WHERE id = ?`
 
-	err := DB.QueryRow(query, id).Scan(
+	err := DB.QueryRow(Rebind(query), id).Scan(
 		&book.ID, &book.Title, &book.Author, &book.Description, &book.TotalPages, &book.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -107,7 +107,7 @@ func GetAllBooks() ([]*models.Book, error) {
 		return nil, sql.ErrConnDone
 	}
 	query := `SELECT id, title, author, description, total_pages, created_at FROM books ORDER BY created_at`
-	rows, err := DB.Query(query)
+	rows, err := DB.Query(Rebind(query))
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func GetAllBooks() ([]*models.Book, error) {
 func GetChaptersByBookID(bookID string) ([]*models.Chapter, error) {
 	query := `SELECT id, book_id, title, number, created_at
 	          FROM chapters WHERE book_id = ? ORDER BY number`
-	rows, err := DB.Query(query, bookID)
+	rows, err := DB.Query(Rebind(query), bookID)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func GetChapterByID(id string) (*models.Chapter, error) {
 	          FROM chapters WHERE id = ?`
 
 	var createdAtStr string
-	err := DB.QueryRow(query, id).Scan(
+	err := DB.QueryRow(Rebind(query), id).Scan(
 		&chapter.ID, &chapter.BookID, &chapter.Title, &chapter.Number, &createdAtStr,
 	)
 	if err == sql.ErrNoRows {
@@ -199,7 +199,7 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	query := `SELECT id, book_id, page_number, chapter_id, chapter_title, content, word_count, created_at
 	          FROM pages WHERE book_id = ? AND page_number = ?`
 
-	err := DB.QueryRow(query, bookID, pageNumber).Scan(
+	err := DB.QueryRow(Rebind(query), bookID, pageNumber).Scan(
 		&page.ID, &page.BookID, &page.PageNumber, &chapterID, &chapterTitle,
 		&page.Content, &page.WordCount, &createdAtStr,
 	)
@@ -227,7 +227,7 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	// Get sections for this page
 	sectionsQuery := `SELECT id, page_id, page_number, section_number, content, word_count, created_at
 	                  FROM sections WHERE page_id = ? ORDER BY section_number`
-	rows, err := DB.Query(sectionsQuery, page.ID)
+	rows, err := DB.Query(Rebind(sectionsQuery), page.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func GetSectionByID(id string) (*models.Section, error) {
 	query := `SELECT id, page_id, page_number, section_number, content, word_count, created_at
 	          FROM sections WHERE id = ?`
 
-	err := DB.QueryRow(query, id).Scan(
+	err := DB.QueryRow(Rebind(query), id).Scan(
 		&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
 		&section.Content, &section.WordCount, &createdAtStr,
 	)
@@ -303,7 +303,7 @@ func GetSectionsByPageNumber(pageNumber int) ([]models.Section, error) {
 	query := `SELECT id, content, page_number, section_number FROM sections 
 	         WHERE page_number = ?
 	         ORDER BY section_number`
-	rows, err := DB.Query(query, pageNumber)
+	rows, err := DB.Query(Rebind(query), pageNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -344,8 +344,8 @@ func CreateAhAhMoment(m *models.AhAhMoment) error {
 		sectionNum = nil
 	}
 	query := `INSERT INTO ah_ah_moments (id, user_id, book_id, content, page_number, section_number, shared, created_at)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-	_, err := DB.Exec(query, m.ID, m.UserID, m.BookID, m.Content, pageNum, sectionNum, shared)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := DB.Exec(Rebind(query), m.ID, m.UserID, m.BookID, m.Content, pageNum, sectionNum, shared, time.Now())
 	return err
 }
 
@@ -361,7 +361,7 @@ func GetAhAhMomentsForFeed(bookID, currentUserID string, limit int) ([]*models.A
 	          WHERE m.book_id = ? AND (m.user_id = ? OR m.shared = 1)
 	          ORDER BY m.created_at DESC
 	          LIMIT ?`
-	rows, err := DB.Query(query, bookID, currentUserID, limit)
+	rows, err := DB.Query(Rebind(query), bookID, currentUserID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func GetGlossaryTerm(bookID, term string) (*models.AliceGlossary, error) {
 	var sourceSentence, example, chapterRef sql.NullString
 	var createdAt, updatedAt string
 
-	err := DB.QueryRow(query, bookID, term).Scan(
+	err := DB.QueryRow(Rebind(query), bookID, term).Scan(
 		&glossary.ID, &glossary.BookID, &glossary.Term, &glossary.Definition,
 		&sourceSentence, &example, &chapterRef,
 		&createdAt, &updatedAt,
@@ -456,7 +456,7 @@ func SearchGlossaryTerms(bookID, searchTerm string) ([]*models.AliceGlossary, er
 	          ORDER BY term`
 
 	searchPattern := "%" + searchTerm + "%"
-	rows, err := DB.Query(query, bookID, searchPattern, searchPattern)
+	rows, err := DB.Query(Rebind(query), bookID, searchPattern, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +489,7 @@ func GetAllGlossaryTerms(bookID string) ([]*models.AliceGlossary, error) {
 	          WHERE book_id = ?
 	          ORDER BY term`
 
-	rows, err := DB.Query(query, bookID)
+	rows, err := DB.Query(Rebind(query), bookID)
 	if err != nil {
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
@@ -550,7 +550,7 @@ func GetGlossaryTermBySection(sectionID string) ([]*models.AliceGlossary, error)
 	          WHERE gs.section_id = ?
 	          ORDER BY g.term`
 
-	rows, err := DB.Query(query, sectionID)
+	rows, err := DB.Query(Rebind(query), sectionID)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +612,7 @@ func GetGlossaryTermByPageAndSection(bookID string, pageNumber, sectionNumber in
 	          WHERE g.book_id = ? AND gs.page_number = ? AND gs.section_number = ?
 	          ORDER BY g.term`
 
-	rows, err := DB.Query(query, bookID, pageNumber, sectionNumber)
+	rows, err := DB.Query(Rebind(query), bookID, pageNumber, sectionNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +683,7 @@ func FindGlossaryTermInText(bookID, word string) (*models.AliceGlossary, error) 
 	var sourceSentence, example, chapterRef sql.NullString
 	var createdAt, updatedAt string
 
-	err = DB.QueryRow(query, bookID, word).Scan(
+	err = DB.QueryRow(Rebind(query), bookID, word).Scan(
 		&term.ID, &term.BookID, &term.Term, &term.Definition,
 		&sourceSentence, &example, &chapterRef,
 		&createdAt, &updatedAt,
@@ -734,7 +734,7 @@ func VerifyCode(code, bookID string) (*models.VerificationCode, error) {
 	query := `SELECT code, book_id, is_used, used_by, created_at
 	          FROM verification_codes WHERE code = ? AND book_id = ?`
 
-	err := DB.QueryRow(query, code, bookID).Scan(
+	err := DB.QueryRow(Rebind(query), code, bookID).Scan(
 		&vc.Code, &vc.BookID, &vc.IsUsed, &usedBy, &vc.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -752,8 +752,8 @@ func VerifyCode(code, bookID string) (*models.VerificationCode, error) {
 
 // UseVerificationCode marks a verification code as used
 func UseVerificationCode(code, userID string) error {
-	query := `UPDATE verification_codes SET is_used = 1, used_by = ?, used_at = datetime('now') WHERE code = ?`
-	_, err := DB.Exec(query, userID, code)
+	query := `UPDATE verification_codes SET is_used = 1, used_by = ?, used_at = ? WHERE code = ?`
+	_, err := DB.Exec(Rebind(query), userID, time.Now(), code)
 	return err
 }
 
@@ -767,7 +767,7 @@ func GetReadingProgress(userID, bookID string) (*models.ReadingProgress, error) 
 	query := `SELECT id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, purchase_date, created_at, updated_at
 	          FROM reading_progress WHERE user_id = ? AND book_id = ?`
 
-	err := DB.QueryRow(query, userID, bookID).Scan(
+	err := DB.QueryRow(Rebind(query), userID, bookID).Scan(
 		&progress.ID, &progress.UserID, &progress.BookID, &chapterID, &sectionID,
 		&lastPage, &progress.LastReadAt, &purchaseDate, &progress.CreatedAt, &progress.UpdatedAt,
 	)
@@ -806,7 +806,7 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 		}
 		query := `INSERT INTO reading_progress (id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, purchase_date, created_at, updated_at)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err := DB.Exec(query, progress.ID, progress.UserID, progress.BookID, progress.ChapterID, progress.SectionID,
+		_, err := DB.Exec(Rebind(query), progress.ID, progress.UserID, progress.BookID, progress.ChapterID, progress.SectionID,
 			progress.LastPage, time.Now(), purchaseDate, time.Now(), time.Now())
 		return err
 	}
@@ -814,7 +814,7 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 	// For updates, we need to preserve purchase_date if it's not explicitly provided
 	// First, get the existing purchase_date from the database
 	var existingPurchaseDate sql.NullString
-	err := DB.QueryRow(`SELECT purchase_date FROM reading_progress WHERE id = ?`, progress.ID).Scan(&existingPurchaseDate)
+	err := DB.QueryRow(Rebind(`SELECT purchase_date FROM reading_progress WHERE id = ?`), progress.ID).Scan(&existingPurchaseDate)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("failed to get existing purchase_date: %w", err)
 	}
@@ -840,7 +840,7 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 	query := `UPDATE reading_progress SET chapter_id = ?, section_id = ?, last_page = ?, last_read_at = ?, purchase_date = ?, updated_at = ?
 	          WHERE id = ?`
 	resolvedAt := time.Now()
-	_, err = DB.Exec(query, progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
+	_, err = DB.Exec(Rebind(query), progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
 	return err
 }
 
@@ -856,14 +856,15 @@ func UpdateBookPurchaseDate(userID, bookID, purchaseDate string) error {
 
 	// First, check if reading_progress record exists
 	var existingID string
-	err := DB.QueryRow(`SELECT id FROM reading_progress WHERE user_id = ? AND book_id = ?`, userID, bookID).Scan(&existingID)
+	err := DB.QueryRow(Rebind(`SELECT id FROM reading_progress WHERE user_id = ? AND book_id = ?`), userID, bookID).Scan(&existingID)
 
 	if err == sql.ErrNoRows {
 		// Create new reading_progress record if it doesn't exist
 		progressID := uuid.New().String()
 		query := `INSERT INTO reading_progress (id, user_id, book_id, purchase_date, created_at, updated_at)
-		          VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`
-		_, err = DB.Exec(query, progressID, userID, bookID, purchaseDateValue)
+		          VALUES (?, ?, ?, ?, ?, ?)`
+		now := time.Now()
+		_, err = DB.Exec(Rebind(query), progressID, userID, bookID, purchaseDateValue, now, now)
 		if err != nil {
 			// Check if error is due to missing column
 			if strings.Contains(err.Error(), "no such column: purchase_date") {
@@ -878,9 +879,9 @@ func UpdateBookPurchaseDate(userID, bookID, purchaseDate string) error {
 	}
 
 	// Update existing record
-	query := `UPDATE reading_progress SET purchase_date = ?, updated_at = datetime('now')
+	query := `UPDATE reading_progress SET purchase_date = ?, updated_at = ?
 	          WHERE user_id = ? AND book_id = ?`
-	_, err = DB.Exec(query, purchaseDateValue, userID, bookID)
+	_, err = DB.Exec(Rebind(query), purchaseDateValue, time.Now(), userID, bookID)
 	if err != nil {
 		// Check if error is due to missing column
 		if strings.Contains(err.Error(), "no such column: purchase_date") {
@@ -898,7 +899,7 @@ func CreateVocabularyLookup(lookup *models.VocabularyLookup) error {
 	lookup.ID = uuid.New().String()
 	query := `INSERT INTO vocabulary_lookups (id, user_id, book_id, word, definition, chapter_id, section_id, context, created_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, lookup.ID, lookup.UserID, lookup.BookID, lookup.Word, lookup.Definition,
+	_, err := DB.Exec(Rebind(query), lookup.ID, lookup.UserID, lookup.BookID, lookup.Word, lookup.Definition,
 		lookup.ChapterID, lookup.SectionID, lookup.Context, time.Now())
 	return err
 }
@@ -907,7 +908,7 @@ func CreateVocabularyLookup(lookup *models.VocabularyLookup) error {
 func GetVocabularyLookups(userID, bookID string) ([]*models.VocabularyLookup, error) {
 	query := `SELECT id, user_id, book_id, word, definition, chapter_id, section_id, context, created_at
 	          FROM vocabulary_lookups WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
-	rows, err := DB.Query(query, userID, bookID)
+	rows, err := DB.Query(Rebind(query), userID, bookID)
 	if err != nil {
 		return nil, err
 	}
@@ -943,14 +944,14 @@ func CreateAIInteraction(interaction *models.AIInteraction) error {
 	// Try with provider field first, fallback to old schema if column doesn't exist
 	query := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, provider, created_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
+	_, err := DB.Exec(Rebind(query), interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
 		interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
 		interaction.Context, interaction.Provider, time.Now())
 	if err != nil {
 		// Fallback to old schema without provider field
 		queryOld := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err = DB.Exec(queryOld, interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
+		_, err = DB.Exec(Rebind(queryOld), interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
 			interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
 			interaction.Context, time.Now())
 	}
@@ -962,14 +963,14 @@ func GetAIInteractions(userID, bookID string) ([]*models.AIInteraction, error) {
 	// Try to select with provider field first
 	query := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, provider, created_at
 	          FROM ai_interactions WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
-	rows, err := DB.Query(query, userID, bookID)
+	rows, err := DB.Query(Rebind(query), userID, bookID)
 	hasProviderColumn := true
 
 	if err != nil {
 		// If that fails, try without provider column (old schema)
 		queryOld := `SELECT id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at
 		          FROM ai_interactions WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC`
-		rows, err = DB.Query(queryOld, userID, bookID)
+		rows, err = DB.Query(Rebind(queryOld), userID, bookID)
 		hasProviderColumn = false
 		if err != nil {
 			return nil, err
@@ -1025,7 +1026,7 @@ func CreateHelpRequest(request *models.HelpRequest) error {
 	request.ID = uuid.New().String()
 	query := `INSERT INTO help_requests (id, user_id, book_id, section_id, status, content, context, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, request.ID, request.UserID, request.BookID, request.SectionID,
+	_, err := DB.Exec(Rebind(query), request.ID, request.UserID, request.BookID, request.SectionID,
 		request.Status, request.Content, request.Context, time.Now(), time.Now())
 	return err
 }
@@ -1034,7 +1035,7 @@ func CreateHelpRequest(request *models.HelpRequest) error {
 func GetHelpRequests(userID string) ([]*models.HelpRequest, error) {
 	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at
 	          FROM help_requests WHERE user_id = ? ORDER BY created_at DESC`
-	rows, err := DB.Query(query, userID)
+	rows, err := DB.Query(Rebind(query), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -1095,7 +1096,7 @@ func GetHelpRequestByID(id string) (*models.HelpRequest, error) {
 	var sectionID, assignedTo, response sql.NullString
 	var resolvedAt sql.NullTime
 
-	err := DB.QueryRow(query, id).Scan(
+	err := DB.QueryRow(Rebind(query), id).Scan(
 		&request.ID, &request.UserID, &request.BookID, &sectionID, &request.Status,
 		&request.Content, &request.Context, &assignedTo, &response, &resolvedAt,
 		&request.CreatedAt, &request.UpdatedAt,
@@ -1130,7 +1131,7 @@ func GetRecentHelpRequests(limit int) ([]*models.HelpRequest, error) {
 	}
 	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at
 	          FROM help_requests ORDER BY created_at DESC LIMIT ?`
-	rows, err := DB.Query(query, limit)
+	rows, err := DB.Query(Rebind(query), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1177,7 +1178,7 @@ func GetRecentHelpRequests(limit int) ([]*models.HelpRequest, error) {
 func GetHelpRequestsByConsultant(consultantID string) ([]*models.HelpRequest, error) {
 	query := `SELECT id, user_id, book_id, section_id, status, content, context, assigned_to, response, resolved_at, created_at, updated_at
 	          FROM help_requests WHERE assigned_to = ? ORDER BY created_at DESC`
-	rows, err := DB.Query(query, consultantID)
+	rows, err := DB.Query(Rebind(query), consultantID)
 	if err != nil {
 		return nil, err
 	}
@@ -1221,7 +1222,7 @@ func UpdateHelpRequest(request *models.HelpRequest) error {
 	if request.ResolvedAt != nil {
 		resolvedAt = request.ResolvedAt
 	}
-	_, err := DB.Exec(query, request.Status, request.AssignedTo, request.Response, resolvedAt, time.Now(), request.ID)
+	_, err := DB.Exec(Rebind(query), request.Status, request.AssignedTo, request.Response, resolvedAt, time.Now(), request.ID)
 	return err
 }
 
@@ -1234,7 +1235,7 @@ func GetCachedDefinition(word string) (*models.DictionaryCache, error) {
 	          FROM dictionary_cache WHERE word = ? LIMIT 1`
 
 	cache := &models.DictionaryCache{}
-	err := DB.QueryRow(query, normalizedWord).Scan(
+	err := DB.QueryRow(Rebind(query), normalizedWord).Scan(
 		&cache.ID, &cache.Word, &cache.Definition, &cache.Example,
 		&cache.Phonetic, &cache.PartOfSpeech, &cache.SourceAPI,
 		&cache.CreatedAt, &cache.UpdatedAt,
@@ -1255,12 +1256,22 @@ func CacheDefinition(cache *models.DictionaryCache) error {
 		cache.ID = fmt.Sprintf("dict-cache-%s-%d", normalizedWord, time.Now().UnixNano())
 	}
 
-	query := `INSERT OR REPLACE INTO dictionary_cache 
-	          (id, word, definition, example, phonetic, part_of_speech, source_api, created_at, updated_at)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
-
-	_, err := DB.Exec(query, cache.ID, normalizedWord, cache.Definition, cache.Example,
-		cache.Phonetic, cache.PartOfSpeech, cache.SourceAPI)
+	now := time.Now()
+	var query string
+	if DriverName == "postgres" {
+		query = `INSERT INTO dictionary_cache 
+		          (id, word, definition, example, phonetic, part_of_speech, source_api, created_at, updated_at)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		          ON CONFLICT (word) DO UPDATE SET definition=EXCLUDED.definition, example=EXCLUDED.example,
+		          phonetic=EXCLUDED.phonetic, part_of_speech=EXCLUDED.part_of_speech, source_api=EXCLUDED.source_api,
+		          updated_at=EXCLUDED.updated_at`
+	} else {
+		query = `INSERT OR REPLACE INTO dictionary_cache 
+		          (id, word, definition, example, phonetic, part_of_speech, source_api, created_at, updated_at)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	}
+	_, err := DB.Exec(Rebind(query), cache.ID, normalizedWord, cache.Definition, cache.Example,
+		cache.Phonetic, cache.PartOfSpeech, cache.SourceAPI, now, now)
 	return err
 }
 
@@ -1426,7 +1437,7 @@ func FindPageByText(bookID, searchText string) (*models.Page, *models.Section, e
 		for _, p := range patterns {
 			args = append(args, p)
 		}
-		rows, err := DB.Query(q, args...)
+		rows, err := DB.Query(Rebind(q), args...)
 		if err != nil {
 			return nil, nil, err
 		}

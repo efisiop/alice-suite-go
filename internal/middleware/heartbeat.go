@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
@@ -53,11 +54,11 @@ func HeartbeatMiddleware(next http.Handler) http.Handler {
 					database.UpdateSessionActivity(token)
 					
 					// Update users.last_active_at (handle column may not exist gracefully)
-					database.DB.Exec(`UPDATE users SET last_active_at = datetime('now') WHERE id = ?`, user.ID)
+					database.DB.Exec(database.Rebind(`UPDATE users SET last_active_at = ? WHERE id = ?`), time.Now(), user.ID)
 					
 					// Update reader_states.last_activity_at if reader
 					if user.Role == "reader" {
-						database.DB.Exec(`UPDATE reader_states SET last_activity_at = datetime('now'), status = 'active' WHERE user_id = ?`, user.ID)
+						database.DB.Exec(database.Rebind(`UPDATE reader_states SET last_activity_at = ?, status = 'active' WHERE user_id = ?`), time.Now(), user.ID)
 					}
 				}()
 			}

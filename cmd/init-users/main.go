@@ -4,65 +4,48 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
+	"time"
 
+	"github.com/efisiopittau/alice-suite-go/internal/config"
+	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func getDBPath() string {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "data/alice-suite.db"
-	}
-	return dbPath
-}
-
 func main() {
-	dbPath := getDBPath()
+	cfg := config.Load()
 
-	// Check if database exists
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Fatalf("Database not found at %s. Please run migrations first.", dbPath)
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if err := database.InitDB(cfg.DBPath, cfg.DatabaseURL); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
-
-	// Open database
-	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
-	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
-	}
-	defer db.Close()
-
-	// Test connection
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
-	}
+	defer database.CloseDB()
 
 	fmt.Println("🌱 Initializing test users...")
+
+	now := time.Now().UTC().Format("2006-01-02 15:04:05")
 
 	// Create test reader user
 	readerEmail := "reader@example.com"
 	readerPassword := "reader123"
 	readerID := uuid.New().String()
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(readerPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	// Check if user already exists
 	var existingID string
-	err = db.QueryRow("SELECT id FROM users WHERE email = ?", readerEmail).Scan(&existingID)
+	err = database.DB.QueryRow(database.Rebind("SELECT id FROM users WHERE email = ?"), readerEmail).Scan(&existingID)
 	if err == nil {
 		fmt.Printf("✅ Reader user already exists: %s (ID: %s)\n", readerEmail, existingID)
 	} else if err == sql.ErrNoRows {
-		// Insert reader user
-		_, err = db.Exec(`
+		_, err = database.DB.Exec(database.Rebind(`
 			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-		`, readerID, readerEmail, string(hashedPassword), "Test", "Reader", "reader", 0)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`), readerID, readerEmail, string(hashedPassword), "Test", "Reader", "reader", 0, now, now)
 		if err != nil {
 			log.Fatalf("Failed to create reader user: %v", err)
 		}
@@ -76,22 +59,19 @@ func main() {
 	consultantPassword := "consultant123"
 	consultantID := uuid.New().String()
 
-	// Hash password
 	hashedPassword, err = bcrypt.GenerateFromPassword([]byte(consultantPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	// Check if consultant already exists
-	err = db.QueryRow("SELECT id FROM users WHERE email = ?", consultantEmail).Scan(&existingID)
+	err = database.DB.QueryRow(database.Rebind("SELECT id FROM users WHERE email = ?"), consultantEmail).Scan(&existingID)
 	if err == nil {
 		fmt.Printf("✅ Consultant user already exists: %s (ID: %s)\n", consultantEmail, existingID)
 	} else if err == sql.ErrNoRows {
-		// Insert consultant user
-		_, err = db.Exec(`
+		_, err = database.DB.Exec(database.Rebind(`
 			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-		`, consultantID, consultantEmail, string(hashedPassword), "Test", "Consultant", "consultant", 1)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`), consultantID, consultantEmail, string(hashedPassword), "Test", "Consultant", "consultant", 1, now, now)
 		if err != nil {
 			log.Fatalf("Failed to create consultant user: %v", err)
 		}
@@ -110,14 +90,14 @@ func main() {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	err = db.QueryRow("SELECT id FROM users WHERE email = ?", adminEmail).Scan(&existingID)
+	err = database.DB.QueryRow(database.Rebind("SELECT id FROM users WHERE email = ?"), adminEmail).Scan(&existingID)
 	if err == nil {
 		fmt.Printf("✅ Administrator user already exists: %s (ID: %s)\n", adminEmail, existingID)
 	} else if err == sql.ErrNoRows {
-		_, err = db.Exec(`
+		_, err = database.DB.Exec(database.Rebind(`
 			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-		`, adminID, adminEmail, string(hashedPassword), "Admin", "User", "administrator", 1)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`), adminID, adminEmail, string(hashedPassword), "Admin", "User", "administrator", 1, now, now)
 		if err != nil {
 			log.Fatalf("Failed to create administrator user: %v", err)
 		}
@@ -128,10 +108,18 @@ func main() {
 
 	// Create verification code for reader
 	verificationCode := "ALICE2024"
-	_, err = db.Exec(`
-		INSERT OR IGNORE INTO verification_codes (code, book_id, is_used, created_at)
-		VALUES (?, ?, ?, datetime('now'))
-	`, verificationCode, "alice-in-wonderland", 0)
+	if database.DriverName == "postgres" {
+		_, err = database.DB.Exec(database.Rebind(`
+			INSERT INTO verification_codes (code, book_id, is_used, created_at)
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT (code) DO NOTHING
+		`), verificationCode, "alice-in-wonderland", 0, now)
+	} else {
+		_, err = database.DB.Exec(database.Rebind(`
+			INSERT OR IGNORE INTO verification_codes (code, book_id, is_used, created_at)
+			VALUES (?, ?, ?, ?)
+		`), verificationCode, "alice-in-wonderland", 0, now)
+	}
 	if err != nil {
 		log.Printf("Warning: Failed to create verification code: %v", err)
 	} else {
@@ -143,22 +131,19 @@ func main() {
 	efisioPassword := "efisio123"
 	efisioID := uuid.New().String()
 
-	// Hash password
 	hashedPassword, err = bcrypt.GenerateFromPassword([]byte(efisioPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	// Check if efisio already exists
-	err = db.QueryRow("SELECT id FROM users WHERE email = ?", efisioEmail).Scan(&existingID)
+	err = database.DB.QueryRow(database.Rebind("SELECT id FROM users WHERE email = ?"), efisioEmail).Scan(&existingID)
 	if err == nil {
 		fmt.Printf("✅ Efisio user already exists: %s (ID: %s)\n", efisioEmail, existingID)
 	} else if err == sql.ErrNoRows {
-		// Insert efisio user
-		_, err = db.Exec(`
+		_, err = database.DB.Exec(database.Rebind(`
 			INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-		`, efisioID, efisioEmail, string(hashedPassword), "Efisio", "Pittau", "reader", 1)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`), efisioID, efisioEmail, string(hashedPassword), "Efisio", "Pittau", "reader", 1, now, now)
 		if err != nil {
 			log.Fatalf("Failed to create efisio user: %v", err)
 		}

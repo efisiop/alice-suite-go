@@ -1912,6 +1912,39 @@ function loadAIInteractionsWithBookId(bookId, token) {
 }
 
 // Load Help Requests
+function parseStructuredHelpRequestContent(raw) {
+    const text = (raw || '').trim();
+    const parsed = {
+        topic: '',
+        location: '',
+        priority: '',
+        tried: '',
+        fallback: text
+    };
+    if (!text) return parsed;
+
+    // Expected blocks from reader form:
+    // Help Topic:\n...
+    // Location:\n...
+    // Priority:\n...
+    // What I already tried:\n...
+    const blocks = text.split(/\n{2,}/);
+    blocks.forEach(block => {
+        const b = block.trim();
+        if (b.startsWith('Help Topic:\n')) {
+            parsed.topic = b.replace('Help Topic:\n', '').trim();
+        } else if (b.startsWith('Location:\n')) {
+            parsed.location = b.replace('Location:\n', '').trim();
+        } else if (b.startsWith('Priority:\n')) {
+            parsed.priority = b.replace('Priority:\n', '').trim();
+        } else if (b.startsWith('What I already tried:\n')) {
+            parsed.tried = b.replace('What I already tried:\n', '').trim();
+        }
+    });
+
+    return parsed;
+}
+
 function loadHelpRequests() {
     const token = getAuthToken();
     if (!token || !readerId) {
@@ -1947,6 +1980,7 @@ function loadHelpRequests() {
         
         let html = '';
         requests.forEach(request => {
+            const parsed = parseStructuredHelpRequestContent(request.content);
             const date = new Date(request.created_at);
             const timeStr = date.toLocaleString('en-US', {
                 month: 'short',
@@ -1977,9 +2011,33 @@ function loadHelpRequests() {
                     </div>
                     <div class="card-body">
                         <div class="mb-2">
-                            <strong>Request:</strong>
-                            <p class="mb-1" style="white-space: pre-wrap;">${escapeHtml(request.content || 'N/A')}</p>
+                            <strong>Help topic:</strong>
+                            <p class="mb-1" style="white-space: pre-wrap;">${escapeHtml(parsed.topic || parsed.fallback || 'N/A')}</p>
                         </div>
+                        ${parsed.location ? `
+                        <div class="mb-2">
+                            <strong>Location:</strong>
+                            <p class="mb-1 text-muted small">${escapeHtml(parsed.location)}</p>
+                        </div>
+                        ` : ''}
+                        ${parsed.priority ? `
+                        <div class="mb-2">
+                            <strong>Priority:</strong>
+                            <span class="badge ${parsed.priority.toLowerCase() === 'urgent' ? 'bg-danger' : (parsed.priority.toLowerCase() === 'high' ? 'bg-warning text-dark' : 'bg-secondary')}">${escapeHtml(parsed.priority)}</span>
+                        </div>
+                        ` : ''}
+                        ${parsed.tried ? `
+                        <div class="mb-2">
+                            <strong>Already tried:</strong>
+                            <p class="mb-1 text-muted small" style="white-space: pre-wrap;">${escapeHtml(parsed.tried)}</p>
+                        </div>
+                        ` : ''}
+                        ${(!parsed.topic && !parsed.location && !parsed.priority && !parsed.tried && parsed.fallback) ? `
+                        <div class="mb-2">
+                            <strong>Request (raw):</strong>
+                            <p class="mb-1 text-muted small" style="white-space: pre-wrap;">${escapeHtml(parsed.fallback)}</p>
+                        </div>
+                        ` : ''}
                         ${request.context ? `
                         <div class="mb-2">
                             <strong>Context:</strong>

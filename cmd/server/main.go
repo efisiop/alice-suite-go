@@ -66,8 +66,8 @@ func main() {
 	cfg := config.Load()
 	cfg.Validate()
 
-	// Initialize database
-	if err := database.InitDB(cfg.DBPath); err != nil {
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if err := database.InitDB(cfg.DBPath, cfg.DatabaseURL); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 	log.Println("Database initialized successfully")

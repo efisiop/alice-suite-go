@@ -4,22 +4,25 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/efisiopittau/alice-suite-go/internal/config"
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/internal/handlers"
 )
 
-const (
-	port = ":8080"
-	dbPath = "data/alice-suite.db"
-)
-
 func main() {
-	// Initialize database
-	if err := database.InitDB(dbPath); err != nil {
+	cfg := config.Load()
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if err := database.InitDB(cfg.DBPath, cfg.DatabaseURL); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer database.CloseDB()
+
+	port := ":" + os.Getenv("PORT")
+	if port == ":" {
+		port = ":8080"
+	}
 
 	fmt.Println("✅ Database initialized")
 

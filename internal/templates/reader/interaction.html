@@ -1691,7 +1691,11 @@ html {
                     <p class="text-muted small mb-3" id="quiz-scope-label"></p>
                     <form id="quiz-form">
                         <div id="quiz-questions-container"></div>
-                        <button type="button" class="btn btn-primary mt-3" onclick="submitQuiz()">Submit answers</button>
+                        <div id="quiz-single-feedback" class="small mt-2"></div>
+                        <div class="mt-3 d-flex gap-2">
+                            <button type="button" class="btn btn-primary" id="quiz-submit-btn" onclick="submitQuizCurrentAnswer()">Check answer</button>
+                            <button type="button" class="btn btn-outline-primary" id="quiz-next-btn" onclick="askOneMoreQuestion()" style="display: none;">Ask one more question</button>
+                        </div>
                     </form>
                 </div>
                 <div id="quiz-results-wrap" style="display: none;">
@@ -1749,6 +1753,78 @@ html {
                 <div id="ahah-feed-loading" class="text-muted small">Loading...</div>
                 <div id="ahah-feed" class="d-none"></div>
                 <div id="ahah-feed-empty" class="d-none text-muted small">No moments yet. Be the first to share one!</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Human Consultant Help Modal -->
+<style>
+#consultantHelpModal.modal { z-index: 1070 !important; }
+#consultantHelpModal textarea,
+#consultantHelpModal input,
+#consultantHelpModal select,
+#consultantHelpModal .form-control,
+#consultantHelpModal .form-select {
+    pointer-events: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+</style>
+<div class="modal fade" id="consultantHelpModal" tabindex="-1" aria-labelledby="consultantHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="consultantHelpModalLabel">Human Consultant Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Share clear details so your consultant can help you faster.</p>
+                <div class="alert alert-light border mb-3 small">
+                    <strong>Good request includes:</strong>
+                    <ul class="mb-0 mt-1">
+                        <li>What you are trying to understand</li>
+                        <li>Where you are in the book (page and section)</li>
+                        <li>What is confusing right now</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <label for="consultant-help-topic" class="form-label">What do you need help with? <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="consultant-help-topic" rows="3" placeholder="Example: I don't understand why Alice follows the rabbit here, and what this means for the story."></textarea>
+                    <div class="form-text">Try to write at least 15-20 words.</div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label for="consultant-help-page" class="form-label small">Page</label>
+                        <input type="number" class="form-control form-control-sm" id="consultant-help-page" min="1" placeholder="Page number">
+                    </div>
+                    <div class="col-6">
+                        <label for="consultant-help-section" class="form-label small">Section</label>
+                        <input type="number" class="form-control form-control-sm" id="consultant-help-section" min="1" placeholder="Section number">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="consultant-help-tried" class="form-label">What have you already tried? (optional)</label>
+                    <textarea class="form-control" id="consultant-help-tried" rows="2" placeholder="Example: I checked the dictionary and AI Help, but I still don't understand the sentence meaning."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="consultant-help-priority" class="form-label">Priority</label>
+                    <select class="form-select" id="consultant-help-priority">
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+
+                <div id="consultant-help-status" class="small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="consultant-help-submit-btn" onclick="submitConsultantHelpRequest()">Send to consultant</button>
             </div>
         </div>
     </div>
@@ -3693,6 +3769,8 @@ function showAIHelp() {
                 setTimeout(function() {
                     var chat = document.getElementById('ai-chat-container');
                     if (!chat || chat.style.display === 'none') return;
+                    // Allow other modal forms to keep focus (e.g., Human Consultant help form)
+                    if (window.suspendAIChatFocusKeeper) return;
                     var active = document.activeElement;
                     if (active === self) return;
                     if (active && chat.contains(active) && (active.tagName === 'BUTTON' || active.closest('button'))) return;
@@ -6797,9 +6875,18 @@ function readerServiceComingSoon(serviceName) {
 }
 
 // --- Test your knowledge (Quiz) ---
-let quizQuestionsData = []; // Store questions from API for scoring
+let quizQuestionsData = []; // Cached questions from API
+let quizCurrentIndex = 0;
+let quizCurrentScope = 'section';
+let quizCurrentAnswered = false;
+let quizScore = 0;
 
 function openQuizModal() {
+    quizQuestionsData = [];
+    quizCurrentIndex = 0;
+    quizCurrentScope = 'section';
+    quizCurrentAnswered = false;
+    quizScore = 0;
     document.getElementById('quiz-choose-scope').style.display = 'block';
     document.getElementById('quiz-loading').style.display = 'none';
     document.getElementById('quiz-questions-wrap').style.display = 'none';
@@ -6811,19 +6898,27 @@ function openQuizModal() {
 }
 
 function getQuizScopeLabel() {
-    var scope = document.querySelector('input[name="quizScope"]:checked').value;
+    var scope = quizCurrentScope;
     if (scope === 'section') return 'Quiz on this section (Section ' + (currentSectionIndex + 1) + ')';
     if (scope === 'page') return 'Quiz on this page (Page ' + currentPage + ')';
     return 'Quiz on what you\'ve read so far (Pages 1–' + currentPage + ')';
 }
 
 function generateQuiz() {
+    quizCurrentScope = document.querySelector('input[name="quizScope"]:checked').value;
+    quizQuestionsData = [];
+    quizCurrentIndex = 0;
+    quizCurrentAnswered = false;
+    quizScore = 0;
+    fetchMoreQuizQuestions(true);
+}
+
+function fetchMoreQuizQuestions(resetMode) {
     var token = getAuthToken();
     if (!token) {
         window.location.href = '/login';
         return;
     }
-    var scope = document.querySelector('input[name="quizScope"]:checked').value;
     document.getElementById('quiz-choose-scope').style.display = 'none';
     document.getElementById('quiz-loading').style.display = 'block';
     document.getElementById('quiz-questions-wrap').style.display = 'none';
@@ -6832,12 +6927,12 @@ function generateQuiz() {
 
     var payload = {
         book_id: bookId,
-        scope: scope,
+        scope: quizCurrentScope,
         page_number: currentPage,
-        section_number: scope === 'section' ? (currentSectionIndex + 1) : 1
+        section_number: quizCurrentScope === 'section' ? (currentSectionIndex + 1) : 1
     };
 
-    fetch('/api/reader/quiz', {
+    return fetch('/api/reader/quiz', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -6853,28 +6948,19 @@ function generateQuiz() {
     })
     .then(function(data) {
         document.getElementById('quiz-loading').style.display = 'none';
-        quizQuestionsData = data.questions || [];
-        if (quizQuestionsData.length === 0) {
+        var newQuestions = data.questions || [];
+        if (newQuestions.length === 0) {
             document.getElementById('quiz-error').style.display = 'block';
             document.getElementById('quiz-error-message').textContent = 'No questions were generated. Try a different scope or try again.';
             document.getElementById('quiz-choose-scope').style.display = 'block';
             return;
         }
-        document.getElementById('quiz-scope-label').textContent = getQuizScopeLabel();
-        var container = document.getElementById('quiz-questions-container');
-        container.innerHTML = '';
-        quizQuestionsData.forEach(function(q, i) {
-            var div = document.createElement('div');
-            div.className = 'mb-4';
-            div.innerHTML = '<p class="fw-bold">' + (i + 1) + '. ' + escapeHtml(q.question) + '</p>';
-            var opts = q.options || [];
-            opts.forEach(function(opt, j) {
-                var id = 'quiz-q' + i + '-opt' + j;
-                div.innerHTML += '<div class="form-check"><input class="form-check-input" type="radio" name="quiz-q' + i + '" id="' + id + '" value="' + j + '"><label class="form-check-label" for="' + id + '">' + escapeHtml(opt) + '</label></div>';
-            });
-            container.appendChild(div);
-        });
-        document.getElementById('quiz-questions-wrap').style.display = 'block';
+        if (resetMode) {
+            quizQuestionsData = newQuestions;
+        } else {
+            quizQuestionsData = quizQuestionsData.concat(newQuestions);
+        }
+        renderCurrentQuizQuestion();
     })
     .catch(function(err) {
         document.getElementById('quiz-loading').style.display = 'none';
@@ -6884,6 +6970,41 @@ function generateQuiz() {
     });
 }
 
+function renderCurrentQuizQuestion() {
+    if (quizCurrentIndex >= quizQuestionsData.length) {
+        fetchMoreQuizQuestions(false);
+        return;
+    }
+    var q = quizQuestionsData[quizCurrentIndex];
+    quizCurrentAnswered = false;
+
+    var label = getQuizScopeLabel() + ' • Question ' + (quizCurrentIndex + 1) + ' • Score: ' + quizScore + '/' + quizCurrentIndex;
+    document.getElementById('quiz-scope-label').textContent = label;
+
+    var container = document.getElementById('quiz-questions-container');
+    container.innerHTML = '';
+    var div = document.createElement('div');
+    div.className = 'mb-3';
+    div.innerHTML = '<p class="fw-bold mb-2">' + escapeHtml(q.question) + '</p>';
+    var opts = q.options || [];
+    opts.forEach(function(opt, j) {
+        var id = 'quiz-current-opt' + j;
+        div.innerHTML += '<div class="form-check mb-1"><input class="form-check-input" type="radio" name="quiz-current" id="' + id + '" value="' + j + '"><label class="form-check-label" for="' + id + '">' + escapeHtml(opt) + '</label></div>';
+    });
+    container.appendChild(div);
+
+    var feedbackEl = document.getElementById('quiz-single-feedback');
+    feedbackEl.textContent = '';
+    feedbackEl.className = 'small mt-2';
+
+    var submitBtn = document.getElementById('quiz-submit-btn');
+    submitBtn.disabled = false;
+    submitBtn.style.display = '';
+    document.getElementById('quiz-next-btn').style.display = 'none';
+
+    document.getElementById('quiz-questions-wrap').style.display = 'block';
+}
+
 function escapeHtml(s) {
     if (!s) return '';
     var div = document.createElement('div');
@@ -6891,36 +7012,49 @@ function escapeHtml(s) {
     return div.innerHTML;
 }
 
-function submitQuiz() {
-    var correct = 0;
-    var detail = [];
-    quizQuestionsData.forEach(function(q, i) {
-        var selected = document.querySelector('input[name="quiz-q' + i + '"]:checked');
-        var chosen = selected ? parseInt(selected.value, 10) : -1;
-        var right = (chosen === q.correct_index);
-        if (right) correct++;
-        var opts = q.options || [];
-        var correctText = opts[q.correct_index] || '';
-        detail.push({
-            question: q.question,
-            chosen: chosen,
-            correct_index: q.correct_index,
-            correctText: correctText,
-            right: right
-        });
-    });
-    var total = quizQuestionsData.length;
-    document.getElementById('quiz-questions-wrap').style.display = 'none';
-    document.getElementById('quiz-results-wrap').style.display = 'block';
-    var alertEl = document.getElementById('quiz-results-alert');
-    alertEl.className = correct === total ? 'alert alert-success' : 'alert alert-info';
-    alertEl.textContent = 'You got ' + correct + ' out of ' + total + ' correct.';
-    var detailEl = document.getElementById('quiz-results-detail');
-    detailEl.innerHTML = detail.map(function(d, i) {
-        var icon = d.right ? '✓' : '✗';
-        var cls = d.right ? 'text-success' : 'text-danger';
-        return '<p class="small ' + cls + '">' + icon + ' Q' + (i + 1) + ': ' + escapeHtml(d.question) + (d.right ? '' : ' — Correct: ' + escapeHtml(d.correctText)) + '</p>';
-    }).join('');
+function submitQuizCurrentAnswer() {
+    if (quizCurrentAnswered) return;
+    var selected = document.querySelector('input[name="quiz-current"]:checked');
+    if (!selected) {
+        alert('Please choose an answer first.');
+        return;
+    }
+
+    var q = quizQuestionsData[quizCurrentIndex];
+    var chosen = parseInt(selected.value, 10);
+    var right = chosen === q.correct_index;
+    if (right) quizScore++;
+    quizCurrentAnswered = true;
+
+    var radios = document.querySelectorAll('input[name="quiz-current"]');
+    radios.forEach(function(r) { r.disabled = true; });
+
+    var opts = q.options || [];
+    var feedbackEl = document.getElementById('quiz-single-feedback');
+    if (right) {
+        feedbackEl.className = 'small mt-2 text-success fw-bold';
+        feedbackEl.textContent = 'Correct! Great job.';
+    } else {
+        feedbackEl.className = 'small mt-2 text-danger';
+        feedbackEl.textContent = 'Not quite. Correct answer: ' + (opts[q.correct_index] || '');
+    }
+
+    document.getElementById('quiz-next-btn').style.display = '';
+    document.getElementById('quiz-submit-btn').disabled = true;
+    document.getElementById('quiz-scope-label').textContent = getQuizScopeLabel() + ' • Score: ' + quizScore + '/' + (quizCurrentIndex + 1);
+}
+
+function askOneMoreQuestion() {
+    if (!quizCurrentAnswered) {
+        alert('Please answer the current question first.');
+        return;
+    }
+    quizCurrentIndex += 1;
+    if (quizCurrentIndex < quizQuestionsData.length) {
+        renderCurrentQuizQuestion();
+        return;
+    }
+    fetchMoreQuizQuestions(false);
 }
 
 function quizBackToScope() {
@@ -7042,41 +7176,151 @@ function submitAhAhMoment() {
 }
 
 function requestHelp() {
-    const content = prompt('What do you need help with?');
-    if (content) {
-        const token = getAuthToken();
-        fetch('/auth/v1/user', {
-            headers: {'Authorization': 'Bearer ' + token}
-        })
-        .then(res => res.json())
-        .then(user => {
-            return fetch('/rest/v1/help_requests?select=*', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({
-                    user_id: user.id,
-                    book_id: bookId,
-                    content: content,
-                    status: 'pending'
-                })
-            });
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert('Help request submitted successfully!');
-            // Track activity with both help_request_id and content for better retrieval
-            trackActivity('HELP_REQUEST', { 
-                help_request_id: data[0]?.id,
-                content: content
-            });
-        })
-        .catch(err => {
-            alert('Failed to submit help request');
-        });
+    const modalEl = document.getElementById('consultantHelpModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const statusEl = document.getElementById('consultant-help-status');
+    const topicEl = document.getElementById('consultant-help-topic');
+    const pageEl = document.getElementById('consultant-help-page');
+    const sectionEl = document.getElementById('consultant-help-section');
+    const triedEl = document.getElementById('consultant-help-tried');
+    const priorityEl = document.getElementById('consultant-help-priority');
+
+    if (topicEl) topicEl.value = '';
+    if (pageEl) pageEl.value = currentPage || '';
+    if (sectionEl) sectionEl.value = (typeof currentSectionIndex === 'number' ? currentSectionIndex + 1 : '');
+    if (triedEl) triedEl.value = '';
+    if (priorityEl) priorityEl.value = 'normal';
+    if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.className = 'small';
     }
+
+    // Hide selection UI so it won't block typing in this modal
+    const toolbar = document.getElementById('selection-toolbar');
+    const indicator = document.getElementById('selection-mode-indicator');
+    const overlay = document.getElementById('touch-selection-overlay');
+    if (toolbar) { toolbar.style.display = 'none'; }
+    if (indicator) { indicator.style.display = 'none'; }
+    if (overlay) { overlay.classList.remove('active'); }
+    // Prevent AI chat focus keeper from stealing cursor while this form is open
+    window.suspendAIChatFocusKeeper = true;
+
+    // Temporarily hide AI chat UI to avoid any focus stealing while writing help request
+    const aiChatContainer = document.getElementById('ai-chat-container');
+    const aiChatMinimized = document.getElementById('ai-chat-minimized');
+    const previousChatState = {
+        containerDisplay: aiChatContainer ? aiChatContainer.style.display : '',
+        minimizedDisplay: aiChatMinimized ? aiChatMinimized.style.display : ''
+    };
+    if (aiChatContainer) aiChatContainer.style.display = 'none';
+    if (aiChatMinimized) aiChatMinimized.style.display = 'none';
+
+    modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        if (toolbar) { toolbar.style.display = ''; }
+        if (indicator) { indicator.style.display = ''; }
+        window.suspendAIChatFocusKeeper = false;
+        if (aiChatContainer) aiChatContainer.style.display = previousChatState.containerDisplay;
+        if (aiChatMinimized) aiChatMinimized.style.display = previousChatState.minimizedDisplay;
+    }, { once: true });
+
+    modal.show();
+    // Ensure cursor lands in first message box
+    setTimeout(() => {
+        const firstInput = document.getElementById('consultant-help-topic');
+        if (firstInput) firstInput.focus();
+    }, 200);
+}
+
+function submitConsultantHelpRequest() {
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    const topic = (document.getElementById('consultant-help-topic')?.value || '').trim();
+    const page = (document.getElementById('consultant-help-page')?.value || '').trim();
+    const section = (document.getElementById('consultant-help-section')?.value || '').trim();
+    const tried = (document.getElementById('consultant-help-tried')?.value || '').trim();
+    const priority = (document.getElementById('consultant-help-priority')?.value || 'normal').trim();
+    const statusEl = document.getElementById('consultant-help-status');
+    const submitBtn = document.getElementById('consultant-help-submit-btn');
+
+    if (!topic || topic.length < 15) {
+        if (statusEl) {
+            statusEl.className = 'small text-danger';
+            statusEl.textContent = 'Please add a bit more detail (at least 15 characters).';
+        }
+        return;
+    }
+
+    // Build structured message so consultant receives clear, useful context.
+    let content = 'Help Topic:\n' + topic;
+    if (page || section) {
+        content += '\n\nLocation:\n' + (page ? ('Page ' + page) : 'Page not provided');
+        if (section) content += ', Section ' + section;
+    }
+    content += '\n\nPriority:\n' + priority;
+    if (tried) content += '\n\nWhat I already tried:\n' + tried;
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (statusEl) {
+        statusEl.className = 'small text-muted';
+        statusEl.textContent = 'Sending to consultant...';
+    }
+
+    fetch('/auth/v1/user', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.json())
+    .then(user => {
+        return fetch('/rest/v1/help_requests?select=*', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                user_id: user.id,
+                book_id: bookId,
+                content: content,
+                status: 'pending'
+            })
+        });
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.text().then(t => { throw new Error(t || 'Failed to submit'); });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (statusEl) {
+            statusEl.className = 'small text-success';
+            statusEl.textContent = 'Sent successfully. Your consultant will review it.';
+        }
+        trackActivity('HELP_REQUEST', {
+            help_request_id: data[0]?.id,
+            content: topic,
+            page_number: page ? parseInt(page, 10) : undefined,
+            section_number: section ? parseInt(section, 10) : undefined,
+            priority: priority
+        });
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('consultantHelpModal'));
+            if (modal) modal.hide();
+        }, 700);
+    })
+    .catch(err => {
+        if (statusEl) {
+            statusEl.className = 'small text-danger';
+            statusEl.textContent = 'Could not send request. Please try again.';
+        }
+    })
+    .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+    });
 }
 
 // Load first page on page load

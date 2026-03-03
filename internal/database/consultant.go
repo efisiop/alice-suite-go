@@ -20,6 +20,7 @@ type ActiveReader struct {
 
 // GetActiveReaders returns readers active in the last N minutes
 func GetActiveReaders(minutesThreshold int) ([]*ActiveReader, error) {
+	cutoff := time.Now().Add(-time.Duration(minutesThreshold) * time.Minute)
 	query := `SELECT u.id, u.email, u.first_name, u.last_name, 
 	                 COALESCE(rs.book_id, ''), COALESCE(rs.current_page, 0),
 	                 COALESCE(rs.last_activity_at, u.last_active_at, u.created_at) as last_active,
@@ -29,13 +30,13 @@ func GetActiveReaders(minutesThreshold int) ([]*ActiveReader, error) {
 	          WHERE u.role = 'reader' 
 	          AND u.is_verified = 1
 	          AND (
-	              rs.last_activity_at >= datetime('now', '-' || ? || ' minutes')
-	              OR u.last_active_at >= datetime('now', '-' || ? || ' minutes')
-	              OR (rs.last_activity_at IS NULL AND u.last_active_at IS NULL AND u.created_at >= datetime('now', '-' || ? || ' minutes'))
+	              rs.last_activity_at >= ?
+	              OR u.last_active_at >= ?
+	              OR (rs.last_activity_at IS NULL AND u.last_active_at IS NULL AND u.created_at >= ?)
 	          )
 	          ORDER BY last_active DESC`
 
-	rows, err := DB.Query(query, minutesThreshold, minutesThreshold, minutesThreshold)
+	rows, err := DB.Query(Rebind(query), cutoff, cutoff, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active readers: %w", err)
 	}
@@ -82,7 +83,7 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 	query := `
 		SELECT 
 			COUNT(*) as total_activities,
-			COUNT(DISTINCT DATE(created_at)) as active_days,
+			COUNT(DISTINCT SUBSTR(created_at, 1, 10)) as active_days,
 			SUM(CASE 
 				WHEN COALESCE(event_type, '') = 'DEFINITION_LOOKUP' OR COALESCE(activity_type, '') = 'WORD_LOOKUP' THEN 1
 				ELSE 0 
@@ -102,7 +103,7 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 				NULL as activity_type
 			FROM interactions
 			WHERE user_id = ? 
-			AND datetime(created_at) >= datetime(?)
+			AND created_at >= ?
 			
 			UNION ALL
 			
@@ -112,11 +113,11 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 				activity_type
 			FROM activity_logs
 			WHERE user_id = ? 
-			AND datetime(created_at) >= datetime(?)
+			AND created_at >= ?
 		) combined_activities`
 
 	summary := &ReaderActivitySummary{}
-	err := DB.QueryRow(query, userID, cutoffTimeStr, userID, cutoffTimeStr).Scan(
+	err := DB.QueryRow(Rebind(query), userID, cutoffTimeStr, userID, cutoffTimeStr).Scan(
 		&summary.TotalActivities,
 		&summary.ActiveDays,
 		&summary.WordLookups,
@@ -147,7 +148,7 @@ func GetReaderState(userID string) (*ReaderState, error) {
 	var bookID, sectionID, lastActivityType, lastActivityAt, status, updatedAt sql.NullString
 	var currentPage, totalPagesRead, totalWordLookups, totalAIInteractions sql.NullInt64
 
-	err := DB.QueryRow(query, userID).Scan(
+	err := DB.QueryRow(Rebind(query), userID).Scan(
 		&state.UserID, &bookID, &currentPage, &sectionID, &lastActivityType,
 		&lastActivityAt, &totalPagesRead, &totalWordLookups, &totalAIInteractions,
 		&status, &updatedAt,

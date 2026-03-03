@@ -395,14 +395,14 @@ func HandleGetLoggedInReadersCount(w http.ResponseWriter, r *http.Request) {
 			MAX(s.last_active_at) as last_active
 		FROM users u
 		INNER JOIN sessions s ON s.user_id = u.id 
-			AND s.expires_at > datetime('now')
-			AND s.last_active_at >= datetime('now', '-1 hour')
+			AND s.expires_at > ?
+			AND s.last_active_at >= ?
 		WHERE u.role = 'reader'
 		GROUP BY u.id, u.first_name, u.last_name, u.email
 		ORDER BY last_active DESC
 	`
 
-	rows, err := database.DB.Query(query)
+	rows, err := database.DB.Query(database.Rebind(query), time.Now(), time.Now().Add(-1*time.Hour))
 	if err != nil {
 		log.Printf("Database error in HandleGetLoggedInReadersCount: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

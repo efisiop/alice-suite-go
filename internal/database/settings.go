@@ -5,7 +5,7 @@ import "fmt"
 // GetAdminSetting returns the value for the given key, or empty string if not found.
 func GetAdminSetting(key string) (string, error) {
 	var value string
-	err := DB.QueryRow("SELECT value FROM admin_settings WHERE key = ?", key).Scan(&value)
+	err := DB.QueryRow(Rebind("SELECT value FROM admin_settings WHERE key = ?"), key).Scan(&value)
 	if err != nil {
 		return "", fmt.Errorf("get admin setting %q: %w", key, err)
 	}
@@ -14,7 +14,13 @@ func GetAdminSetting(key string) (string, error) {
 
 // SetAdminSetting sets the value for the given key.
 func SetAdminSetting(key, value string) error {
-	_, err := DB.Exec("INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)", key, value)
+	var query string
+	if DriverName == "postgres" {
+		query = `INSERT INTO admin_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+	} else {
+		query = "INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)"
+	}
+	_, err := DB.Exec(Rebind(query), key, value)
 	if err != nil {
 		return fmt.Errorf("set admin setting %q: %w", key, err)
 	}

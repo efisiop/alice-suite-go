@@ -32,8 +32,8 @@ func main() {
 	fmt.Println("=" + strings.Repeat("=", 60))
 	fmt.Println("")
 
-	// Initialize database
-	if err := database.InitDB(cfg.DBPath); err != nil {
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if err := database.InitDB(cfg.DBPath, cfg.DatabaseURL); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer database.CloseDB()

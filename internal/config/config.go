@@ -7,20 +7,25 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	Port      string
-	JWTSecret string
-	DBPath    string
-	AIAPIKey  string
-	Env       string // "development" or "production"
+	Port         string
+	JWTSecret    string
+	DBPath       string
+	DatabaseURL  string // PostgreSQL connection URL (used when set; Render provides this)
+	AIAPIKey     string
+	Env          string // "development" or "production"
+	UsePostgres  bool   // true when DATABASE_URL is set
 }
 
 // Load loads configuration from environment variables
 func Load() *Config {
+	dbURL := os.Getenv("DATABASE_URL")
 	cfg := &Config{
-		Port:   getEnvOrDefault("PORT", "8080"),
-		DBPath: getEnvOrDefault("DB_PATH", "data/alice-suite.db"),
-		AIAPIKey: getEnvOrDefault("AI_API_KEY", ""),
-		Env:    getEnvOrDefault("ENV", "development"),
+		Port:        getEnvOrDefault("PORT", "8080"),
+		DBPath:      getEnvOrDefault("DB_PATH", "data/alice-suite.db"),
+		DatabaseURL: dbURL,
+		UsePostgres: dbURL != "",
+		AIAPIKey:    getEnvOrDefault("AI_API_KEY", ""),
+		Env:         getEnvOrDefault("ENV", "development"),
 	}
 
 	// JWT Secret - required in production, optional in development
@@ -51,8 +56,9 @@ func (c *Config) Validate() error {
 		log.Fatal("PORT configuration is required")
 	}
 
-	if c.DBPath == "" {
-		log.Fatal("DB_PATH configuration is required")
+	// Need either DATABASE_URL (PostgreSQL) or DB_PATH (SQLite)
+	if c.DatabaseURL == "" && c.DBPath == "" {
+		log.Fatal("Either DATABASE_URL (PostgreSQL) or DB_PATH (SQLite) is required")
 	}
 
 	// In production, validate critical settings

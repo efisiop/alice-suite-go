@@ -38,7 +38,7 @@ func LogActivity(activity *ActivityLog) error {
 	          (id, user_id, session_id, activity_type, book_id, page_number, section_id, metadata, created_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := DB.Exec(query,
+	_, err := DB.Exec(Rebind(query),
 		activity.ID, activity.UserID, activity.SessionID, activity.ActivityType,
 		activity.BookID, activity.PageNumber, activity.SectionID, metadataJSON, time.Now(),
 	)
@@ -56,7 +56,7 @@ func updateReaderState(activity *ActivityLog) error {
 	// Only update reader_states for readers
 	// First check if user is a reader
 	var userRole string
-	err := DB.QueryRow(`SELECT role FROM users WHERE id = ?`, activity.UserID).Scan(&userRole)
+	err := DB.QueryRow(Rebind(`SELECT role FROM users WHERE id = ?`), activity.UserID).Scan(&userRole)
 	if err != nil {
 		// If user not found, skip state update
 		return nil
@@ -68,7 +68,7 @@ func updateReaderState(activity *ActivityLog) error {
 
 	// Check if reader_state exists
 	var exists bool
-	err = DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM reader_states WHERE user_id = ?)`, activity.UserID).Scan(&exists)
+	err = DB.QueryRow(Rebind(`SELECT EXISTS(SELECT 1 FROM reader_states WHERE user_id = ?)`), activity.UserID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check reader_state existence: %w", err)
 	}
@@ -77,8 +77,9 @@ func updateReaderState(activity *ActivityLog) error {
 		// Create new reader_state
 		query := `INSERT INTO reader_states 
 		          (user_id, book_id, current_page, current_section_id, last_activity_type, last_activity_at, status, updated_at)
-		          VALUES (?, ?, ?, ?, ?, datetime('now'), 'active', datetime('now'))`
-		_, err = DB.Exec(query, activity.UserID, activity.BookID, activity.PageNumber, activity.SectionID, activity.ActivityType)
+		          VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`
+		now := time.Now()
+		_, err = DB.Exec(Rebind(query), activity.UserID, activity.BookID, activity.PageNumber, activity.SectionID, activity.ActivityType, now, now)
 		if err != nil {
 			return fmt.Errorf("failed to create reader_state: %w", err)
 		}
@@ -91,12 +92,13 @@ func updateReaderState(activity *ActivityLog) error {
 	          current_page = COALESCE(?, current_page),
 	          current_section_id = COALESCE(?, current_section_id),
 	          last_activity_type = ?,
-	          last_activity_at = datetime('now'),
+	          last_activity_at = ?,
 	          status = 'active',
-	          updated_at = datetime('now')
+	          updated_at = ?
 	          WHERE user_id = ?`
 
-	_, err = DB.Exec(query, activity.BookID, activity.PageNumber, activity.SectionID, activity.ActivityType, activity.UserID)
+	now := time.Now()
+	_, err = DB.Exec(Rebind(query), activity.BookID, activity.PageNumber, activity.SectionID, activity.ActivityType, now, now, activity.UserID)
 	if err != nil {
 		return fmt.Errorf("failed to update reader_state: %w", err)
 	}
@@ -110,7 +112,7 @@ func GetRecentActivities(limit int) ([]*ActivityLog, error) {
 	          ORDER BY created_at DESC
 	          LIMIT ?`
 
-	rows, err := DB.Query(query, limit)
+	rows, err := DB.Query(Rebind(query), limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query recent activities: %w", err)
 	}
@@ -165,7 +167,7 @@ func GetUserActivities(userID string, limit int) ([]*ActivityLog, error) {
 	          ORDER BY created_at DESC
 	          LIMIT ?`
 
-	rows, err := DB.Query(query, userID, limit)
+	rows, err := DB.Query(Rebind(query), userID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user activities: %w", err)
 	}

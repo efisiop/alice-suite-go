@@ -1,28 +1,22 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/efisiopittau/alice-suite-go/internal/database"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
 	migrationsDir = "migrations"
 )
-
-func getDBPath() string {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "data/alice-suite.db"
-	}
-	return dbPath
-}
 
 // splitSQLStatements splits SQL by semicolons, but respects quoted strings
 func splitSQLStatements(sql string) []string {
@@ -71,27 +65,28 @@ func splitSQLStatements(sql string) []string {
 }
 
 func main() {
-	dbPath := getDBPath()
-
-	// Create data directory if it doesn't exist
-	dbDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dbDir, 0755); err != nil {
-		log.Fatalf("Failed to create data directory: %v", err)
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/alice-suite.db"
 	}
+	databaseURL := os.Getenv("DATABASE_URL")
 
-	// Open database
-	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
-	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if databaseURL == "" {
+		dbDir := filepath.Dir(dbPath)
+		if err := os.MkdirAll(dbDir, 0755); err != nil {
+			log.Fatalf("Failed to create data directory: %v", err)
+		}
 	}
-	defer db.Close()
-
-	// Test connection
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	if err := database.InitDB(dbPath, databaseURL); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	defer database.CloseDB()
 
 	fmt.Println("✅ Database connection established")
+	if database.DriverName == "postgres" {
+		fmt.Println("📦 Using PostgreSQL (persistent storage)")
+	}
 
 	// Read migration files
 	files, err := ioutil.ReadDir(migrationsDir)
@@ -99,44 +94,40 @@ func main() {
 		log.Fatalf("Failed to read migrations directory: %v", err)
 	}
 
-	// Sort migration files by name
 	migrationFiles := []string{}
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".sql") {
 			migrationFiles = append(migrationFiles, file.Name())
 		}
 	}
+	sort.Strings(migrationFiles)
 
-	// Execute migrations in order
 	for _, filename := range migrationFiles {
-		filepath := filepath.Join(migrationsDir, filename)
+		path := filepath.Join(migrationsDir, filename)
 		fmt.Printf("📄 Running migration: %s\n", filename)
 
-		sqlBytes, err := ioutil.ReadFile(filepath)
+		sqlBytes, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Fatalf("Failed to read migration file %s: %v", filename, err)
 		}
 
-		sql := string(sqlBytes)
+		sqlContent := string(sqlBytes)
+		if database.DriverName == "postgres" {
+			sqlContent = database.TransformSQLiteToPostgres(sqlContent)
+		}
 
-		// Execute entire SQL file - SQLite can handle multiple statements
-		// This approach handles quoted strings and multi-line statements correctly
-		_, err = db.Exec(sql)
-		if err != nil {
-			// If executing entire file fails, try splitting by semicolons
-			// but only split outside of quoted strings
-			statements := splitSQLStatements(sql)
-			for _, statement := range statements {
-				statement = strings.TrimSpace(statement)
-				if statement == "" || strings.HasPrefix(statement, "--") {
-					continue
-				}
-
-				_, execErr := db.Exec(statement)
-				if execErr != nil {
-					log.Printf("Warning: Error executing statement in %s: %v", filename, execErr)
-					// Continue with next statement (some errors are expected for IF NOT EXISTS)
-				}
+		statements := splitSQLStatements(sqlContent)
+		for _, stmt := range statements {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" || strings.HasPrefix(stmt, "--") {
+				continue
+			}
+			if database.DriverName == "postgres" && strings.HasPrefix(stmt, "INSERT INTO") {
+				stmt = database.WrapInsertForPostgres(stmt)
+			}
+			_, execErr := database.DB.Exec(stmt)
+			if execErr != nil {
+				log.Printf("Warning: Error executing statement in %s: %v", filename, execErr)
 			}
 		}
 
@@ -144,5 +135,9 @@ func main() {
 	}
 
 	fmt.Println("\n🎉 All migrations completed successfully!")
-	fmt.Printf("📊 Database created at: %s\n", dbPath)
+	if database.DriverName == "postgres" {
+		fmt.Println("📊 Connected to PostgreSQL (data persists across deploys)")
+	} else {
+		fmt.Printf("📊 Database at: %s\n", dbPath)
+	}
 }

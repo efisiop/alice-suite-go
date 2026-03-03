@@ -9,6 +9,7 @@ import (
 
 	"github.com/efisiopittau/alice-suite-go/internal/config"
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,83 +24,82 @@ func main() {
 	fmt.Println("=" + strings.Repeat("=", 60))
 	fmt.Println("")
 
-	// Initialize database
-	if err := database.InitDB(cfg.DBPath); err != nil {
+	// Initialize database (PostgreSQL when DATABASE_URL set, else SQLite)
+	if err := database.InitDB(cfg.DBPath, cfg.DatabaseURL); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer database.CloseDB()
 
-	fmt.Println("✅ Database connected:", cfg.DBPath)
+	if cfg.DatabaseURL != "" {
+		fmt.Println("✅ Database connected: PostgreSQL (persistent)")
+	} else {
+		fmt.Println("✅ Database connected:", cfg.DBPath)
+	}
 	fmt.Println("")
 
 	// Step 1: Diagnose current state
 	fmt.Println("📊 Step 1: Diagnosing current database state...")
 	fmt.Println("-" + strings.Repeat("-", 60))
 
-	var tableSQL string
-	err := database.DB.QueryRow(`
-		SELECT sql FROM sqlite_master 
-		WHERE type='table' AND name='sections'
-	`).Scan(&tableSQL)
+	hasSectionsTable := false
+	var err error
 
-	hasSectionsTable := err == nil
-	isNewStructure := false
+	if database.DriverName == "postgres" {
+		// PostgreSQL: use information_schema (migrations create correct schema from the start)
+		var n int
+		err = database.DB.QueryRow(`
+			SELECT 1 FROM information_schema.tables 
+			WHERE table_schema = 'public' AND table_name = 'sections'
+		`).Scan(&n)
+		hasSectionsTable = (err == nil)
+		if !hasSectionsTable {
+			log.Fatal("❌ ERROR: No sections table found. Please run migrations first.")
+		}
+		fmt.Printf("   PostgreSQL: sections table exists (migrations define schema)\n")
+	} else {
+		// SQLite: check sqlite_master for structure and sections_new migration
+		var tableSQL string
+		err = database.DB.QueryRow(`
+			SELECT sql FROM sqlite_master 
+			WHERE type='table' AND name='sections'
+		`).Scan(&tableSQL)
+		hasSectionsTable = (err == nil)
 
-	if hasSectionsTable {
-		// Check structure
-		isNewStructure = strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
-
-		if !isNewStructure {
-			fmt.Printf("   Detected OLD structure in 'sections' table\n")
-			// Check if sections_new exists with new structure
+		if hasSectionsTable {
+			isNewStructure := strings.Contains(tableSQL, "page_number") && strings.Contains(tableSQL, "section_number")
+			if !isNewStructure {
+				fmt.Printf("   Detected OLD structure in 'sections' table\n")
+				var sectionsNewSQL string
+				err2 := database.DB.QueryRow(`
+					SELECT sql FROM sqlite_master 
+					WHERE type='table' AND name='sections_new'
+				`).Scan(&sectionsNewSQL)
+				if err2 == nil {
+					fmt.Println("   Migrating: Dropping old 'sections', renaming 'sections_new' to 'sections'...")
+					_, _ = database.DB.Exec("DROP TABLE IF EXISTS sections")
+					_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
+					if err != nil {
+						log.Fatalf("❌ Failed to rename sections_new: %v", err)
+					}
+					fmt.Println("   ✓ Migration completed")
+				} else {
+					log.Fatal("❌ ERROR: Old database structure detected. Please run migrations first.")
+				}
+			} else {
+				fmt.Printf("   Detected NEW structure in 'sections' table\n")
+			}
+		} else {
 			var sectionsNewSQL string
 			err2 := database.DB.QueryRow(`
-				SELECT sql FROM sqlite_master 
-				WHERE type='table' AND name='sections_new'
+				SELECT sql FROM sqlite_master WHERE type='table' AND name='sections_new'
 			`).Scan(&sectionsNewSQL)
-
 			if err2 == nil {
-				fmt.Println("   Found 'sections_new' table with NEW structure")
-				fmt.Println("   Migrating: Dropping old 'sections', renaming 'sections_new' to 'sections'...")
-
-				// Drop old sections table
-				_, err = database.DB.Exec("DROP TABLE IF EXISTS sections")
-				if err != nil {
-					log.Fatalf("❌ Failed to drop old sections table: %v", err)
-				}
-
-				// Rename sections_new to sections
-				_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
-				if err != nil {
-					log.Fatalf("❌ Failed to rename sections_new to sections: %v", err)
-				}
-
-				fmt.Println("   ✓ Migration completed: 'sections_new' is now 'sections'")
-				isNewStructure = true
+				_, _ = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
+				hasSectionsTable = true
+				fmt.Println("   ✓ Renamed 'sections_new' to 'sections'")
 			} else {
-				log.Fatal("❌ ERROR: Old database structure detected and no sections_new table. Please run migrations first.")
+				log.Fatal("❌ ERROR: No sections table found. Please run migrations first.")
 			}
-		} else {
-			fmt.Printf("   Detected NEW structure in 'sections' table\n")
-		}
-	} else {
-		// Check if sections_new exists
-		var sectionsNewSQL string
-		err2 := database.DB.QueryRow(`
-			SELECT sql FROM sqlite_master 
-			WHERE type='table' AND name='sections_new'
-		`).Scan(&sectionsNewSQL)
-
-		if err2 == nil {
-			fmt.Println("   Found 'sections_new' table, renaming to 'sections'...")
-			_, err = database.DB.Exec("ALTER TABLE sections_new RENAME TO sections")
-			if err != nil {
-				log.Fatalf("❌ Failed to rename sections_new to sections: %v", err)
-			}
-			fmt.Println("   ✓ Renamed 'sections_new' to 'sections'")
-			isNewStructure = true
-		} else {
-			log.Fatal("❌ ERROR: No sections table found. Please run migrations first.")
 		}
 	}
 
@@ -205,13 +205,14 @@ func main() {
 		}
 	}
 
-	// Create each page
+	// Create each page (idempotent: INSERT OR IGNORE for SQLite, ON CONFLICT for Postgres)
+	pageInsertQuery := `INSERT OR IGNORE INTO pages (id, book_id, page_number) VALUES (?, 'alice-in-wonderland', ?)`
+	if database.DriverName == "postgres" {
+		pageInsertQuery = `INSERT INTO pages (id, book_id, page_number) VALUES ($1, 'alice-in-wonderland', $2) ON CONFLICT (id) DO NOTHING`
+	}
 	for pageNum := range pageMap {
 		pageID := fmt.Sprintf("page-%d", pageNum)
-		_, err = txPages.Exec(`
-			INSERT OR IGNORE INTO pages (id, book_id, page_number)
-			VALUES (?, 'alice-in-wonderland', ?)
-		`, pageID, pageNum)
+		_, err = txPages.Exec(database.Rebind(pageInsertQuery), pageID, pageNum)
 		if err != nil {
 			txPages.Rollback()
 			log.Fatalf("❌ Failed to create page %d: %v", pageNum, err)
@@ -263,9 +264,14 @@ func main() {
 		fmt.Printf("   ✓ Cleared %d existing sections\n", totalSections)
 	}
 
+	// Transform sections data for PostgreSQL (char(10) -> chr(10), etc.)
+	dataToImport := sectionsData
+	if database.DriverName == "postgres" {
+		dataToImport = database.TransformSQLiteToPostgres(sectionsData)
+	}
+
 	// Split into individual INSERT statements and execute
-	// Each line in the file is one INSERT statement
-	lines2 := strings.Split(sectionsData, "\n")
+	lines2 := strings.Split(dataToImport, "\n")
 	importedCount := 0
 	failedCount := 0
 
@@ -275,7 +281,6 @@ func main() {
 			continue
 		}
 
-		// Ensure statement ends with semicolon (for safety, though each line should have it)
 		stmt := line
 		if !strings.HasSuffix(stmt, ";") {
 			stmt += ";"
@@ -283,9 +288,12 @@ func main() {
 
 		_, err = tx.Exec(stmt)
 		if err != nil {
-			// Check if it's a duplicate key error (OK if we're re-running)
-			if strings.Contains(err.Error(), "UNIQUE constraint") || strings.Contains(err.Error(), "constraint failed") {
-				// Section already exists, skip it
+			// Duplicate key errors (OK when re-running)
+			errStr := err.Error()
+			if strings.Contains(errStr, "UNIQUE constraint") ||
+				strings.Contains(errStr, "constraint failed") ||
+				strings.Contains(errStr, "duplicate key") ||
+				strings.Contains(errStr, "unique_violation") {
 				continue
 			}
 			// Log error but continue (might be other recoverable issues)
@@ -321,16 +329,12 @@ func main() {
 	database.DB.QueryRow("SELECT COUNT(*) FROM sections WHERE page_number = 1").Scan(&newPage1Count)
 	fmt.Printf("   Sections for page 1: %d\n", newPage1Count)
 
-	// Show sample sections for page 1
+	// Show sample sections for page 1 (SUBSTR works in both SQLite and Postgres)
+	previewQuery := database.Rebind(`SELECT section_number, SUBSTR(content, 1, 60) as preview
+		FROM sections WHERE page_number = 1 ORDER BY section_number LIMIT 5`)
 	fmt.Println("")
 	fmt.Println("   Sample sections for page 1:")
-	rows, err := database.DB.Query(`
-		SELECT section_number, SUBSTR(content, 1, 60) as preview
-		FROM sections 
-		WHERE page_number = 1 
-		ORDER BY section_number
-		LIMIT 5
-	`)
+	rows, err := database.DB.Query(previewQuery)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

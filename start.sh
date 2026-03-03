@@ -8,10 +8,22 @@ if [ -f .env ]; then
     set +a
 fi
 
-# Always run migrations to ensure database schema is up to date
+# Production (e.g. Render) requires PostgreSQL - SQLite data is ephemeral and lost on deploy
+if [ "${ENV:-}" = "production" ] && [ -z "$DATABASE_URL" ]; then
+    echo "ERROR: DATABASE_URL is required in production. Add a Render PostgreSQL database and link it."
+    echo "See docs/POSTGRES_MIGRATION.md for setup."
+    exit 1
+fi
+
+# Run migrations before server starts
 echo "Running database migrations..."
-export DB_PATH="${DB_PATH:-data/alice-suite.db}"
-mkdir -p "$(dirname "$DB_PATH")"
+if [ -n "$DATABASE_URL" ]; then
+  echo "Using PostgreSQL (persistent storage)"
+else
+  export DB_PATH="${DB_PATH:-data/alice-suite.db}"
+  mkdir -p "$(dirname "$DB_PATH")"
+  echo "Using SQLite at $DB_PATH"
+fi
 ./bin/migrate
 
 # Always run init-users to ensure all users exist (it checks and only creates if missing)

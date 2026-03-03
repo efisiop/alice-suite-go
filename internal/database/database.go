@@ -3,63 +3,76 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"path/filepath"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // DB represents the database connection
 var DB *sql.DB
 
-// InitDB initializes the SQLite database connection with WAL mode and optimal PRAGMAs
-func InitDB(dbPath string) error {
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
+// DriverName is "postgres" or "sqlite3" - used for query rebinding
+var DriverName string
 
-	// Open database connection with WAL mode support
+// InitDB initializes the database connection.
+// When databaseURL is non-empty (e.g. DATABASE_URL from Render), uses PostgreSQL.
+// Otherwise uses SQLite with dbPath (local development).
+func InitDB(dbPath, databaseURL string) error {
 	var err error
-	DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL")
-	if err != nil {
-		return err
-	}
 
-	// CRITICAL: Set connection pool limits for SQLite
-	// SQLite works best with limited concurrent connections
-	DB.SetMaxOpenConns(25)        // Limit concurrent connections
-	DB.SetMaxIdleConns(5)         // Keep 5 idle connections
-	DB.SetConnMaxLifetime(0)      // Reuse connections indefinitely
+	if databaseURL != "" {
+		// PostgreSQL (production: Render.com, or local with Docker)
+		DriverName = "postgres"
+		DB, err = sql.Open("pgx", databaseURL)
+		if err != nil {
+			return fmt.Errorf("open postgres: %w", err)
+		}
+		DB.SetMaxOpenConns(25)
+		DB.SetMaxIdleConns(5)
+		DB.SetConnMaxLifetime(0)
+	} else {
+		// SQLite (local development)
+		DriverName = "sqlite3"
+		dir := filepath.Dir(dbPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+		DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL")
+		if err != nil {
+			return err
+		}
+		DB.SetMaxOpenConns(25)
+		DB.SetMaxIdleConns(5)
+		DB.SetConnMaxLifetime(0)
 
-	// Execute PRAGMAs for optimal performance and concurrency
-	pragmas := []string{
-		"PRAGMA journal_mode = WAL;",           // Enable Write-Ahead Logging (allows concurrent reads)
-		"PRAGMA synchronous = NORMAL;",         // Good balance between speed and safety
-		"PRAGMA foreign_keys = ON;",            // Enforce referential integrity
-		"PRAGMA busy_timeout = 5000;",          // Wait 5 seconds before "database locked" error
-		"PRAGMA wal_autocheckpoint = 1000;",     // Auto-checkpoint WAL every 1000 pages
-		"PRAGMA cache_size = -20000;",          // 20 MB page cache (adjust based on available RAM)
-		"PRAGMA temp_store = MEMORY;",          // Store temp tables in memory for speed
-	}
-
-	for _, pragma := range pragmas {
-		if _, err := DB.Exec(pragma); err != nil {
-			return fmt.Errorf("failed to set pragma %s: %w", pragma, err)
+		// SQLite-only PRAGMAs
+		pragmas := []string{
+			"PRAGMA journal_mode = WAL;",
+			"PRAGMA synchronous = NORMAL;",
+			"PRAGMA foreign_keys = ON;",
+			"PRAGMA busy_timeout = 5000;",
+			"PRAGMA wal_autocheckpoint = 1000;",
+			"PRAGMA cache_size = -20000;",
+			"PRAGMA temp_store = MEMORY;",
+		}
+		for _, pragma := range pragmas {
+			if _, err := DB.Exec(pragma); err != nil {
+				return fmt.Errorf("failed to set pragma %s: %w", pragma, err)
+			}
 		}
 	}
 
-	// Test connection by executing a simple query (SQLite doesn't support Ping)
-	_, err = DB.Exec("SELECT 1")
-	if err != nil {
-		return err
+	if err := DB.Ping(); err != nil {
+		return fmt.Errorf("ping database: %w", err)
 	}
 
-	// Ensure consultant_prompts table exists (migration 012) so saving prompts works without running migrate
+	// Ensure tables exist (run even for PostgreSQL; migrations create schema)
 	if err := ensureConsultantPromptsTable(); err != nil {
 		return fmt.Errorf("ensure consultant_prompts table: %w", err)
 	}
-	// Ensure ah_ah_moments table exists (migration 015)
 	if err := ensureAhAhMomentsTable(); err != nil {
 		return fmt.Errorf("ensure ah_ah_moments table: %w", err)
 	}
@@ -67,22 +80,36 @@ func InitDB(dbPath string) error {
 	return nil
 }
 
+// Rebind converts ? placeholders to $1, $2... for PostgreSQL.
+// SQLite uses ? and ignores this; call before every Exec/Query/QueryRow when using raw queries.
+func Rebind(query string) string {
+	if DriverName == "postgres" {
+		return sqlx.Rebind(sqlx.DOLLAR, query)
+	}
+	return query
+}
+
 // ensureConsultantPromptsTable creates the consultant_prompts table if it doesn't exist
 func ensureConsultantPromptsTable() error {
-	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS consultant_prompts (
+	tsDefault := "CURRENT_TIMESTAMP"
+	if DriverName == "sqlite3" {
+		tsDefault = "datetime('now')"
+	}
+	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS consultant_prompts (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
 		book_id TEXT NOT NULL,
 		page_number INTEGER NOT NULL,
 		section_number INTEGER,
 		prompt_text TEXT NOT NULL,
-		created_at TEXT NOT NULL DEFAULT (datetime('now')),
-		updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+		created_at TEXT NOT NULL DEFAULT (%s),
+		updated_at TEXT NOT NULL DEFAULT (%s),
 		dismissed_at TEXT,
 		accepted_at TEXT,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 		FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-	)`)
+	)`, tsDefault, tsDefault)
+	_, err := DB.Exec(q)
 	if err != nil {
 		return err
 	}
@@ -101,7 +128,11 @@ func ensureConsultantPromptsTable() error {
 
 // ensureAhAhMomentsTable creates the ah_ah_moments table if it doesn't exist (migration 015)
 func ensureAhAhMomentsTable() error {
-	_, err := DB.Exec(`CREATE TABLE IF NOT EXISTS ah_ah_moments (
+	tsDefault := "CURRENT_TIMESTAMP"
+	if DriverName == "sqlite3" {
+		tsDefault = "datetime('now')"
+	}
+	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS ah_ah_moments (
 		id TEXT PRIMARY KEY,
 		user_id TEXT NOT NULL,
 		book_id TEXT NOT NULL,
@@ -109,10 +140,11 @@ func ensureAhAhMomentsTable() error {
 		page_number INTEGER,
 		section_number INTEGER,
 		shared INTEGER NOT NULL DEFAULT 1,
-		created_at TEXT NOT NULL DEFAULT (datetime('now')),
+		created_at TEXT NOT NULL DEFAULT (%s),
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 		FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-	)`)
+	)`, tsDefault)
+	_, err := DB.Exec(q)
 	if err != nil {
 		return err
 	}
