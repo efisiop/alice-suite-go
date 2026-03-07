@@ -4,7 +4,7 @@
 --          Optional admin_level for global vs regional (e.g. 'global', 'regional').
 -- ============================================================
 
--- SQLite does not allow altering CHECK constraints; recreate users table with new role.
+-- SQLite does not allow altering CHECK constraints. Recreate users table with new role.
 PRAGMA foreign_keys = OFF;
 
 CREATE TABLE users_new (

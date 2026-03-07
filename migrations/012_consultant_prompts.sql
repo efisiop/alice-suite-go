@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migration 012: Consultant Prompts (AI-style suggestions for readers)
 -- Purpose: Let consultants create prompts that suggest the reader
---          get help on a specific page/section; shown to reader as AI-style suggestion
+--          get help on a specific page/section, shown to reader as AI-style suggestion
 -- ============================================================
 
 PRAGMA foreign_keys = ON;

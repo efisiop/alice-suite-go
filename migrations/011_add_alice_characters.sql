@@ -1,7 +1,6 @@
 -- Add Alice in Wonderland Character Names to Glossary
 -- Book ID: alice-in-wonderland
-
-BEGIN TRANSACTION;
+-- (Each INSERT runs separately; no BEGIN/COMMIT so migrator's Exec-per-statement works.)
 
 -- Main Characters
 INSERT OR IGNORE INTO alice_glossary (id, book_id, term, definition, example, chapter_reference)
@@ -41,5 +40,3 @@ VALUES
 ('character-knave-of-hearts', 'alice-in-wonderland', 'knave of hearts', 'A character accused of stealing the Queen''s tarts. He is put on trial in Chapter XI.', 'The Knave of Hearts, he made those tarts, and took them quite away!', 'XI'),
 
 ('character-bill-the-lizard', 'alice-in-wonderland', 'bill the lizard', 'A character who appears in Chapter IV. Bill is a lizard who works for the White Rabbit and is sent down the chimney.', 'Bill the Lizard was a footman: and the two footmen were both shaped like the three gardeners.', 'IV');
-
-COMMIT;

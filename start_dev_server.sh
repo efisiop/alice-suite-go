@@ -41,9 +41,17 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 
+# Allow Go to work behind TLS-inspecting proxies (fixes x509: negative serial number)
+export GODEBUG="${GODEBUG:+$GODEBUG,}x509negativeserial=1"
+
+# Step 3b: Fix go.mod if Go asked for "go mod tidy" (avoids "updates to go.mod needed" build failure)
+echo ""
+echo "2. Checking go.mod..."
+go mod tidy || echo "   ⚠️  go mod tidy had issues (continuing anyway)"
+
 # Step 4: Build the server
 echo ""
-echo "2. Building server..."
+echo "3. Building server..."
 if go build -o bin/server ./cmd/server; then
     echo "   ✅ Server built successfully"
 else
@@ -53,7 +61,7 @@ fi
 
 # Step 5: Set AI API keys automatically (for Tier 2 features)
 echo ""
-echo "3. Setting up AI API keys..."
+echo "4. Setting up AI API keys..."
 # Set Gemini API key (from render.yaml) if not already set
 if [ -z "$GEMINI_API_KEY" ]; then
     # GEMINI_API_KEY should be set as environment variable, not hardcoded here
@@ -79,11 +87,11 @@ echo "   ✅ AI environment configured"
 
 # Step 6: Start the server
 echo ""
-echo "4. Starting server on port 8080..."
+echo "5. Starting server on port 8080..."
 echo "   Access at: http://127.0.0.1:8080/reader/login"
 echo "   Press Ctrl+C to stop"
 echo ""
 
-# Run the server
-./bin/server
+# Step 6: Start the server
+exec ./bin/server
 

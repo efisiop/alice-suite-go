@@ -20,6 +20,8 @@ data/simulated_login_email.txt
 # IDE
 .idea/
 .vscode/
+.cursor/
+
 *.swp
 *.swo
 .DS_Store

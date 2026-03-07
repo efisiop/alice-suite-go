@@ -11,7 +11,7 @@ setup: proxy-setup ## Run initial setup (proxy configuration)
 	@echo "✅ Setup complete!"
 
 proxy-setup: ## Configure Safari proxy bypass for localhost
-	@./setup_safari_proxy.sh
+	@test -f archive/scripts/setup_safari_proxy.sh && ./archive/scripts/setup_safari_proxy.sh || (echo "⚠️  setup_safari_proxy.sh not found. Safari proxy bypass may need manual setup."; exit 0)
 
 build: ## Build the server
 	@echo "Building server..."
