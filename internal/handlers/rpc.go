@@ -146,27 +146,28 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	var rows *sql.Rows
 	var queryErr error
 
-	// Check if sections table exists and has data
+	// Check if sections table exists and has data (use Rebind for PostgreSQL)
 	var sectionCount int
-	countErr := database.DB.QueryRow("SELECT COUNT(*) FROM sections WHERE page_number = ?", pageNum).Scan(&sectionCount)
+	countQuery := database.Rebind("SELECT COUNT(*) FROM sections WHERE page_number = ?")
+	countErr := database.DB.QueryRow(countQuery, pageNum).Scan(&sectionCount)
 	if countErr != nil {
 		log.Printf("Error counting sections for page %d: %v", pageNum, countErr)
 	} else {
 		log.Printf("Found %d sections in database for page %d", sectionCount, pageNum)
 	}
 
-	// Try querying new structure first (with page_number) - this is the most common case
-	query := `SELECT id, content, page_number, section_number FROM sections 
+	// Try querying new structure first (with page_number) - use Rebind so PostgreSQL works on Render
+	query := database.Rebind(`SELECT id, content, page_number, section_number FROM sections 
 	         WHERE page_number = ?
-	         ORDER BY section_number`
+	         ORDER BY section_number`)
 	rows, queryErr = database.DB.Query(query, pageNum)
 
 	if queryErr != nil {
 		log.Printf("New structure query failed: %v, trying old structure", queryErr)
-		// Try old structure (with start_page/end_page)
-		query = `SELECT id, content FROM sections 
+		// Try old structure (with start_page/end_page) - use Rebind for PostgreSQL
+		query = database.Rebind(`SELECT id, content FROM sections 
 		          WHERE start_page <= ? AND end_page >= ?
-		          ORDER BY number`
+		          ORDER BY number`)
 		rows, queryErr = database.DB.Query(query, pageNum, pageNum)
 		if queryErr != nil {
 			log.Printf("Both structure queries failed: %v", queryErr)
@@ -222,6 +223,26 @@ func handleGetSectionsForPage(w http.ResponseWriter, r *http.Request, params map
 	}
 
 	if len(foundSections) == 0 {
+		// Last resort: if we have page content (e.g. from pages table) but no sections in DB,
+		// return a single section so the reader still shows content (e.g. on Render before fix-render).
+		if page != nil && page.Content != "" {
+			log.Printf("⚠️  No sections in DB for page %d; returning full page content as single section. Run fix-render for proper section division.", pageNum)
+			pageObj := &models.Page{
+				ID:         page.ID,
+				BookID:     bookID,
+				PageNumber: pageNum,
+				Sections: []models.Section{{
+					ID:            fmt.Sprintf("page-%d-section-1", pageNum),
+					PageID:        page.ID,
+					PageNumber:    pageNum,
+					SectionNumber: 1,
+					Content:       page.Content,
+				}},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(pageObj)
+			return
+		}
 		log.Printf("⚠️  WARNING: No sections found for page %d. Section count in DB: %d", pageNum, sectionCount)
 		log.Printf("   This might indicate sections data wasn't imported. Check if fix-render ran successfully.")
 		w.Header().Set("Content-Type", "application/json")

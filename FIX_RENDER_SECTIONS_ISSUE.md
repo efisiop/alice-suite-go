@@ -1,10 +1,12 @@
 # Fix Render Sections Issue
 
 ## Problem
-On Render, pages are not showing multiple sections - only the first line/snippet is shown, unlike localhost which shows all sections correctly.
+On Render, pages show only the full chapter (no section division), while on localhost the same page shows multiple selectable sections.
 
 ## Root Cause
-The sections data might not be imported on Render, or the `fix-render` script isn't running properly.
+
+1. **Database**: Sections data may not be imported on Render, or `fix-render` isn't running at startup.
+2. **Code (fixed)**: The RPC fallback in `handleGetSectionsForPage` (internal/handlers/rpc.go) was using raw `?` placeholders in SQL. On Render (PostgreSQL), placeholders must be `$1`, `$2`, etc. The fallback now uses `database.Rebind()` so the sections-by-`page_number` query works on PostgreSQL. When no sections exist in the DB but the page has content (from the `pages` table), the handler now returns that content as a single section so the reader still shows text; run `fix-render` for proper multi-section division.
 
 ## Diagnostic Steps
 
