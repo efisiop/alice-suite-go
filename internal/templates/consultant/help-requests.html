@@ -85,6 +85,9 @@
     <a class="nav-link active" href="/consultant/help-requests">Help Requests</a>
 </li>
 <li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
@@ -120,8 +123,8 @@
         
         <!-- Empty State -->
         <div id="empty-state" class="empty-state" style="display: none;">
-            <h5>No help requests found</h5>
-            <p>Help requests from readers will appear here.</p>
+            <h5 id="empty-state-title">No help requests found</h5>
+            <p id="empty-state-text">Help requests from readers will appear here.</p>
         </div>
         
         <!-- Timeline Container -->
@@ -359,8 +362,12 @@ function displayRequests(requests) {
     }
     
     if (filteredRequests.length === 0) {
-        document.getElementById('empty-state').style.display = 'block';
-        document.getElementById('empty-state').innerHTML = `<h5>No ${currentFilter === 'all' ? '' : currentFilter} help requests found</h5>`;
+        const emptyEl = document.getElementById('empty-state');
+        const titleEl = document.getElementById('empty-state-title');
+        const textEl = document.getElementById('empty-state-text');
+        emptyEl.style.display = 'block';
+        if (titleEl) titleEl.textContent = currentFilter === 'all' ? 'No help requests found' : `No ${currentFilter} requests`;
+        if (textEl) textEl.textContent = currentFilter === 'all' ? 'Help requests from readers will appear here.' : 'Try another filter or check back later.';
         return;
     }
     
@@ -421,6 +428,12 @@ function createHelpRequestCard(request) {
     const createdAt = new Date(request.created_at);
     const createdStr = createdAt.toLocaleString();
     
+    // Book / section context if available
+    let bookSectionInfo = '';
+    if (request.book_id || (request.section_id && request.section_id !== 'null')) {
+        bookSectionInfo = '<div class="help-request-meta mb-2"><strong>Context:</strong> ' + escapeHtml(request.book_id || '') + (request.section_id ? ' · Section ' + escapeHtml(String(request.section_id)) : '') + '</div>';
+    }
+    
     // Assigned info
     let assignedInfo = '';
     if (request.assigned_to && request.status !== 'pending') {
@@ -459,6 +472,7 @@ function createHelpRequestCard(request) {
                 <strong>Requested:</strong> ${createdStr}
             </div>
             
+            ${bookSectionInfo}
             ${assignedInfo}
             ${resolvedInfo}
             

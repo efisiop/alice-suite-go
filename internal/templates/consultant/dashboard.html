@@ -394,10 +394,14 @@ window.isConsultantDashboard = true;
 
         <div class="row">
             <div class="col-md-12">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <h5 class="mb-0">Active Readers</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="expandAllReaderCards()">Expand all</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="collapseAllReaderCards()">Collapse all</button>
                         <span class="badge bg-success" id="feed-status">Live</span>
                     </div>
+                </div>
                 <!-- Reader windows container - displays readers side-by-side -->
                 <div id="readers-container" class="d-flex flex-wrap gap-3" style="min-height: 200px;">
                     <p class="text-muted w-100">Loading active readers...</p>
@@ -1136,11 +1140,12 @@ function getOrCreateReaderCard(activity) {
         cardElement.innerHTML = `
             <div class="card-header reader-card-header collapsed" style="background-color: ${bgColor} !important;" data-bg-color="${bgColor}" data-hover-color="${hoverColor}">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div>
+                    <div class="flex-grow-1 min-width-0">
                         <strong>${readerName}</strong>
                         <small class="d-block text-muted">${activity.email || 'No email'}</small>
+                        <a href="/consultant/readers/${userId}" class="small d-inline-block mt-1" onclick="event.stopPropagation()">View full profile →</a>
                     </div>
-                    <span class="expand-icon text-muted">▼</span>
+                    <span class="expand-icon text-muted ms-2" title="Click to expand or collapse">▼</span>
                 </div>
             </div>
             <div id="${cardId}-body" class="card-body reader-card-body" style="display: none;">
@@ -1207,6 +1212,34 @@ function getOrCreateReaderCard(activity) {
     }
     
     return readerCard;
+}
+
+// Expand all reader cards
+function expandAllReaderCards() {
+    readerCards.forEach(function(readerCard) {
+        const header = readerCard.cardElement.querySelector('.reader-card-header');
+        const body = readerCard.cardElement.querySelector('.reader-card-body');
+        if (header && body && header.classList.contains('collapsed')) {
+            header.classList.remove('collapsed');
+            body.style.display = 'block';
+            readerCard.unreadCount = 0;
+            readerCard.visibleCount = 12;
+            updateUnreadBadge(readerCard);
+            updateActivityVisibility(readerCard);
+        }
+    });
+}
+
+// Collapse all reader cards
+function collapseAllReaderCards() {
+    readerCards.forEach(function(readerCard) {
+        const header = readerCard.cardElement.querySelector('.reader-card-header');
+        const body = readerCard.cardElement.querySelector('.reader-card-body');
+        if (header && body && !header.classList.contains('collapsed')) {
+            header.classList.add('collapsed');
+            body.style.display = 'none';
+        }
+    });
 }
 
 // Add activity to reader's card

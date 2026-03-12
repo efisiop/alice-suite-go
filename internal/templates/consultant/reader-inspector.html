@@ -8,6 +8,9 @@
     <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
 </li>
 <li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
 {{end}}
@@ -579,10 +582,9 @@
 
 {{define "content"}}
 <div class="container-fluid">
-    <div class="back-button">
-        <a href="/consultant" class="btn btn-outline-secondary">
-            ← Back to Dashboard
-        </a>
+    <div class="back-button d-flex gap-2 flex-wrap">
+        <a href="/consultant/readers" class="btn btn-outline-secondary">← Back to list</a>
+        <a href="/consultant" class="btn btn-outline-secondary">Back to Dashboard</a>
     </div>
     
     <div id="loadingState" class="loading-state">

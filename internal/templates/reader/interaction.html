@@ -16,7 +16,10 @@
 <style>
 /* Section Snippets Styling */
 .section-snippet {
-    padding: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     border-left: 3px solid #155724;
     background-color: #f8f9fa;
     border-radius: 4px;
@@ -35,8 +38,9 @@
 .section-snippet.active {
     background-color: #d4edda;
     border-left-color: #155724;
-    border-left-width: 4px;
-    font-weight: 500;
+    border-left-width: 5px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .snippet-text {
@@ -46,6 +50,24 @@
 
 .section-content {
     transition: background-color 0.3s ease;
+}
+
+/* Reading content area: comfortable width and line height */
+.reading-content {
+    max-width: 42em;
+    line-height: 1.65;
+}
+
+.jump-to-sections-link {
+    font-size: 0.875rem;
+    color: #0d6efd;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.jump-to-sections-link:hover {
+    color: #0a58ca;
+    text-decoration: underline;
 }
 
 .section-content.section-highlight {
@@ -397,6 +419,40 @@ html {
     opacity: 0.8;
 }
 
+.ai-help-tabs {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.ai-help-tab {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: #f0f0f0;
+    color: #555;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: background 0.2s, color 0.2s;
+}
+
+.ai-help-tab:hover {
+    background: #e5e5e5;
+    color: #333;
+}
+
+.ai-help-tab.active {
+    background: white;
+    color: #075E54;
+    font-weight: 600;
+    border-bottom-color: #075E54;
+}
+
+.ai-help-tab-hint {
+    flex-shrink: 0;
+}
+
 .ai-chat-header-btn {
     background: none;
     border: none;
@@ -615,9 +671,33 @@ html {
 }
 
 .dictionary-popup-definition {
-    color: #555;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
     line-height: 1.5;
     margin-bottom: 0.5rem;
+}
+
+.dictionary-popup-source {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.35rem;
+}
+
+.dictionary-popup-pos,
+.dictionary-popup-phonetic {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-right: 0.5rem;
+}
+
+.dictionary-popup-example-inline {
+    color: #555;
+    font-style: italic;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    padding-left: 0.5rem;
+    border-left: 2px solid #28a745;
 }
 
 /* Glossary badge indicator */
@@ -808,6 +888,16 @@ html {
     padding: 1rem;
 }
 
+/* AI Response block - readable and distinct from book text */
+.ai-response-content {
+    line-height: 1.6;
+    max-width: 100%;
+    padding: 0.75rem;
+    background-color: rgba(248, 249, 250, 0.9);
+    border-radius: 6px;
+    margin-top: 0.25rem;
+}
+
 /* AI Response Formatting */
 .ai-response-formatted {
     line-height: 1.7;
@@ -921,8 +1011,15 @@ html {
 
 .chat-typing-indicator {
     display: flex;
-    gap: 4px;
+    align-items: center;
+    gap: 6px;
     padding: 0.5rem 0;
+}
+
+.chat-typing-text {
+    margin-right: 4px;
+    font-size: 0.9rem;
+    color: #666;
 }
 
 .chat-typing-dot {
@@ -933,11 +1030,11 @@ html {
     animation: typing 1.4s infinite;
 }
 
-.chat-typing-dot:nth-child(2) {
+.chat-typing-dot:nth-child(3) {
     animation-delay: 0.2s;
 }
 
-.chat-typing-dot:nth-child(3) {
+.chat-typing-dot:nth-child(4) {
     animation-delay: 0.4s;
 }
 
@@ -1469,9 +1566,9 @@ html {
     <!-- Page Navigation (Sections) - First Column (Left) -->
     <div class="col-md-3">
         <div class="card">
-            <div class="card-header nav-collapse-header" data-bs-toggle="collapse" data-bs-target="#navCollapseContent" aria-expanded="true" aria-controls="navCollapseContent">
-                <h5 class="mb-0 d-inline">Page/Sections Navigation</h5>
-                <span class="nav-collapse-icon">▼</span>
+            <div class="card-header nav-collapse-header d-flex align-items-center justify-content-between" data-bs-toggle="collapse" data-bs-target="#navCollapseContent" aria-expanded="true" aria-controls="navCollapseContent" id="sections-nav-header">
+                <h5 class="mb-0">Sections</h5>
+                <span class="nav-collapse-icon" aria-hidden="true">▼</span>
             </div>
             <div class="collapse show" id="navCollapseContent">
                 <div class="card-body">
@@ -1492,7 +1589,7 @@ html {
                     </div>
                 </div>
                 <div class="card-body border-top">
-                    <h6 class="mb-2">Select the section you're reading</h6>
+                    <h6 class="mb-2" id="section-snippets-heading">Select the section you're reading</h6>
                     <div id="section-snippets">
                         <p class="text-muted small">Loading sections...</p>
                     </div>
@@ -1508,6 +1605,7 @@ html {
                 <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
             </div>
             <div class="card-body" id="reading-container">
+                <a href="#section-snippets-heading" class="jump-to-sections-link" id="jump-to-sections-link" onclick="event.preventDefault(); jumpToSections(); return false;">Jump to table of contents</a>
                 <!-- Consultant suggestion: light bubble, easily dismissed -->
                 <div id="consultant-prompt-banner" class="consultant-prompt-bubble" style="display: none;" role="complementary" aria-label="AI suggestion for this passage">
                     <button type="button" class="consultant-prompt-close" onclick="dismissConsultantPromptBubble()" aria-label="Dismiss">×</button>
@@ -1688,20 +1786,26 @@ html {
                     </div>
                 </div>
                 <div id="quiz-questions-wrap" style="display: none;">
-                    <p class="text-muted small mb-3" id="quiz-scope-label"></p>
+                    <p class="text-muted small mb-2" id="quiz-scope-label"></p>
+                    <p class="fw-semibold small text-primary mb-2" id="quiz-progress-label">Question 1 of 5</p>
                     <form id="quiz-form">
                         <div id="quiz-questions-container"></div>
                         <div id="quiz-single-feedback" class="small mt-2"></div>
-                        <div class="mt-3 d-flex gap-2">
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
                             <button type="button" class="btn btn-primary" id="quiz-submit-btn" onclick="submitQuizCurrentAnswer()">Check answer</button>
-                            <button type="button" class="btn btn-outline-primary" id="quiz-next-btn" onclick="askOneMoreQuestion()" style="display: none;">Ask one more question</button>
+                            <button type="button" class="btn btn-outline-primary" id="quiz-next-btn" onclick="askOneMoreQuestion()" style="display: none;">Next</button>
+                            <button type="button" class="btn btn-outline-primary" id="quiz-finish-btn" onclick="showQuizSummary()" style="display: none;">Finish</button>
                         </div>
                     </form>
                 </div>
                 <div id="quiz-results-wrap" style="display: none;">
+                    <h6 class="mb-2">Quiz complete</h6>
                     <div class="alert mb-3" id="quiz-results-alert" role="alert"></div>
                     <div id="quiz-results-detail"></div>
-                    <button type="button" class="btn btn-outline-primary mt-3" onclick="quizBackToScope()">Try another quiz</button>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-primary" onclick="quizBackToScope()">Try another quiz</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Back to reading</button>
+                    </div>
                 </div>
                 <div id="quiz-error" style="display: none;">
                     <div class="alert alert-danger" role="alert">
@@ -1913,6 +2017,14 @@ html {
         </div>
     </div>
     
+    <!-- AI Help mode tabs -->
+    <div class="ai-help-tabs border-bottom bg-white px-2">
+        <button type="button" class="ai-help-tab active" data-mode="explain" aria-pressed="true">Explain</button>
+        <button type="button" class="ai-help-tab" data-mode="simplify" aria-pressed="false">Simplify</button>
+        <button type="button" class="ai-help-tab" data-mode="chat" aria-pressed="false">Chat</button>
+    </div>
+    <div class="ai-help-tab-hint small text-muted px-2 py-1 bg-light" id="ai-help-tab-hint">Explain: get a short explanation of the selected text.</div>
+    
     <!-- Chat Messages -->
     <div id="ai-chat-messages" class="ai-chat-messages">
         <div class="text-center text-muted py-5" id="ai-chat-empty-state">
@@ -1944,7 +2056,7 @@ html {
                     class="form-control ai-chat-input" 
                     id="ai-question" 
                     rows="1" 
-                    placeholder="Type a message..."
+                    placeholder="Select text or type a message..."
                     style="resize: none; max-height: 120px; background: white; border-radius: 20px; padding: 0.5rem 1rem;"
                     tabindex="0"
                     autocomplete="off"
@@ -2089,7 +2201,7 @@ function loadGlossaryTerms() {
 function loadPage(pageNumber) {
     const token = getAuthToken();
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
 
@@ -2751,12 +2863,25 @@ function lookupWordInline(word, popupContent) {
         if (data.definition && data.definition !== 'Word not found in dictionary.') {
             let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
             
-            // Add glossary badge if definition is from glossary
-            if (data.source === 'glossary') {
-                html += `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
+            // Source label (glossary or dictionary)
+            const sourceLabel = data.source === 'glossary' ? '📚 From Glossary' : '📖 From dictionary';
+            html += `<div class="dictionary-popup-source">${escapeHtml(sourceLabel)}</div>`;
+            
+            // Part of speech and phonetic when available
+            if (data.part_of_speech || data.phonetic) {
+                html += '<div class="dictionary-popup-meta mb-2">';
+                if (data.part_of_speech) html += `<span class="dictionary-popup-pos">${escapeHtml(data.part_of_speech)}</span>`;
+                if (data.phonetic) html += `<span class="dictionary-popup-phonetic">/${escapeHtml(data.phonetic)}/</span>`;
+                html += '</div>';
             }
             
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
+            
+            // Show single example inline when present (dedicated line)
+            if (data.example) {
+                const firstExample = data.example.split(' |||| ')[0].trim();
+                if (firstExample) html += `<div class="dictionary-popup-example-inline">${escapeHtml(firstExample)}</div>`;
+            }
             
             // Add two buttons side by side: Derivation (left) and Examples (right)
             const safeWordId = wordToLookup.replace(/[^a-zA-Z0-9]/g, '_');
@@ -3194,6 +3319,22 @@ function trackActivity(eventType, data) {
         });
     })
     .catch(err => console.error('Error tracking activity:', err));
+}
+
+function jumpToSections() {
+    const heading = document.getElementById('section-snippets-heading');
+    const collapseContent = document.getElementById('navCollapseContent');
+    const header = document.getElementById('sections-nav-header');
+    if (collapseContent && !collapseContent.classList.contains('show')) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+            const bsCollapse = bootstrap.Collapse.getInstance(collapseContent) || new bootstrap.Collapse(collapseContent, { toggle: true });
+            bsCollapse.show();
+        } else {
+            collapseContent.classList.add('show');
+        }
+    }
+    if (heading) heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else if (header) header.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function goToPage() {
@@ -3705,6 +3846,48 @@ function handleOutsideChatInteraction(e) {
     }
 }
 
+// AI Help mode: explain | simplify | chat (persisted in localStorage)
+window.currentAiHelpMode = window.currentAiHelpMode || (function() {
+    try { return localStorage.getItem('alice_ai_help_mode') || 'chat'; } catch (e) { return 'chat'; }
+})();
+
+function setAiHelpMode(mode) {
+    window.currentAiHelpMode = mode;
+    try { localStorage.setItem('alice_ai_help_mode', mode); } catch (e) {}
+    var tabs = document.querySelectorAll('.ai-help-tab');
+    var hintEl = document.getElementById('ai-help-tab-hint');
+    var placeholders = {
+        explain: 'e.g. paste or type text to explain',
+        simplify: 'e.g. paste or type text to simplify',
+        chat: 'Type a message...'
+    };
+    var hints = {
+        explain: 'Explain: get a short explanation of the selected text.',
+        simplify: 'Simplify: get a simpler version of the selected text.',
+        chat: 'Chat: ask anything about what you\'re reading.'
+    };
+    tabs.forEach(function(t) {
+        t.classList.toggle('active', t.getAttribute('data-mode') === mode);
+        t.setAttribute('aria-pressed', t.getAttribute('data-mode') === mode ? 'true' : 'false');
+    });
+    if (hintEl) hintEl.textContent = hints[mode] || '';
+    var q = document.getElementById('ai-question');
+    if (q) q.placeholder = placeholders[mode] || 'Type a message...';
+}
+
+function initAiHelpTabs() {
+    var tabContainer = document.querySelector('.ai-help-tabs');
+    if (!tabContainer || tabContainer.dataset.inited === '1') return;
+    tabContainer.dataset.inited = '1';
+    setAiHelpMode(window.currentAiHelpMode);
+    tabContainer.querySelectorAll('.ai-help-tab').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var mode = btn.getAttribute('data-mode');
+            setAiHelpMode(mode);
+        });
+    });
+}
+
 // Show AI Help - WhatsApp style floating chat (same flow for Tools button and consultant "Open AI Help")
 // When opening from consultant prompt, window.pendingConsultantPromptInChat is set; the prompt is added when history loads (no extra DOM updates here = no focus issues)
 function showAIHelp() {
@@ -3718,6 +3901,7 @@ function showAIHelp() {
     
     // Show the floating chat container (same as when clicking Tools "AI Help")
     if (chatContainer) {
+        initAiHelpTabs();
         chatContainer.style.display = 'flex';
         if (minimizedBar) minimizedBar.style.display = 'none';
         isChatMinimized = false;
@@ -4319,10 +4503,13 @@ function addChatMessage(role, content, timestamp, provider = null, isHTML = fals
     
     // Format content - use HTML directly if isHTML flag is set, otherwise format as markdown
     const formattedContent = isHTML ? content : formatAIResponse(content);
+    const contentBlock = role === 'ai'
+        ? `<div class="ai-response-content"><div class="ai-response-formatted">${formattedContent}</div></div>`
+        : `<div class="chat-message-content">${formattedContent}</div>`;
     
     bubbleDiv.innerHTML = `
         <div class="chat-message-header">${headerText}</div>
-        <div class="chat-message-content">${formattedContent}</div>
+        ${contentBlock}
         <div class="chat-message-time">${timeStr}</div>
     `;
     
@@ -4369,6 +4556,7 @@ function showTypingIndicator() {
         <div class="chat-bubble ai">
             <div class="chat-message-header">AI Assistant</div>
             <div class="chat-typing-indicator">
+                <span class="chat-typing-text">Thinking…</span>
                 <div class="chat-typing-dot"></div>
                 <div class="chat-typing-dot"></div>
                 <div class="chat-typing-dot"></div>
@@ -5092,12 +5280,12 @@ function askAI() {
     const token = getAuthToken();
     if (!token) {
         alert('Please log in to use AI Help.');
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
     
-    // Detect interaction type from question
-    let interactionType = 'chat';
+    // Use tab mode if set; otherwise detect from question
+    let interactionType = (window.currentAiHelpMode === 'explain' || window.currentAiHelpMode === 'simplify') ? window.currentAiHelpMode : 'chat';
     let processedQuestion = question;
     
     if (question.toLowerCase().startsWith('find misunderstood words:') || question.toLowerCase().includes('find misunderstood')) {
@@ -5116,12 +5304,19 @@ function askAI() {
         if (visualText) {
             processedQuestion = visualText;
         }
-    } else if (question.toLowerCase().startsWith('explain this:')) {
+    } else if (interactionType === 'explain' || question.toLowerCase().startsWith('explain this:')) {
         interactionType = 'explain';
-        // Extract text after "Explain this:"
         const match = question.match(/explain this:\s*"([^"]+)"/i) || question.match(/explain this:\s*(.+)/i);
         if (match && match[1]) {
             processedQuestion = match[1].trim();
+        }
+    } else if (interactionType === 'simplify' || question.toLowerCase().startsWith('simplify this:')) {
+        interactionType = 'simplify';
+        const match = question.match(/simplify this:\s*"([^"]+)"/i) || question.match(/simplify this:\s*(.+)/i);
+        if (match && match[1]) {
+            processedQuestion = match[1].trim();
+        } else {
+            processedQuestion = question;
         }
     }
     
@@ -6892,6 +7087,8 @@ function openQuizModal() {
     document.getElementById('quiz-questions-wrap').style.display = 'none';
     document.getElementById('quiz-results-wrap').style.display = 'none';
     document.getElementById('quiz-error').style.display = 'none';
+    var fn = document.getElementById('quiz-finish-btn');
+    if (fn) fn.style.display = 'none';
     document.getElementById('quizScopeSection').checked = true;
     var modal = new bootstrap.Modal(document.getElementById('quizModal'));
     modal.show();
@@ -6916,7 +7113,7 @@ function generateQuiz() {
 function fetchMoreQuizQuestions(resetMode) {
     var token = getAuthToken();
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
     document.getElementById('quiz-choose-scope').style.display = 'none';
@@ -6970,6 +7167,8 @@ function fetchMoreQuizQuestions(resetMode) {
     });
 }
 
+var optionLabels = ['A', 'B', 'C', 'D', 'E'];
+
 function renderCurrentQuizQuestion() {
     if (quizCurrentIndex >= quizQuestionsData.length) {
         fetchMoreQuizQuestions(false);
@@ -6978,18 +7177,21 @@ function renderCurrentQuizQuestion() {
     var q = quizQuestionsData[quizCurrentIndex];
     quizCurrentAnswered = false;
 
-    var label = getQuizScopeLabel() + ' • Question ' + (quizCurrentIndex + 1) + ' • Score: ' + quizScore + '/' + quizCurrentIndex;
-    document.getElementById('quiz-scope-label').textContent = label;
+    document.getElementById('quiz-scope-label').textContent = getQuizScopeLabel();
+    var total = quizQuestionsData.length;
+    var current = quizCurrentIndex + 1;
+    document.getElementById('quiz-progress-label').textContent = 'Question ' + current + ' of ' + total;
 
     var container = document.getElementById('quiz-questions-container');
     container.innerHTML = '';
     var div = document.createElement('div');
     div.className = 'mb-3';
-    div.innerHTML = '<p class="fw-bold mb-2">' + escapeHtml(q.question) + '</p>';
+    div.innerHTML = '<p class="fw-bold mb-2 quiz-question-text">' + escapeHtml(q.question) + '</p>';
     var opts = q.options || [];
     opts.forEach(function(opt, j) {
         var id = 'quiz-current-opt' + j;
-        div.innerHTML += '<div class="form-check mb-1"><input class="form-check-input" type="radio" name="quiz-current" id="' + id + '" value="' + j + '"><label class="form-check-label" for="' + id + '">' + escapeHtml(opt) + '</label></div>';
+        var letter = optionLabels[j] || (j + 1);
+        div.innerHTML += '<div class="form-check mb-2 quiz-option"><input class="form-check-input" type="radio" name="quiz-current" id="' + id + '" value="' + j + '"><label class="form-check-label" for="' + id + '"><span class="quiz-option-label">' + letter + '.</span> ' + escapeHtml(opt) + '</label></div>';
     });
     container.appendChild(div);
 
@@ -7000,7 +7202,13 @@ function renderCurrentQuizQuestion() {
     var submitBtn = document.getElementById('quiz-submit-btn');
     submitBtn.disabled = false;
     submitBtn.style.display = '';
-    document.getElementById('quiz-next-btn').style.display = 'none';
+    var nextBtn = document.getElementById('quiz-next-btn');
+    var finishBtn = document.getElementById('quiz-finish-btn');
+    nextBtn.style.display = 'none';
+    finishBtn.style.display = 'none';
+    if (quizCurrentIndex === quizQuestionsData.length - 1) {
+        finishBtn.style.display = 'none'; // show after answering
+    }
 
     document.getElementById('quiz-questions-wrap').style.display = 'block';
 }
@@ -7035,26 +7243,41 @@ function submitQuizCurrentAnswer() {
         feedbackEl.className = 'small mt-2 text-success fw-bold';
         feedbackEl.textContent = 'Correct! Great job.';
     } else {
+        var correctText = opts[q.correct_index] ? (optionLabels[q.correct_index] || (q.correct_index + 1)) + '. ' + opts[q.correct_index] : '';
         feedbackEl.className = 'small mt-2 text-danger';
-        feedbackEl.textContent = 'Not quite. Correct answer: ' + (opts[q.correct_index] || '');
+        feedbackEl.textContent = 'Incorrect. The correct answer is: ' + (correctText || opts[q.correct_index] || '');
     }
 
-    document.getElementById('quiz-next-btn').style.display = '';
     document.getElementById('quiz-submit-btn').disabled = true;
-    document.getElementById('quiz-scope-label').textContent = getQuizScopeLabel() + ' • Score: ' + quizScore + '/' + (quizCurrentIndex + 1);
+    document.getElementById('quiz-submit-btn').style.display = 'none';
+    var nextBtn = document.getElementById('quiz-next-btn');
+    var finishBtn = document.getElementById('quiz-finish-btn');
+    if (quizCurrentIndex === quizQuestionsData.length - 1) {
+        finishBtn.style.display = '';
+    } else {
+        nextBtn.style.display = '';
+    }
 }
 
 function askOneMoreQuestion() {
-    if (!quizCurrentAnswered) {
-        alert('Please answer the current question first.');
-        return;
-    }
+    if (!quizCurrentAnswered) return;
     quizCurrentIndex += 1;
     if (quizCurrentIndex < quizQuestionsData.length) {
         renderCurrentQuizQuestion();
         return;
     }
     fetchMoreQuizQuestions(false);
+}
+
+function showQuizSummary() {
+    if (!quizCurrentAnswered) return;
+    var total = quizQuestionsData.length;
+    document.getElementById('quiz-questions-wrap').style.display = 'none';
+    document.getElementById('quiz-results-wrap').style.display = 'block';
+    var alertEl = document.getElementById('quiz-results-alert');
+    alertEl.className = quizScore === total ? 'alert alert-success mb-3' : 'alert alert-info mb-3';
+    alertEl.textContent = 'You got ' + quizScore + ' out of ' + total + ' correct.';
+    document.getElementById('quiz-results-detail').innerHTML = '';
 }
 
 function quizBackToScope() {
@@ -7235,7 +7458,7 @@ function requestHelp() {
 function submitConsultantHelpRequest() {
     const token = getAuthToken();
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
 

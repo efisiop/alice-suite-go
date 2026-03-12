@@ -19,37 +19,37 @@
         
         <div class="row mb-4">
             <div class="col-md-4">
-                <div class="card">
+                <div class="card reader-dashboard-card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Start Reading</h5>
-                        <p class="card-text">Continue your reading journey</p>
+                        <p class="card-text text-muted">Pick up where you left off.</p>
                         <a href="/reader/interaction" class="btn btn-primary">Open Book</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card">
+                <div class="card reader-dashboard-card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Reading Progress</h5>
-                        <p class="card-text">View your reading statistics</p>
+                        <p class="card-text text-muted">See your progress and stats.</p>
                         <a href="/reader/statistics" class="btn btn-outline-primary">View Stats</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card">
+                <div class="card reader-dashboard-card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">My Page</h5>
-                        <p class="card-text">View your help requests</p>
+                        <p class="card-text text-muted">View your help requests and activity.</p>
                         <a href="/reader/my-page" class="btn btn-outline-primary">Go to My Page</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card reader-dashboard-card shadow-sm">
             <div class="card-header">
-                <h5>Recent Activity</h5>
+                <h5 class="mb-0">Recent Activity</h5>
             </div>
             <div class="card-body">
                 <div id="recent-activity">
@@ -63,6 +63,12 @@
 {{end}}
 
 {{define "head"}}
+<style>
+.reader-dashboard-card {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 6px;
+}
+</style>
 {{end}}
 
 {{define "scripts"}}
@@ -72,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const token = getAuthToken();
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
 
@@ -94,8 +100,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 500);
     
-    // Load recent activity
-    document.getElementById('recent-activity').innerHTML = '<p class="text-muted">No recent activity</p>';
+    // Load recent activity (placeholder; replace with API call if you have one)
+    const activityEl = document.getElementById('recent-activity');
+    if (activityEl && activityEl.innerHTML.indexOf('Loading') !== -1) {
+        activityEl.innerHTML = '<p class="text-muted mb-0">No recent activity yet — start reading to see it here.</p>';
+    }
 });
 </script>
 {{end}}

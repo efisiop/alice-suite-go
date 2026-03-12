@@ -107,6 +107,19 @@ func handleGetDefinitionWithContext(w http.ResponseWriter, r *http.Request, para
 		response["example"] = glossaryTerm.Example
 	}
 
+	// Include part_of_speech and phonetic when from cache or external API
+	normalizedWord := strings.ToLower(strings.TrimSpace(glossaryTerm.Term))
+	if source == "cache" || source == "external" {
+		if cached, err := database.GetCachedDefinition(normalizedWord); err == nil && cached != nil {
+			if cached.PartOfSpeech != "" {
+				response["part_of_speech"] = cached.PartOfSpeech
+			}
+			if cached.Phonetic != "" {
+				response["phonetic"] = cached.Phonetic
+			}
+		}
+	}
+
 	json.NewEncoder(w).Encode(response)
 }
 

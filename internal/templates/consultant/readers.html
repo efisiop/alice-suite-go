@@ -204,10 +204,13 @@
 
 {{define "nav"}}
 <li class="nav-item">
-    <a class="nav-link active" href="/consultant">Dashboard</a>
+    <a class="nav-link" href="/consultant">Dashboard</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/consultant/readers">Readers</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
@@ -217,7 +220,8 @@
 {{define "content"}}
 <div class="row">
     <div class="col-12">
-        <h1 class="mb-4">Dashboard</h1>
+        <h1 class="mb-1">Readers</h1>
+        <p class="text-muted mb-4">Readers and their activity.</p>
         
         <!-- AI Summary card -->
         <div class="card mb-4">
@@ -244,7 +248,8 @@
                 <div>
                     <h5 class="mb-0">All Readers</h5>
                 </div>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <input type="text" class="form-control form-control-sm" id="readers-search" placeholder="Search by name or email..." style="max-width: 220px;" aria-label="Search readers">
                     <div class="activity-legend">
                         <span class="legend-item"><span class="legend-dot" style="background-color: #28a745;"></span>High</span>
                         <span class="legend-item"><span class="legend-dot" style="background-color: #17a2b8;"></span>Med</span>
@@ -339,6 +344,17 @@ const readerActivityData = {};
 // Store online status for readers
 let onlineReaders = {};
 
+// Filter readers table by search (name or email)
+function filterReadersTable() {
+    const searchEl = document.getElementById('readers-search');
+    const q = (searchEl && searchEl.value.trim()) ? searchEl.value.trim().toLowerCase() : '';
+    const rows = document.querySelectorAll('#readers-table-body tr');
+    rows.forEach(function(row) {
+        const search = (row.getAttribute('data-search') || '').toLowerCase();
+        row.style.display = (!q || search.indexOf(q) !== -1) ? '' : 'none';
+    });
+}
+
 // Ensure getAuthToken is available
 if (typeof getAuthToken === 'undefined') {
     window.getAuthToken = function() {
@@ -366,6 +382,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     loadConsultantUserInfo();
+    var searchInput = document.getElementById('readers-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterReadersTable);
+        searchInput.addEventListener('keyup', filterReadersTable);
+    }
     loadReaders();
     
     // Start polling for online status updates every 10 seconds
@@ -683,6 +704,8 @@ function createReaderRow(reader, activityData, purchaseDate = '-') {
     // Check if reader is online
     const isOnline = onlineReaders[reader.id] || false;
     const onlineDot = isOnline ? '<span class="online-indicator" title="Online"></span>' : '<span style="width: 10px; display: inline-block; margin-right: 8px;"></span>';
+    const searchText = (firstName + ' ' + lastName + ' ' + (reader.email || '')).toLowerCase();
+    row.setAttribute('data-search', searchText);
     
     row.innerHTML = `
         <td style="width: 20px; padding-right: 0;">${onlineDot}</td>
