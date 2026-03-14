@@ -34,7 +34,7 @@ document.getElementById('verify-form').addEventListener('submit', function(e) {
     const token = localStorage.getItem('auth_token');
     
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/reader/login';
         return;
     }
 

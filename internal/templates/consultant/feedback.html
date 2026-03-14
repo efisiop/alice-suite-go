@@ -1,0 +1,52 @@
+{{define "title"}}Feedback - Consultant - Alice Suite{{end}}
+
+{{define "head"}}{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/consultant">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/help-requests">Help Requests</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/consultant/readers">Readers</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
+</li>
+{{end}}
+
+{{define "content"}}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Feedback</li>
+    </ol>
+</nav>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Feedback</h1>
+        <p class="text-muted">Reader feedback and satisfaction. This section is coming soon.</p>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+(function() {
+    window.consultantLogout = function() {
+        var u = document.getElementById('user-info-nav'); if (u) u.style.display = 'none';
+        sessionStorage.removeItem('auth_token');
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+        window.location.href = '/consultant/login';
+    };
+    window.logout = window.consultantLogout;
+})();
+document.addEventListener('DOMContentLoaded', function() {
+    var link = document.getElementById('logout-link');
+    if (link) link.addEventListener('click', function(e) { e.preventDefault(); window.consultantLogout(); });
+    if (typeof loadConsultantUserInfo === 'function') loadConsultantUserInfo();
+});
+</script>
+{{end}}

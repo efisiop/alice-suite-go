@@ -108,7 +108,10 @@ func HandleConsultantSendPrompt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "send-prompt.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "send-prompt.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -145,7 +148,10 @@ func HandleConsultantFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "feedback.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "feedback.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -216,7 +222,10 @@ func HandleConsultantReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "reports.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "reports.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -233,7 +242,10 @@ func HandleConsultantReadingInsights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "reading-insights.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "reading-insights.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
@@ -250,7 +262,10 @@ func HandleConsultantAssignReaders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(filepath.Join("internal", "templates", "consultant", "assign-readers.html"))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "consultant", "assign-readers.html"),
+	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return

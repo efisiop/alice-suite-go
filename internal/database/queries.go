@@ -1226,6 +1226,43 @@ func UpdateHelpRequest(request *models.HelpRequest) error {
 	return err
 }
 
+// HelpRequestCounts holds counts of help requests by status
+type HelpRequestCounts struct {
+	Pending  int `json:"pending"`
+	Assigned int `json:"assigned"`
+	Resolved int `json:"resolved"`
+	Open     int `json:"open"` // pending + assigned
+}
+
+// GetHelpRequestCounts returns counts of help requests by status
+func GetHelpRequestCounts() (*HelpRequestCounts, error) {
+	query := `SELECT status, COUNT(*) FROM help_requests GROUP BY status`
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	c := &HelpRequestCounts{}
+	for rows.Next() {
+		var status string
+		var n int
+		if err := rows.Scan(&status, &n); err != nil {
+			continue
+		}
+		switch status {
+		case "pending":
+			c.Pending = n
+		case "assigned":
+			c.Assigned = n
+		case "resolved":
+			c.Resolved = n
+		}
+	}
+	c.Open = c.Pending + c.Assigned
+	return c, rows.Err()
+}
+
 // Dictionary Cache Functions
 
 // GetCachedDefinition retrieves a cached definition from dictionary_cache table

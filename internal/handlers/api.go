@@ -75,6 +75,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/logged-in-readers-count", middleware.RequireConsultant(http.HandlerFunc(HandleGetLoggedInReadersCount)))
 	mux.Handle("/api/consultant/logged-out-count", middleware.RequireConsultant(http.HandlerFunc(HandleGetLoggedOutCount)))
 	mux.Handle("/api/consultant/todays-activity-count", middleware.RequireConsultant(http.HandlerFunc(HandleGetTodaysActivityCount)))
+	mux.Handle("/api/consultant/help-requests-count", middleware.RequireConsultant(http.HandlerFunc(HandleGetHelpRequestsCount)))
 
 	// New consultant dashboard endpoints (using new activity_logs table)
 	mux.Handle("/api/consultant/active-readers", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantActiveReaders)))

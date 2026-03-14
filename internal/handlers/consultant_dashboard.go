@@ -42,6 +42,23 @@ func HandleConsultantActiveReaders(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleGetHelpRequestsCount handles GET /api/consultant/help-requests-count
+// Returns counts of help requests by status (pending, assigned, resolved, open)
+func HandleGetHelpRequestsCount(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	counts, err := database.GetHelpRequestCounts()
+	if err != nil {
+		log.Printf("GetHelpRequestCounts error: %v", err)
+		http.Error(w, "Failed to fetch help request counts", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(counts)
+}
+
 // HandleConsultantReaderActivity handles GET /api/consultant/reader/:id/activity
 // Returns activity summary for a specific reader
 func HandleConsultantReaderActivity(w http.ResponseWriter, r *http.Request) {

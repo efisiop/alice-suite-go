@@ -24,6 +24,16 @@
     --admin-primary: #1a365d;
     --admin-primary-light: #2c5282;
     --admin-primary-dark: #0d2137;
+
+    /* Narrative style – book-like feel */
+    --narrative-font: 'Lora', Georgia, 'Times New Roman', serif;
+    --narrative-ink: #2c2825;
+    --narrative-ink-muted: #5c554d;
+    --narrative-paper: #f7f4ef;
+    --narrative-paper-card: #fefdfb;
+    --narrative-border: #e8e2d9;
+    --narrative-shadow: 0 1px 3px rgba(44, 40, 37, 0.08);
+    --narrative-shadow-card: 0 2px 8px rgba(44, 40, 37, 0.06);
 }
 
 /* Reader app theme - Dark Green */
@@ -319,6 +329,200 @@ body[data-app="admin"] footer.bg-light {
 body.admin-app footer .mb-0,
 body[data-app="admin"] footer .mb-0 {
     color: inherit;
+}
+
+/* ========== Narrative style (Reader, Consultant, Admin) – simple, book-like ========== */
+body.reader-app,
+body.consultant-app,
+body.admin-app,
+body[data-app="reader"],
+body[data-app="consultant"],
+body[data-app="admin"] {
+    font-family: var(--narrative-font);
+    line-height: 1.65;
+    color: var(--narrative-ink);
+}
+
+body.reader-app h1, body.reader-app h2, body.reader-app h3, body.reader-app h4, body.reader-app h5, body.reader-app h6,
+body.consultant-app h1, body.consultant-app h2, body.consultant-app h3, body.consultant-app h4, body.consultant-app h5, body.consultant-app h6,
+body.admin-app h1, body.admin-app h2, body.admin-app h3, body.admin-app h4, body.admin-app h5, body.admin-app h6,
+body[data-app="reader"] h1, body[data-app="reader"] h2, body[data-app="reader"] h3, body[data-app="reader"] h4, body[data-app="reader"] h5, body[data-app="reader"] h6,
+body[data-app="consultant"] h1, body[data-app="consultant"] h2, body[data-app="consultant"] h3, body[data-app="consultant"] h4, body[data-app="consultant"] h5, body[data-app="consultant"] h6,
+body[data-app="admin"] h1, body[data-app="admin"] h2, body[data-app="admin"] h3, body[data-app="admin"] h4, body[data-app="admin"] h5, body[data-app="admin"] h6 {
+    font-family: var(--narrative-font);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--narrative-ink);
+}
+
+/* Page background – warm paper for Reader and Consultant */
+body.reader-app main,
+body.consultant-app main,
+body[data-app="reader"] main,
+body[data-app="consultant"] main {
+    background-color: var(--narrative-paper);
+    border-radius: 0;
+    padding-top: 1.75rem;
+    padding-bottom: 2rem;
+}
+
+/* Cards – paper-like for Reader and Consultant */
+body.reader-app .card,
+body.consultant-app .card,
+body[data-app="reader"] .card,
+body[data-app="consultant"] .card {
+    background-color: var(--narrative-paper-card);
+    border: 1px solid var(--narrative-border);
+    border-radius: 6px;
+    box-shadow: var(--narrative-shadow-card);
+}
+
+body.reader-app .card-header,
+body[data-app="reader"] .card-header {
+    border-bottom: 1px solid var(--narrative-border);
+    border-radius: 6px 6px 0 0;
+}
+
+body.consultant-app .card-header,
+body[data-app="consultant"] .card-header {
+    border-bottom: 1px solid var(--narrative-border);
+    border-radius: 6px 6px 0 0;
+}
+
+/* Navbar – subtle narrative touch (keep app colors, add soft shadow) */
+body.reader-app .navbar,
+body.consultant-app .navbar,
+body.admin-app .navbar,
+body[data-app="reader"] .navbar,
+body[data-app="consultant"] .navbar,
+body[data-app="admin"] .navbar {
+    box-shadow: var(--narrative-shadow);
+    font-family: var(--narrative-font);
+}
+
+body.reader-app .navbar-brand,
+body.consultant-app .navbar-brand,
+body.admin-app .navbar-brand,
+body[data-app="reader"] .navbar-brand,
+body[data-app="consultant"] .navbar-brand,
+body[data-app="admin"] .navbar-brand {
+    font-family: var(--narrative-font);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* Footer – warm, quiet for Reader and Consultant (Admin keeps dark) */
+body.reader-app footer.bg-light,
+body.consultant-app footer.bg-light,
+body[data-app="reader"] footer.bg-light,
+body[data-app="consultant"] footer.bg-light {
+    background-color: var(--narrative-paper) !important;
+    border-top: 1px solid var(--narrative-border);
+    color: var(--narrative-ink-muted);
+}
+
+body.reader-app footer .mb-0,
+body.consultant-app footer .mb-0,
+body[data-app="reader"] footer .mb-0,
+body[data-app="consultant"] footer .mb-0 {
+    color: var(--narrative-ink-muted);
+    font-size: 0.9rem;
+}
+
+/* Breadcrumbs – chapter-like */
+body.reader-app .breadcrumb,
+body.consultant-app .breadcrumb,
+body.admin-app .breadcrumb,
+body[data-app="reader"] .breadcrumb,
+body[data-app="consultant"] .breadcrumb,
+body[data-app="admin"] .breadcrumb {
+    font-family: var(--narrative-font);
+    font-size: 0.875rem;
+    color: var(--narrative-ink-muted);
+}
+
+body.reader-app .breadcrumb-item a,
+body.consultant-app .breadcrumb-item a,
+body.admin-app .breadcrumb-item a,
+body[data-app="reader"] .breadcrumb-item a,
+body[data-app="consultant"] .breadcrumb-item a,
+body[data-app="admin"] .breadcrumb-item a {
+    color: var(--narrative-ink);
+    text-decoration: none;
+}
+
+body.reader-app .breadcrumb-item a:hover,
+body.consultant-app .breadcrumb-item a:hover,
+body.admin-app .breadcrumb-item a:hover,
+body[data-app="reader"] .breadcrumb-item a:hover,
+body[data-app="consultant"] .breadcrumb-item a:hover,
+body[data-app="admin"] .breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+/* Muted text in narrative tone */
+body.reader-app .text-muted,
+body.consultant-app .text-muted,
+body[data-app="reader"] .text-muted,
+body[data-app="consultant"] .text-muted {
+    color: var(--narrative-ink-muted) !important;
+}
+
+/* Buttons – slightly softer radius, narrative feel */
+body.reader-app .btn,
+body.consultant-app .btn,
+body.admin-app .btn,
+body[data-app="reader"] .btn,
+body[data-app="consultant"] .btn,
+body[data-app="admin"] .btn {
+    font-family: var(--narrative-font);
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+/* Lead and display text – chapter-like */
+body.reader-app .lead,
+body.consultant-app .lead,
+body.admin-app .lead,
+body[data-app="reader"] .lead,
+body[data-app="consultant"] .lead,
+body[data-app="admin"] .lead {
+    font-family: var(--narrative-font);
+    font-weight: 400;
+    color: var(--narrative-ink-muted);
+}
+
+body.reader-app .display-1, body.reader-app .display-2, body.reader-app .display-3, body.reader-app .display-4, body.reader-app .display-5, body.reader-app .display-6,
+body.consultant-app .display-1, body.consultant-app .display-2, body.consultant-app .display-3, body.consultant-app .display-4, body.consultant-app .display-5, body.consultant-app .display-6,
+body.admin-app .display-1, body.admin-app .display-2, body.admin-app .display-3, body.admin-app .display-4, body.admin-app .display-5, body.admin-app .display-6,
+body[data-app="reader"] .display-1, body[data-app="reader"] .display-2, body[data-app="reader"] .display-3, body[data-app="reader"] .display-4, body[data-app="reader"] .display-5, body[data-app="reader"] .display-6,
+body[data-app="consultant"] .display-1, body[data-app="consultant"] .display-2, body[data-app="consultant"] .display-3, body[data-app="consultant"] .display-4, body[data-app="consultant"] .display-5, body[data-app="consultant"] .display-6,
+body[data-app="admin"] .display-1, body[data-app="admin"] .display-2, body[data-app="admin"] .display-3, body[data-app="admin"] .display-4, body[data-app="admin"] .display-5, body[data-app="admin"] .display-6 {
+    font-family: var(--narrative-font);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--narrative-ink);
+}
+
+/* Form controls – gentle border */
+body.reader-app .form-control,
+body.consultant-app .form-control,
+body.admin-app .form-control,
+body[data-app="reader"] .form-control,
+body[data-app="consultant"] .form-control,
+body[data-app="admin"] .form-control {
+    border-color: var(--narrative-border);
+    border-radius: 5px;
+}
+
+body.reader-app .form-control:focus,
+body.consultant-app .form-control:focus,
+body.admin-app .form-control:focus,
+body[data-app="reader"] .form-control:focus,
+body[data-app="consultant"] .form-control:focus,
+body[data-app="admin"] .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.06);
 }
 
 body {

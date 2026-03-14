@@ -1,4 +1,4 @@
-{{define "title"}}Consultant Dashboard - Alice Suite{{end}}
+{{define "title"}}Dashboard - Consultant - Alice Suite{{end}}
 
 {{define "head"}}
 <style>
@@ -351,6 +351,12 @@ window.isConsultantDashboard = true;
 {{end}}
 
 {{define "content"}}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+    </ol>
+</nav>
 <div class="row">
     <div class="col-md-12">
         <h1 class="mb-4">Consultant Dashboard</h1>
@@ -387,6 +393,15 @@ window.isConsultantDashboard = true;
                         <div id="ai-provider-status">
                             <small class="text-muted">Loading...</small>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Open Help Requests</h5>
+                        <h2 id="open-help-requests">-</h2>
+                        <small><a href="/consultant/help-requests">View all</a></small>
                     </div>
                 </div>
             </div>
@@ -1609,6 +1624,23 @@ function loadDashboardData() {
     .catch(err => {
         console.error('Error loading today\'s activity:', err);
         document.getElementById('today-activity').textContent = '0';
+    });
+
+    // Load open help requests count
+    fetch('/api/consultant/help-requests-count', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        const open = data.open != null ? data.open : (data.pending || 0) + (data.assigned || 0);
+        document.getElementById('open-help-requests').textContent = open;
+    })
+    .catch(err => {
+        console.error('Error loading help requests count:', err);
+        document.getElementById('open-help-requests').textContent = '0';
     });
 
     // Load active readers count using new API endpoint

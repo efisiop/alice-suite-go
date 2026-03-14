@@ -1,4 +1,4 @@
-{{define "title"}}Help Requests - Consultant Dashboard - Alice Suite{{end}}
+{{define "title"}}Help Requests - Consultant - Alice Suite{{end}}
 
 {{define "head"}}
 <style>
@@ -93,6 +93,12 @@
 {{end}}
 
 {{define "content"}}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Help Requests</li>
+    </ol>
+</nav>
 <div class="row">
     <div class="col-12">
         <h1 class="mb-4">Help Requests Administration</h1>
