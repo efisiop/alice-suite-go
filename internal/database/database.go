@@ -69,12 +69,16 @@ func InitDB(dbPath, databaseURL string) error {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
-	// Ensure tables exist (run even for PostgreSQL; migrations create schema)
-	if err := ensureConsultantPromptsTable(); err != nil {
-		return fmt.Errorf("ensure consultant_prompts table: %w", err)
-	}
-	if err := ensureAhAhMomentsTable(); err != nil {
-		return fmt.Errorf("ensure ah_ah_moments table: %w", err)
+	// For PostgreSQL, migrations (012, 015) create these tables; do not run ensure* here
+	// or migrate would fail on empty DB (ensure* references users which is created in 001).
+	// For SQLite, ensure* is safe and keeps schema in sync if migrations were skipped.
+	if databaseURL == "" {
+		if err := ensureConsultantPromptsTable(); err != nil {
+			return fmt.Errorf("ensure consultant_prompts table: %w", err)
+		}
+		if err := ensureAhAhMomentsTable(); err != nil {
+			return fmt.Errorf("ensure ah_ah_moments table: %w", err)
+		}
 	}
 
 	return nil
