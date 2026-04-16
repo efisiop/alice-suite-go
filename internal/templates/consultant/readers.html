@@ -227,25 +227,50 @@
 <div class="row">
     <div class="col-12">
         <h1 class="mb-1">Readers</h1>
-        <p class="text-muted mb-4">Readers and their activity.</p>
+        <p class="text-muted mb-4">Readers and their activity. Load charts below to see engagement across all readers.</p>
         
-        <!-- AI Summary card -->
+        <!-- All-readers activity stats & charts -->
         <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">AI summary</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0">All readers — activity stats &amp; charts</h5>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <select id="ai-summary-hours" class="form-select form-select-sm" style="width: auto; max-width: 180px;">
                         <option value="24">Last 24 hours</option>
+                        <option value="72">Last 3 days</option>
                         <option value="168">Last 7 days</option>
                     </select>
-                    <button type="button" class="btn btn-primary" id="ai-summary-btn" onclick="generateAISummary()">Generate summary</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="ai-summary-btn" onclick="loadDashboardActivityCharts()">Show activity</button>
                 </div>
-                <div id="ai-summary-loading" class="text-muted small" style="display: none;">Analysing readers...</div>
+            </div>
+            <div class="card-body">
+                <div id="ai-summary-loading" class="text-muted small" style="display: none;">Loading activity…</div>
                 <div id="ai-summary-error" class="text-danger small" style="display: none;"></div>
-                <div id="ai-summary-result" class="small" style="display: none; white-space: pre-wrap;"></div>
-                <div id="ai-summary-placeholder" class="text-muted small">Use the button above to get an AI overview of reader activity and suggested focus.</div>
+                <div id="ai-summary-placeholder" class="text-muted small">Choose a time range and click &quot;Show activity&quot; for graphs of all readers&apos; usage and help requests.</div>
+                <div id="dashboard-activity-charts-wrap" style="display: none;">
+                    <div class="row g-2 mb-3" id="dashboard-activity-stat-cards"></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-xl-8">
+                            <div class="small text-muted mb-1">All readers — events per day</div>
+                            <div style="position: relative; height: 240px;">
+                                <canvas id="chart-dashboard-activity-daily"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-xl-4">
+                            <div class="small text-muted mb-1">Event mix (in this period)</div>
+                            <div style="position: relative; height: 240px;">
+                                <canvas id="chart-dashboard-activity-types"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="small text-muted mb-1">New help requests per day</div>
+                            <div style="position: relative; height: 200px;">
+                                <canvas id="chart-dashboard-help-daily"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -304,6 +329,7 @@
 {{end}}
 
 {{define "scripts"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 // Consultant logout function
 (function() {
@@ -438,8 +464,25 @@ function loadConsultantUserInfo() {
     .catch(err => console.error('Error loading user info:', err));
 }
 
-// Generate AI summary for dashboard (scope=dashboard)
-function generateAISummary() {
+window._dashboardActivityCharts = { daily: null, types: null, help: null };
+
+function destroyDashboardActivityCharts() {
+    if (window._dashboardActivityCharts.daily) {
+        window._dashboardActivityCharts.daily.destroy();
+        window._dashboardActivityCharts.daily = null;
+    }
+    if (window._dashboardActivityCharts.types) {
+        window._dashboardActivityCharts.types.destroy();
+        window._dashboardActivityCharts.types = null;
+    }
+    if (window._dashboardActivityCharts.help) {
+        window._dashboardActivityCharts.help.destroy();
+        window._dashboardActivityCharts.help = null;
+    }
+}
+
+// Load aggregate stats & graphs for all readers (no AI text)
+function loadDashboardActivityCharts() {
     const token = getAuthToken();
     if (!token) {
         document.getElementById('ai-summary-placeholder').style.display = 'none';
@@ -447,38 +490,45 @@ function generateAISummary() {
         document.getElementById('ai-summary-error').style.display = 'block';
         return;
     }
+    if (typeof Chart === 'undefined') {
+        document.getElementById('ai-summary-error').textContent = 'Charts could not load. Check your network connection.';
+        document.getElementById('ai-summary-error').style.display = 'block';
+        return;
+    }
     const hoursEl = document.getElementById('ai-summary-hours');
     const hours = hoursEl ? hoursEl.value || '24' : '24';
     const loadingEl = document.getElementById('ai-summary-loading');
     const errorEl = document.getElementById('ai-summary-error');
-    const resultEl = document.getElementById('ai-summary-result');
     const placeholderEl = document.getElementById('ai-summary-placeholder');
+    const wrapEl = document.getElementById('dashboard-activity-charts-wrap');
     const btn = document.getElementById('ai-summary-btn');
-    
+
     loadingEl.style.display = 'block';
     errorEl.style.display = 'none';
-    resultEl.style.display = 'none';
     placeholderEl.style.display = 'none';
+    if (wrapEl) wrapEl.style.display = 'none';
     if (btn) btn.disabled = true;
-    
-    fetch('/api/consultant/ai-insight?scope=dashboard&hours=' + encodeURIComponent(hours), {
+
+    fetch('/api/consultant/dashboard/activity-charts?hours=' + encodeURIComponent(hours), {
         headers: {'Authorization': 'Bearer ' + token},
         redirect: 'manual'
     })
     .then(function(res) {
         if (res.type === 'opaqueredirect' || res.status === 0) {
-            return { ok: false, error: 'Session expired. Please log in again.' };
+            return Promise.resolve({ ok: false, error: 'Session expired. Please log in again.' });
         }
         if (res.status === 302 || res.status === 301) {
-            return { ok: false, error: 'Session expired. Please log in again.' };
+            return Promise.resolve({ ok: false, error: 'Session expired. Please log in again.' });
         }
         return res.text().then(function(text) {
             var data = {};
             try {
                 data = text ? JSON.parse(text) : {};
-            } catch (e) {}
-            if (res.ok && data.summary) {
-                return { ok: true, summary: data.summary };
+            } catch (e) {
+                return { ok: false, error: 'Invalid response from server. Try refreshing the page or logging in again.' };
+            }
+            if (res.ok && !data.error) {
+                return { ok: true, data: data };
             }
             return { ok: false, error: data.error || ('Server error ' + res.status) };
         });
@@ -486,13 +536,122 @@ function generateAISummary() {
     .then(function(out) {
         loadingEl.style.display = 'none';
         if (btn) btn.disabled = false;
-        if (out.ok && out.summary) {
-            resultEl.textContent = out.summary;
-            resultEl.style.display = 'block';
-        } else {
-            errorEl.textContent = out.error || 'AI summary unavailable.';
+        if (!out.ok) {
+            errorEl.textContent = out.error || 'Could not load activity data.';
             errorEl.style.display = 'block';
+            return;
         }
+        const data = out.data;
+        const s = data.summary || {};
+        const total = s.TotalActivities || 0;
+        const hw = data.help_in_window || {};
+        const helpTotal = hw.total != null ? hw.total : 0;
+        const helpOpen = hw.open != null ? hw.open : 0;
+        const activeWin = data.active_readers_in_window != null ? data.active_readers_in_window : 0;
+        const onlineNow = data.online_now != null ? data.online_now : 0;
+        const totalReaders = data.total_verified_readers != null ? data.total_verified_readers : 0;
+        const unique = s.UniqueReaders || 0;
+
+        const statHtml =
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Total events</div><div class="fs-5 fw-semibold">' + total + '</div></div></div>' +
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Readers (any activity)</div><div class="fs-5 fw-semibold">' + unique + '</div></div></div>' +
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Active in period</div><div class="fs-5 fw-semibold">' + activeWin + ' <span class="text-muted small">/ ' + totalReaders + '</span></div></div></div>' +
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Online now</div><div class="fs-5 fw-semibold">' + onlineNow + '</div></div></div>' +
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Calendar days w/ activity</div><div class="fs-5 fw-semibold">' + (s.ActiveDays || 0) + '</div></div></div>' +
+            '<div class="col-6 col-md-4 col-lg-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Help requests (period)</div><div class="fs-5 fw-semibold">' + helpTotal + ' <span class="text-muted small">(' + helpOpen + ' open)</span></div></div></div>';
+        document.getElementById('dashboard-activity-stat-cards').innerHTML = statHtml;
+
+        destroyDashboardActivityCharts();
+
+        const daily = Array.isArray(data.daily) ? data.daily : [];
+        const labels = daily.map(function(d) { return d.date; });
+        const counts = daily.map(function(d) { return d.count; });
+
+        const ctxD = document.getElementById('chart-dashboard-activity-daily');
+        window._dashboardActivityCharts.daily = new Chart(ctxD, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Events',
+                    data: counts,
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.08)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 14 } },
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+
+        const wl = s.WordLookups || 0;
+        const ai = s.AIIteractions || 0;
+        const pv = s.PageViews || 0;
+        const other = Math.max(0, total - wl - ai - pv);
+        const ctxT = document.getElementById('chart-dashboard-activity-types');
+        window._dashboardActivityCharts.types = new Chart(ctxT, {
+            type: 'doughnut',
+            data: {
+                labels: ['Word lookups', 'AI interactions', 'Page views', 'Other'],
+                datasets: [{
+                    data: [wl, ai, pv, other],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.85)',
+                        'rgba(13, 110, 253, 0.85)',
+                        'rgba(255, 193, 7, 0.9)',
+                        'rgba(108, 117, 125, 0.5)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+            }
+        });
+
+        const helpDaily = Array.isArray(data.help_daily) ? data.help_daily : [];
+        const hLabels = helpDaily.map(function(d) { return d.date; });
+        const hCounts = helpDaily.map(function(d) { return d.count; });
+        const ctxH = document.getElementById('chart-dashboard-help-daily');
+        window._dashboardActivityCharts.help = new Chart(ctxH, {
+            type: 'bar',
+            data: {
+                labels: hLabels,
+                datasets: [{
+                    label: 'New help requests',
+                    data: hCounts,
+                    backgroundColor: 'rgba(220, 53, 69, 0.65)',
+                    borderColor: 'rgba(220, 53, 69, 0.9)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 14 } },
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+
+        if (wrapEl) wrapEl.style.display = 'block';
     })
     .catch(function(err) {
         loadingEl.style.display = 'none';
@@ -684,18 +843,12 @@ function createReaderRow(reader, activityData, purchaseDate = '-') {
     // Store reader data on row for inspector access
     row.readerData = reader;
     
-    // Make row clickable (but exclude calendar cell clicks)
+    // Row opens reader inspector. Only the ◀ / ▶ buttons scroll the calendar (stopPropagation there).
     row.addEventListener('click', function(e) {
-        // Don't trigger if clicking on calendar navigation buttons
         if (e.target.closest('.calendar-nav-btn')) {
             return;
         }
-        // Don't trigger if clicking on calendar viewport
-        if (e.target.closest('.calendar-viewport')) {
-            return;
-        }
-        // Navigate to reader inspector page
-        window.location.href = `/consultant/readers/${reader.id}`;
+        window.location.href = '/consultant/readers/' + encodeURIComponent(reader.id);
     });
     
     const firstName = reader.first_name || '';

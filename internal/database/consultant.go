@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+// sqlDateKeyYMD is SQL for calendar day YYYY-MM-DD from a timestamp/text column.
+// PostgreSQL timestamps must be cast to text before SUBSTR; SQLite TEXT is unchanged.
+func sqlDateKeyYMD(column string) string {
+	return "SUBSTR(CAST(" + column + " AS TEXT), 1, 10)"
+}
+
 // ActiveReader represents a reader who is currently active
 type ActiveReader struct {
 	UserID       string
@@ -83,24 +89,24 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 	query := `
 		SELECT 
 			COUNT(*) as total_activities,
-			COUNT(DISTINCT SUBSTR(created_at, 1, 10)) as active_days,
-			SUM(CASE 
+			COUNT(DISTINCT ` + sqlDateKeyYMD("created_at") + `) as active_days,
+			COALESCE(SUM(CASE 
 				WHEN COALESCE(event_type, '') = 'DEFINITION_LOOKUP' OR COALESCE(activity_type, '') = 'WORD_LOOKUP' THEN 1
 				ELSE 0 
-			END) as word_lookups,
-			SUM(CASE 
+			END), 0) as word_lookups,
+			COALESCE(SUM(CASE 
 				WHEN COALESCE(event_type, '') = 'AI_QUERY' OR COALESCE(activity_type, '') = 'AI_INTERACTION' THEN 1
 				ELSE 0 
-			END) as ai_interactions,
-			SUM(CASE 
+			END), 0) as ai_interactions,
+			COALESCE(SUM(CASE 
 				WHEN COALESCE(event_type, '') = 'PAGE_SYNC' OR COALESCE(activity_type, '') = 'PAGE_VIEW' THEN 1
 				ELSE 0 
-			END) as page_views
+			END), 0) as page_views
 		FROM (
 			SELECT 
 				created_at,
 				event_type,
-				NULL as activity_type
+				CAST(NULL AS TEXT) AS activity_type
 			FROM interactions
 			WHERE user_id = ? 
 			AND created_at >= ?
@@ -109,7 +115,7 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 			
 			SELECT 
 				created_at,
-				NULL as event_type,
+				CAST(NULL AS TEXT) AS event_type,
 				activity_type
 			FROM activity_logs
 			WHERE user_id = ? 
@@ -134,6 +140,263 @@ func GetReaderActivitySummary(userID string, hours int) (*ReaderActivitySummary,
 	}
 
 	return summary, nil
+}
+
+// ActivityDayPoint is one day of activity count for charts (consultant reader inspector).
+type ActivityDayPoint struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+// GetReaderActivityDailySeries returns activity counts per calendar day within the last `hours` hours.
+func GetReaderActivityDailySeries(userID string, hours int) ([]ActivityDayPoint, error) {
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	query := `
+		SELECT day, COUNT(*) as cnt FROM (
+			SELECT ` + sqlDateKeyYMD("created_at") + ` AS day
+			FROM interactions
+			WHERE user_id = ? AND created_at >= ?
+			UNION ALL
+			SELECT ` + sqlDateKeyYMD("created_at") + ` AS day
+			FROM activity_logs
+			WHERE user_id = ? AND created_at >= ?
+		) t
+		GROUP BY day
+		ORDER BY day`
+
+	rows, err := DB.Query(Rebind(query), userID, cutoffTimeStr, userID, cutoffTimeStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reader activity daily series: %w", err)
+	}
+	defer rows.Close()
+
+	byDay := make(map[string]int)
+	for rows.Next() {
+		var day string
+		var cnt int
+		if err := rows.Scan(&day, &cnt); err != nil {
+			continue
+		}
+		byDay[day] = cnt
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Fill every calendar day from the window start through today (zeros where no events).
+	startDay := time.Date(cutoffTime.Year(), cutoffTime.Month(), cutoffTime.Day(), 0, 0, 0, 0, cutoffTime.Location())
+	now := time.Now()
+	endDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var out []ActivityDayPoint
+	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
+		key := d.Format("2006-01-02")
+		out = append(out, ActivityDayPoint{Date: key, Count: byDay[key]})
+	}
+
+	return out, nil
+}
+
+// readerVerifiedFilter is reused for dashboard-wide aggregates (verified readers only).
+const readerVerifiedFilter = `user_id IN (SELECT id FROM users WHERE role = 'reader' AND is_verified = 1)`
+
+// DashboardReadersActivitySummary aggregates activity across all verified readers in a time window.
+type DashboardReadersActivitySummary struct {
+	TotalActivities int
+	ActiveDays      int
+	UniqueReaders   int
+	WordLookups     int
+	AIIteractions   int
+	PageViews       int
+}
+
+// GetDashboardReadersActivitySummary returns combined stats for every verified reader in the last `hours` hours.
+func GetDashboardReadersActivitySummary(hours int) (*DashboardReadersActivitySummary, error) {
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	query := `
+		SELECT 
+			COUNT(*) as total_activities,
+			COUNT(DISTINCT ` + sqlDateKeyYMD("created_at") + `) as active_days,
+			COUNT(DISTINCT user_id) as unique_readers,
+			COALESCE(SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'DEFINITION_LOOKUP' OR COALESCE(activity_type, '') = 'WORD_LOOKUP' THEN 1
+				ELSE 0 
+			END), 0) as word_lookups,
+			COALESCE(SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'AI_QUERY' OR COALESCE(activity_type, '') = 'AI_INTERACTION' THEN 1
+				ELSE 0 
+			END), 0) as ai_interactions,
+			COALESCE(SUM(CASE 
+				WHEN COALESCE(event_type, '') = 'PAGE_SYNC' OR COALESCE(activity_type, '') = 'PAGE_VIEW' THEN 1
+				ELSE 0 
+			END), 0) as page_views
+		FROM (
+			SELECT user_id, created_at, event_type, CAST(NULL AS TEXT) AS activity_type
+			FROM interactions
+			WHERE ` + readerVerifiedFilter + `
+			AND created_at >= ?
+			UNION ALL
+			SELECT user_id, created_at, CAST(NULL AS TEXT) AS event_type, activity_type
+			FROM activity_logs
+			WHERE ` + readerVerifiedFilter + `
+			AND created_at >= ?
+		) combined_activities`
+
+	s := &DashboardReadersActivitySummary{}
+	err := DB.QueryRow(Rebind(query), cutoffTimeStr, cutoffTimeStr).Scan(
+		&s.TotalActivities,
+		&s.ActiveDays,
+		&s.UniqueReaders,
+		&s.WordLookups,
+		&s.AIIteractions,
+		&s.PageViews,
+	)
+	if err == sql.ErrNoRows {
+		return &DashboardReadersActivitySummary{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dashboard readers activity summary: %w", err)
+	}
+	return s, nil
+}
+
+// GetDashboardActivityDailySeries returns total reader activity events per calendar day (all verified readers).
+func GetDashboardActivityDailySeries(hours int) ([]ActivityDayPoint, error) {
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	query := `
+		SELECT day, COUNT(*) as cnt FROM (
+			SELECT ` + sqlDateKeyYMD("created_at") + ` AS day
+			FROM interactions
+			WHERE ` + readerVerifiedFilter + `
+			AND created_at >= ?
+			UNION ALL
+			SELECT ` + sqlDateKeyYMD("created_at") + ` AS day
+			FROM activity_logs
+			WHERE ` + readerVerifiedFilter + `
+			AND created_at >= ?
+		) t
+		GROUP BY day
+		ORDER BY day`
+
+	rows, err := DB.Query(Rebind(query), cutoffTimeStr, cutoffTimeStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dashboard activity daily series: %w", err)
+	}
+	defer rows.Close()
+
+	byDay := make(map[string]int)
+	for rows.Next() {
+		var day string
+		var cnt int
+		if err := rows.Scan(&day, &cnt); err != nil {
+			continue
+		}
+		byDay[day] = cnt
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	startDay := time.Date(cutoffTime.Year(), cutoffTime.Month(), cutoffTime.Day(), 0, 0, 0, 0, cutoffTime.Location())
+	now := time.Now()
+	endDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var out []ActivityDayPoint
+	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
+		key := d.Format("2006-01-02")
+		out = append(out, ActivityDayPoint{Date: key, Count: byDay[key]})
+	}
+	return out, nil
+}
+
+// HelpDayPoint is help-request volume per day for consultant charts.
+type HelpDayPoint struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+// GetDashboardHelpRequestsDailySeries counts new help requests per calendar day in the window.
+func GetDashboardHelpRequestsDailySeries(hours int) ([]HelpDayPoint, error) {
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	query := `
+		SELECT ` + sqlDateKeyYMD("created_at") + ` AS day, COUNT(*) AS cnt
+		FROM help_requests
+		WHERE created_at >= ?
+		GROUP BY ` + sqlDateKeyYMD("created_at") + `
+		ORDER BY day`
+
+	rows, err := DB.Query(Rebind(query), cutoffTimeStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get help requests daily series: %w", err)
+	}
+	defer rows.Close()
+
+	byDay := make(map[string]int)
+	for rows.Next() {
+		var day string
+		var cnt int
+		if err := rows.Scan(&day, &cnt); err != nil {
+			continue
+		}
+		byDay[day] = cnt
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	startDay := time.Date(cutoffTime.Year(), cutoffTime.Month(), cutoffTime.Day(), 0, 0, 0, 0, cutoffTime.Location())
+	now := time.Now()
+	endDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var out []HelpDayPoint
+	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
+		key := d.Format("2006-01-02")
+		out = append(out, HelpDayPoint{Date: key, Count: byDay[key]})
+	}
+	return out, nil
+}
+
+// DashboardHelpWindow holds help-request counts inside the time window.
+type DashboardHelpWindow struct {
+	Total int `json:"total"`
+	Open  int `json:"open"`
+}
+
+// GetDashboardHelpRequestsInWindow counts help requests created in the window; Open is pending + assigned.
+func GetDashboardHelpRequestsInWindow(hours int) (*DashboardHelpWindow, error) {
+	cutoffTime := time.Now().Add(-time.Duration(hours) * time.Hour)
+	cutoffTimeStr := cutoffTime.Format("2006-01-02 15:04:05")
+
+	query := `
+		SELECT COUNT(*),
+			COALESCE(SUM(CASE WHEN status IN ('pending', 'assigned') THEN 1 ELSE 0 END), 0)
+		FROM help_requests
+		WHERE created_at >= ?`
+
+	w := &DashboardHelpWindow{}
+	err := DB.QueryRow(Rebind(query), cutoffTimeStr).Scan(&w.Total, &w.Open)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get help requests in window: %w", err)
+	}
+	return w, nil
+}
+
+// CountVerifiedReaders returns the number of verified reader accounts.
+func CountVerifiedReaders() (int, error) {
+	var n int
+	err := DB.QueryRow(Rebind(`SELECT COUNT(*) FROM users WHERE role = 'reader' AND is_verified = 1`)).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count readers: %w", err)
+	}
+	return n, nil
 }
 
 // GetReaderState retrieves the current state of a reader
@@ -196,15 +459,15 @@ func GetReaderState(userID string) (*ReaderState, error) {
 
 // ReaderState represents the denormalized state of a reader
 type ReaderState struct {
-	UserID              string
-	BookID              *string
-	CurrentPage         *int
-	SectionID           *string
-	LastActivityType    *string
-	LastActivityAt      time.Time
-	TotalPagesRead      int
-	TotalWordLookups    int
-	TotalAIInteractions int
-	Status              string
-	UpdatedAt           time.Time
+	UserID              string     `json:"user_id"`
+	BookID              *string    `json:"book_id,omitempty"`
+	CurrentPage         *int       `json:"current_page,omitempty"`
+	SectionID           *string    `json:"section_id,omitempty"`
+	LastActivityType    *string    `json:"last_activity_type,omitempty"`
+	LastActivityAt      time.Time  `json:"last_activity_at"`
+	TotalPagesRead      int        `json:"total_pages_read"`
+	TotalWordLookups    int        `json:"total_word_lookups"`
+	TotalAIInteractions int        `json:"total_ai_interactions"`
+	Status              string     `json:"status"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }

@@ -61,11 +61,13 @@ alice-suite-go/
 
 ## Three apps — URLs and purpose
 
-| App           | Login URL              | Main URL / dashboard   | Purpose |
-|---------------|------------------------|-------------------------|---------|
-| **Reader**    | `/reader/login`        | `/reader`, `/reader/interaction` | Read book, dictionary, AI help, help requests, progress. |
-| **Consultant**| `/consultant/login`    | `/consultant`, `/consultant/readers`, `/consultant/help-requests` | See readers, activity, help requests, send prompts. |
-| **Administrator** | `/admin/login`     | `/admin`                | Monitor readers/consultants online, email notifications, future stats. |
+
+| App               | Login URL           | Main URL / dashboard                                              | Purpose                                                                |
+| ----------------- | ------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Reader**        | `/reader/login`     | `/reader`, `/reader/interaction`                                  | Read book, dictionary, AI help, help requests, progress.               |
+| **Consultant**    | `/consultant/login` | `/consultant`, `/consultant/readers`, `/consultant/help-requests` | See readers, activity, help requests, send prompts.                    |
+| **Administrator** | `/admin/login`      | `/admin`                                                          | Monitor readers/consultants online, email notifications, future stats. |
+
 
 - **Health:** `/health` (no auth).
 - **Reader API** (when using `cmd/reader`): `/api/health`, `/api/auth/login`, `/api/books`, `/api/chapters`, `/api/sections`, `/api/pages`, `/api/dictionary/lookup`, `/api/ai/ask`, `/api/help/request`, etc.
@@ -90,6 +92,7 @@ make stop / make restart / make test / make check
 ## Important docs (in repo)
 
 - **AGENTS.MD** — Project rules and scope for agents; read first.
+- **docs/AI_AGENTS_CHECKLIST.md** — One-page list of Cursor, MCP, Paperclip, `qmd`, and CLI helpers.
 - **LOGIN_CREDENTIALS.md** — Test accounts (reader, consultant, admin).
 - **docs/QMD_PROJECT_MEMORY.md** — How to use qmd collection `alice`.
 - **docs/APP_UPGRADES.md** — Log of app upgrades (noscript, canonical URLs, nav, logout).

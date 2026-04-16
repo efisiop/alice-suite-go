@@ -81,6 +81,8 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/active-readers", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantActiveReaders)))
 	mux.Handle("/api/consultant/recent-activities", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantRecentActivities)))
 	mux.Handle("/api/consultant/reader/activity", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderActivity)))
+	mux.Handle("/api/consultant/reader/activity-charts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderActivityCharts)))
+	mux.Handle("/api/consultant/dashboard/activity-charts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantDashboardActivityCharts)))
 	mux.Handle("/api/consultant/reader/state", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderState)))
 	mux.Handle("/api/consultant/reader/purchase-date", middleware.RequireConsultant(http.HandlerFunc(HandleUpdateBookPurchaseDate)))
 	mux.Handle("/api/consultant/online-readers", middleware.RequireConsultant(http.HandlerFunc(HandleGetOnlineReaders)))

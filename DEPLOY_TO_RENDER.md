@@ -101,16 +101,23 @@ After deployment completes:
    - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
    - Or clear browser cache completely
 
-### If deployment fails:
+### If deployment fails (or you get a "deploy didn't complete" email):
 
-1. **Check build logs** for errors
-2. **Check if all files were pushed to GitHub:**
-   ```bash
-   git log --oneline -1
-   # Should show: "Add glossary term highlighting with light blue color and character names"
-   ```
+1. **Find the actual error (most important):**
+   - Go to [Render Dashboard](https://dashboard.render.com) → your **alice-suite-go** service
+   - Open the **Logs** tab (or the failed deploy’s log)
+   - Check **Build logs** first: if the failure is there, the error message will show (e.g. Go compile error, missing binary, timeout)
+   - Then check **Deploy / Runtime logs**: if the build succeeded but the service didn’t start, the error will be there (e.g. `DATABASE_URL` missing, migration failed, `./start.sh` failed)
 
-3. **Verify migration file exists:**
+2. **Typical causes:**
+   - **Build:** Go build failed (syntax/import error), one of the extra binaries (`diagnose-sections`, `compare-db-structure`) failed to build, or build timed out
+   - **Start:** `DATABASE_URL` not set or PostgreSQL not linked, or a step in `start.sh` failed (migrate, init-users, fix-render)
+
+3. **Quick checks on your machine:**
+   - Confirm the latest commit is on GitHub: `git log --oneline -1`
+   - Optional: try building locally: `CGO_ENABLED=1 go build -o bin/server ./cmd/server` (needs C compiler for SQLite)
+
+4. **Verify migration file exists (if logs mention migrations):**
    ```bash
    ls -la migrations/011_add_alice_characters.sql
    ```

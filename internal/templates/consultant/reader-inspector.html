@@ -747,28 +747,44 @@
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-ai" aria-expanded="false" aria-controls="subject-ai">
-                        🤖 AI &amp; prompts — insight, suggestions, chats
+                        🤖 AI &amp; prompts — activity charts, suggestions, chats
                     </button>
                 </h2>
                 <div id="subject-ai" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="card mb-3">
                             <div class="card-header d-flex justify-content-between align-items-center py-2">
-                                <h6 class="mb-0">AI insight for this reader</h6>
+                                <h6 class="mb-0">Reader activity — stats &amp; charts</h6>
                                 <div class="d-flex align-items-center gap-2">
                                     <select id="ai-insight-hours" class="form-select form-select-sm" style="width: auto;">
                                         <option value="168">Last 7 days</option>
                                         <option value="72">Last 3 days</option>
                                         <option value="24">Last 24 hours</option>
                                     </select>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="ai-insight-btn" onclick="generateAIInsight()">Generate insight</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="ai-insight-btn" onclick="loadReaderActivityCharts()">Show activity</button>
                                 </div>
                             </div>
                             <div class="card-body py-2">
-                                <div id="ai-insight-loading" class="text-muted small" style="display: none;">Analysing...</div>
+                                <div id="ai-insight-loading" class="text-muted small" style="display: none;">Loading activity…</div>
                                 <div id="ai-insight-error" class="text-danger small" style="display: none;"></div>
-                                <div id="ai-insight-result" class="small" style="display: none; white-space: pre-wrap;"></div>
-                                <div id="ai-insight-placeholder" class="text-muted small">Click "Generate insight" for an AI summary of this reader and how you can assist.</div>
+                                <div id="ai-insight-placeholder" class="text-muted small">Choose a time range and click &quot;Show activity&quot; to see graphs of this reader&apos;s usage.</div>
+                                <div id="reader-activity-charts-wrap" style="display: none;">
+                                    <div class="row g-2 mb-3" id="reader-activity-stat-cards"></div>
+                                    <div class="row g-3">
+                                        <div class="col-lg-7">
+                                            <div class="small text-muted mb-1">Events per day</div>
+                                            <div style="position: relative; height: 220px;">
+                                                <canvas id="chart-reader-activity-daily"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-5">
+                                            <div class="small text-muted mb-1">What they did (in this period)</div>
+                                            <div style="position: relative; height: 220px;">
+                                                <canvas id="chart-reader-activity-types"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="card mb-3">
@@ -844,6 +860,7 @@
 {{end}}
 
 {{define "scripts"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 // Consultant logout function
 (function() {
@@ -884,7 +901,7 @@
     window.logout = window.consultantLogout;
 })();
 
-const readerId = '{{.ReaderID}}';
+const readerId = {{.ReaderID}};
 
 // Activity calendar state for inspector (top right)
 window.inspectorActivityByDate = null;
@@ -972,8 +989,22 @@ function refreshAll() {
     loadHelpRequests();
 }
 
-// Generate AI insight for this reader (scope=reader)
-function generateAIInsight() {
+// Chart instances for reader activity (destroyed before redraw)
+window._readerActivityCharts = { daily: null, types: null };
+
+function destroyReaderActivityCharts() {
+    if (window._readerActivityCharts.daily) {
+        window._readerActivityCharts.daily.destroy();
+        window._readerActivityCharts.daily = null;
+    }
+    if (window._readerActivityCharts.types) {
+        window._readerActivityCharts.types.destroy();
+        window._readerActivityCharts.types = null;
+    }
+}
+
+// Load stats + graphs for this reader (no AI text)
+function loadReaderActivityCharts() {
     const token = getAuthToken();
     if (!token || !readerId) {
         document.getElementById('ai-insight-placeholder').style.display = 'none';
@@ -982,38 +1013,138 @@ function generateAIInsight() {
         errEl.style.display = 'block';
         return;
     }
+    if (typeof Chart === 'undefined') {
+        document.getElementById('ai-insight-error').textContent = 'Charts could not load. Check your network connection.';
+        document.getElementById('ai-insight-error').style.display = 'block';
+        return;
+    }
     const hoursEl = document.getElementById('ai-insight-hours');
     const hours = hoursEl ? hoursEl.value || '168' : '168';
     const loadingEl = document.getElementById('ai-insight-loading');
     const errorEl = document.getElementById('ai-insight-error');
-    const resultEl = document.getElementById('ai-insight-result');
     const placeholderEl = document.getElementById('ai-insight-placeholder');
+    const wrapEl = document.getElementById('reader-activity-charts-wrap');
     const btn = document.getElementById('ai-insight-btn');
-    
+
     loadingEl.style.display = 'block';
     errorEl.style.display = 'none';
-    resultEl.style.display = 'none';
     placeholderEl.style.display = 'none';
+    if (wrapEl) wrapEl.style.display = 'none';
     if (btn) btn.disabled = true;
-    
-    const url = '/api/consultant/ai-insight?scope=reader&user_id=' + encodeURIComponent(readerId) + '&hours=' + encodeURIComponent(hours);
-    fetch(url, { headers: {'Authorization': 'Bearer ' + token} })
-    .then(res => res.json().then(data => ({ ok: res.ok, data })))
-    .then(({ ok, data }) => {
-        loadingEl.style.display = 'none';
-        if (btn) btn.disabled = false;
-        if (ok && data.summary) {
-            resultEl.textContent = data.summary;
-            resultEl.style.display = 'block';
-        } else {
-            errorEl.textContent = data.error || 'AI insight unavailable.';
-            errorEl.style.display = 'block';
-        }
+
+    const url = '/api/consultant/reader/activity-charts?user_id=' + encodeURIComponent(readerId) + '&hours=' + encodeURIComponent(hours);
+    fetch(url, {
+        headers: {'Authorization': 'Bearer ' + token},
+        redirect: 'manual'
     })
-    .catch(err => {
+    .then(function(res) {
+        if (res.type === 'opaqueredirect' || res.status === 0) {
+            return { ok: false, data: { error: 'Session expired. Please refresh the page or log in again.' } };
+        }
+        if (res.status === 302 || res.status === 301) {
+            return { ok: false, data: { error: 'Session expired. Please refresh the page or log in again.' } };
+        }
+        return res.text().then(function(text) {
+            var data = {};
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch (e) {
+                return { ok: false, data: { error: 'Invalid response from server. Try logging in again.' } };
+            }
+            if (res.ok && !data.error) {
+                return { ok: true, data: data };
+            }
+            return { ok: false, data: data };
+        });
+    })
+    .then(function(result) {
         loadingEl.style.display = 'none';
         if (btn) btn.disabled = false;
-        errorEl.textContent = 'Request failed. Try again.';
+        var ok = result.ok;
+        var data = result.data || {};
+        if (!ok || data.error) {
+            errorEl.textContent = data.error || 'Could not load activity data.';
+            errorEl.style.display = 'block';
+            return;
+        }
+        const s = data.summary || {};
+        const total = s.TotalActivities || 0;
+        const helpN = data.help_requests_total != null ? data.help_requests_total : 0;
+        const statHtml =
+            '<div class="col-6 col-md-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Total events</div><div class="fs-5 fw-semibold">' + total + '</div></div></div>' +
+            '<div class="col-6 col-md-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Active days</div><div class="fs-5 fw-semibold">' + (s.ActiveDays || 0) + '</div></div></div>' +
+            '<div class="col-6 col-md-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">Word lookups</div><div class="fs-5 fw-semibold">' + (s.WordLookups || 0) + '</div></div></div>' +
+            '<div class="col-6 col-md-3">' +
+            '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">AI + pages</div><div class="fs-5 fw-semibold">' + ((s.AIIteractions || 0) + (s.PageViews || 0)) + '</div></div></div>' +
+            '<div class="col-12 mt-1"><span class="small text-muted">Help requests (all time): <strong>' + helpN + '</strong></span></div>';
+        document.getElementById('reader-activity-stat-cards').innerHTML = statHtml;
+
+        destroyReaderActivityCharts();
+
+        const daily = Array.isArray(data.daily) ? data.daily : [];
+        const labels = daily.map(function (d) { return d.date; });
+        const counts = daily.map(function (d) { return d.count; });
+
+        const ctxD = document.getElementById('chart-reader-activity-daily');
+        window._readerActivityCharts.daily = new Chart(ctxD, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Events',
+                    data: counts,
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+
+        const wl = s.WordLookups || 0;
+        const ai = s.AIIteractions || 0;
+        const pv = s.PageViews || 0;
+        const other = Math.max(0, total - wl - ai - pv);
+        const ctxT = document.getElementById('chart-reader-activity-types');
+        window._readerActivityCharts.types = new Chart(ctxT, {
+            type: 'doughnut',
+            data: {
+                labels: ['Word lookups', 'AI interactions', 'Page views', 'Other'],
+                datasets: [{
+                    data: [wl, ai, pv, other],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.85)',
+                        'rgba(13, 110, 253, 0.85)',
+                        'rgba(255, 193, 7, 0.9)',
+                        'rgba(108, 117, 125, 0.5)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+            }
+        });
+
+        if (wrapEl) wrapEl.style.display = 'block';
+    })
+    .catch(function (err) {
+        loadingEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        errorEl.textContent = (err && err.message) ? ('Request failed: ' + err.message) : 'Request failed. Try again.';
         errorEl.style.display = 'block';
     });
 }
@@ -1059,11 +1190,26 @@ function refreshStats() {
     const token = getAuthToken();
     if (!token || !readerId) return;
     
-    fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
-        headers: {'Authorization': 'Bearer ' + token}
+    fetch('/api/consultant/reader/activity?user_id=' + encodeURIComponent(readerId) + '&hours=720', {
+        headers: {'Authorization': 'Bearer ' + token},
+        redirect: 'manual'
     })
-    .then(r => r.json())
-    .then(summary => {
+    .then(function(r) {
+        if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
+            return null;
+        }
+        if (!r.ok) {
+            return r.text().then(function() { return null; });
+        }
+        return r.text().then(function(text) {
+            try {
+                return text ? JSON.parse(text) : null;
+            } catch (e) {
+                return null;
+            }
+        });
+    })
+    .then(function(summary) {
         if (summary) {
             const total = summary.TotalActivities || 0;
             const words = summary.WordLookups || 0;
@@ -1073,13 +1219,12 @@ function refreshStats() {
             document.getElementById('wordLookups').textContent = words;
             document.getElementById('pageViews').textContent = pages;
             updateActivityBreakdown(total, words, pages);
-            // Update last updated timestamp
             const now = new Date();
-            document.getElementById('lastUpdated').textContent = 
-                `Last updated: ${now.toLocaleTimeString()}`;
+            document.getElementById('lastUpdated').textContent =
+                'Last updated: ' + now.toLocaleTimeString();
         }
     })
-    .catch(err => {
+    .catch(function(err) {
         console.error('Error refreshing stats:', err);
     });
 }
@@ -1130,45 +1275,92 @@ function loadReaderDetails() {
         return;
     }
     
-    // Get book_id from reader state first
+    // Get book_id from reader state first (404 = no reader_states row yet — not an error)
     let bookId = null;
-    fetch(`/api/consultant/reader/state?user_id=${readerId}`, {
-        headers: {'Authorization': 'Bearer ' + token}
+    fetch(`/api/consultant/reader/state?user_id=${encodeURIComponent(readerId)}`, {
+        headers: {'Authorization': 'Bearer ' + token},
+        redirect: 'manual'
     })
-    .then(r => r.json())
-    .then(state => {
-        window.readerState = state || null;
-        if (state && state.book_id) {
-            bookId = state.book_id;
-        } else {
-            // If no book_id in state, get first book from system
-            return fetch(`/rest/v1/books?limit=1`, {
-                headers: {'Authorization': 'Bearer ' + token}
-            }).then(r => r.json()).then(books => {
-                if (Array.isArray(books) && books.length > 0) {
-                    bookId = books[0].id;
-                }
+    .then(function(r) {
+        if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
+            return Promise.reject(new Error('Session expired. Please log in again.'));
+        }
+        if (r.status === 404) {
+            return null;
+        }
+        if (!r.ok) {
+            return r.text().then(function(t) {
+                throw new Error(t || ('Reader state failed: ' + r.status));
             });
         }
+        return r.json();
+    })
+    .then(function(state) {
+        window.readerState = state || null;
+        var bid = state && (state.book_id || state.BookID);
+        if (bid) {
+            bookId = bid;
+            return;
+        }
+        return fetch('/rest/v1/books?limit=1', {
+            headers: {'Authorization': 'Bearer ' + token}
+        }).then(function(r) {
+            if (!r.ok) {
+                return r.text().then(function(t) { throw new Error(t || 'Books request failed'); });
+            }
+            return r.json();
+        }).then(function(books) {
+            if (Array.isArray(books) && books.length > 0) {
+                bookId = books[0].id;
+            }
+        });
     })
     .then(() => {
         // Load reader info, activity summary, and reading progress in parallel
+        function parseJSONOk(r, label) {
+            if (!r.ok) {
+                return r.text().then(function(t) {
+                    throw new Error((label || 'Request') + ' failed: ' + (t || r.status));
+                });
+            }
+            return r.json();
+        }
+        function fetchActivityOrZeros() {
+            return fetch('/api/consultant/reader/activity?user_id=' + encodeURIComponent(readerId) + '&hours=720', {
+                headers: {'Authorization': 'Bearer ' + token},
+                redirect: 'manual'
+            }).then(function(r) {
+                if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
+                    return { TotalActivities: 0, ActiveDays: 0, WordLookups: 0, PageViews: 0, AIIteractions: 0 };
+                }
+                if (!r.ok) {
+                    return r.text().then(function() {
+                        return { TotalActivities: 0, ActiveDays: 0, WordLookups: 0, PageViews: 0, AIIteractions: 0 };
+                    });
+                }
+                return r.text().then(function(text) {
+                    try {
+                        return text ? JSON.parse(text) : { TotalActivities: 0, ActiveDays: 0, WordLookups: 0, PageViews: 0, AIIteractions: 0 };
+                    } catch (e) {
+                        return { TotalActivities: 0, ActiveDays: 0, WordLookups: 0, PageViews: 0, AIIteractions: 0 };
+                    }
+                });
+            });
+        }
         const promises = [
-            fetch(`/rest/v1/users?id=eq.${readerId}`, {
+            fetch('/rest/v1/users?id=eq.' + encodeURIComponent(readerId), {
                 headers: {'Authorization': 'Bearer ' + token}
-            }).then(r => r.json()),
-            fetch(`/api/consultant/reader/activity?user_id=${readerId}&hours=720`, {
-                headers: {'Authorization': 'Bearer ' + token}
-            }).then(r => r.json()),
+            }).then(function(r) { return parseJSONOk(r, 'Users'); }),
+            fetchActivityOrZeros(),
             loadActivities()
         ];
         
         // Add reading progress fetch if we have a book_id
         if (bookId) {
             promises.push(
-                fetch(`/rest/v1/reading_progress?user_id=eq.${readerId}&book_id=eq.${bookId}`, {
+                fetch('/rest/v1/reading_progress?user_id=eq.' + encodeURIComponent(readerId) + '&book_id=eq.' + encodeURIComponent(bookId), {
                     headers: {'Authorization': 'Bearer ' + token}
-                }).then(r => r.json())
+                }).then(function(r) { return parseJSONOk(r, 'Reading progress'); })
             );
         }
         
@@ -1202,7 +1394,7 @@ function loadReaderDetails() {
         }
         loadHelpRequests(); // Help requests don't require bookId
         loadConsultantPrompts();
-        if (window.readerState && window.readerState.current_page) {
+        if (window.readerState && window.readerState.current_page != null) {
             const pageEl = document.getElementById('prompt-page-number');
             if (pageEl) pageEl.value = window.readerState.current_page;
         }

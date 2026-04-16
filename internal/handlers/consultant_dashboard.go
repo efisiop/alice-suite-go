@@ -96,6 +96,114 @@ func HandleConsultantReaderActivity(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(summary)
 }
 
+// HandleConsultantReaderActivityCharts handles GET /api/consultant/reader/activity-charts
+// Returns summary stats, daily series, and help-request count for charting (no AI).
+func HandleConsultantReaderActivityCharts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "User ID required", http.StatusBadRequest)
+		return
+	}
+
+	hoursStr := r.URL.Query().Get("hours")
+	hours := 168
+	if hoursStr != "" {
+		if parsed, err := strconv.Atoi(hoursStr); err == nil && parsed > 0 {
+			hours = parsed
+		}
+	}
+
+	summary, err := database.GetReaderActivitySummary(userID, hours)
+	if err != nil {
+		log.Printf("GetReaderActivitySummary (charts) error: %v", err)
+		http.Error(w, "Failed to fetch reader activity", http.StatusInternalServerError)
+		return
+	}
+
+	daily, err := database.GetReaderActivityDailySeries(userID, hours)
+	if err != nil {
+		log.Printf("GetReaderActivityDailySeries error: %v", err)
+		http.Error(w, "Failed to fetch reader activity series", http.StatusInternalServerError)
+		return
+	}
+
+	helpReqs, _ := database.GetHelpRequests(userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"hours":               hours,
+		"summary":             summary,
+		"daily":               daily,
+		"help_requests_total": len(helpReqs),
+	})
+}
+
+// HandleConsultantDashboardActivityCharts handles GET /api/consultant/dashboard/activity-charts
+// Returns aggregate stats and series for all readers (consultant Readers page).
+func HandleConsultantDashboardActivityCharts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	hoursStr := r.URL.Query().Get("hours")
+	hours := 24
+	if hoursStr != "" {
+		if parsed, err := strconv.Atoi(hoursStr); err == nil && parsed > 0 {
+			hours = parsed
+		}
+	}
+
+	summary, err := database.GetDashboardReadersActivitySummary(hours)
+	if err != nil {
+		log.Printf("GetDashboardReadersActivitySummary error: %v", err)
+		http.Error(w, "Failed to fetch dashboard activity", http.StatusInternalServerError)
+		return
+	}
+
+	daily, err := database.GetDashboardActivityDailySeries(hours)
+	if err != nil {
+		log.Printf("GetDashboardActivityDailySeries error: %v", err)
+		http.Error(w, "Failed to fetch dashboard activity series", http.StatusInternalServerError)
+		return
+	}
+
+	helpDaily, err := database.GetDashboardHelpRequestsDailySeries(hours)
+	if err != nil {
+		log.Printf("GetDashboardHelpRequestsDailySeries error: %v", err)
+		http.Error(w, "Failed to fetch help request series", http.StatusInternalServerError)
+		return
+	}
+
+	helpWin, err := database.GetDashboardHelpRequestsInWindow(hours)
+	if err != nil {
+		log.Printf("GetDashboardHelpRequestsInWindow error: %v", err)
+		http.Error(w, "Failed to fetch help request counts", http.StatusInternalServerError)
+		return
+	}
+
+	activeReaders, _ := database.GetActiveReaders(hours * 60)
+	onlineMap, _ := database.GetOnlineReaderIDs()
+	totalReaders, _ := database.CountVerifiedReaders()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"hours":                    hours,
+		"summary":                  summary,
+		"daily":                    daily,
+		"help_daily":               helpDaily,
+		"help_in_window":           helpWin,
+		"active_readers_in_window": len(activeReaders),
+		"online_now":               len(onlineMap),
+		"total_verified_readers":   totalReaders,
+	})
+}
+
 // HandleConsultantRecentActivities handles GET /api/consultant/recent-activities
 // Returns recent activity feed for all readers
 func HandleConsultantRecentActivities(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +256,9 @@ func HandleConsultantReaderState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if state == nil {
-		http.Error(w, "Reader state not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Reader state not found"})
 		return
 	}
 
