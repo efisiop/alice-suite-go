@@ -1,5 +1,8 @@
-# Alice Suite - PostgreSQL migration
-# DATABASE_URL is injected from the database via fromDatabase below.
+# Alice Suite - external PostgreSQL (e.g. Neon)
+# DATABASE_URL is set manually in the Render Dashboard:
+#   Dashboard → alice-suite-go → Environment → Add Environment Variable
+#   key:   DATABASE_URL
+#   value: <connection string from Neon, includes sslmode=require>
 # Migrations run on startup (start.sh) before the server.
 
 services:
@@ -16,10 +19,8 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: alice-suite-go-db
-          property: connectionString
+      # DATABASE_URL is NOT set here on purpose — set it in the Render Dashboard
+      # so you can point it at Neon (or any external Postgres) without editing code.
       # AI Provider Configuration
       # IMPORTANT: Set these as environment variables in Render Dashboard (not here!)
       # Go to: https://dashboard.render.com → Your Service → Environment → Add Environment Variable
@@ -29,7 +30,3 @@ services:
       #   sync: false  # Set this in Render Dashboard instead
       - key: AI_PROVIDER
         value: auto  # Options: "auto" (try Gemini first, fallback to Moonshot), "gemini", or "moonshot"
-
-databases:
-  - name: alice-suite-go-db
-    plan: free
