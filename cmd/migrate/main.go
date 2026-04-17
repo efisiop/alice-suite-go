@@ -18,14 +18,59 @@ var (
 	migrationsDir = "migrations"
 )
 
-// splitSQLStatements splits SQL by semicolons, but respects quoted strings
+// splitSQLStatements splits SQL by semicolons while respecting:
+//   - single-quoted strings (including doubled '' escape, which the toggle
+//     approach handles naturally: each ' flips state, pairs flip back)
+//   - double-quoted identifiers
+//   - -- line comments (apostrophes inside comments must NOT affect quote state)
+//   - /* ... */ block comments
+//
+// A previous version ignored comments entirely, so text like
+//   -- Alice's glossary
+// toggled inSingleQuote and caused every subsequent ; to be swallowed,
+// concatenating many real INSERTs into one broken statement.
 func splitSQLStatements(sql string) []string {
 	var statements []string
 	var current strings.Builder
 	inSingleQuote := false
 	inDoubleQuote := false
 
-	for i, char := range sql {
+	runes := []rune(sql)
+	n := len(runes)
+	i := 0
+	for i < n {
+		char := runes[i]
+
+		// Skip -- line comments (only when not inside a string)
+		if !inSingleQuote && !inDoubleQuote &&
+			char == '-' && i+1 < n && runes[i+1] == '-' {
+			// Preserve the comment text in the output so line numbers are
+			// still meaningful if we ever log a statement. Stop at newline.
+			for i < n && runes[i] != '\n' {
+				current.WriteRune(runes[i])
+				i++
+			}
+			continue
+		}
+
+		// Skip /* ... */ block comments (only when not inside a string)
+		if !inSingleQuote && !inDoubleQuote &&
+			char == '/' && i+1 < n && runes[i+1] == '*' {
+			current.WriteRune('/')
+			current.WriteRune('*')
+			i += 2
+			for i+1 < n && !(runes[i] == '*' && runes[i+1] == '/') {
+				current.WriteRune(runes[i])
+				i++
+			}
+			if i+1 < n {
+				current.WriteRune('*')
+				current.WriteRune('/')
+				i += 2
+			}
+			continue
+		}
+
 		switch char {
 		case '\'':
 			if !inDoubleQuote {
@@ -50,7 +95,7 @@ func splitSQLStatements(sql string) []string {
 		default:
 			current.WriteRune(char)
 		}
-		_ = i // avoid unused variable
+		i++
 	}
 
 	// Add remaining statement
@@ -113,6 +158,17 @@ func main() {
 
 		sqlContent := string(sqlBytes)
 		if database.DriverName == "postgres" {
+			// Migration 013 uses SQLite's "create users_new, copy, drop, rename"
+			// pattern to alter a CHECK constraint. That pattern doesn't work on
+			// Postgres because other tables have foreign keys to users(id).
+			// Use Postgres-native ALTER TABLE statements instead.
+			if filename == "013_add_administrator_role.sql" {
+				sqlContent = `
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('reader', 'consultant', 'administrator'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_level TEXT;
+`
+			}
 			sqlContent = database.TransformSQLiteToPostgres(sqlContent)
 		}
 
