@@ -41,31 +41,27 @@ func splitSQLStatements(sql string) []string {
 	for i < n {
 		char := runes[i]
 
-		// Skip -- line comments (only when not inside a string)
+		// Skip -- line comments (only when not inside a string).
+		// We DROP the comment text entirely (do not write to current) so that
+		// statements don't end up with a leading "--" line, which the loop
+		// below would mis-detect as a comment-only statement and skip.
 		if !inSingleQuote && !inDoubleQuote &&
 			char == '-' && i+1 < n && runes[i+1] == '-' {
-			// Preserve the comment text in the output so line numbers are
-			// still meaningful if we ever log a statement. Stop at newline.
 			for i < n && runes[i] != '\n' {
-				current.WriteRune(runes[i])
 				i++
 			}
 			continue
 		}
 
-		// Skip /* ... */ block comments (only when not inside a string)
+		// Skip /* ... */ block comments (only when not inside a string).
+		// Also dropped from the output for the same reason as line comments.
 		if !inSingleQuote && !inDoubleQuote &&
 			char == '/' && i+1 < n && runes[i+1] == '*' {
-			current.WriteRune('/')
-			current.WriteRune('*')
 			i += 2
 			for i+1 < n && !(runes[i] == '*' && runes[i+1] == '/') {
-				current.WriteRune(runes[i])
 				i++
 			}
 			if i+1 < n {
-				current.WriteRune('*')
-				current.WriteRune('/')
 				i += 2
 			}
 			continue
