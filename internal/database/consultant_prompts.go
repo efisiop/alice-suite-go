@@ -119,13 +119,13 @@ func DeleteConsultantPrompt(id string) error {
 
 // DismissConsultantPrompt records that the reader dismissed this prompt (feedback to consultant)
 func DismissConsultantPrompt(promptID, userID string) error {
-	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET dismissed_at = ? WHERE id = ? AND user_id = ?`), time.Now(), promptID, userID)
+	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET dismissed_at = ? WHERE id = ? AND user_id = ?`), FormatSQLDateTime(time.Now()), promptID, userID)
 	return err
 }
 
 // AcceptConsultantPrompt records that the reader clicked Open AI Help and interacted (feedback to consultant)
 func AcceptConsultantPrompt(promptID, userID string) error {
-	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET accepted_at = ? WHERE id = ? AND user_id = ?`), time.Now(), promptID, userID)
+	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET accepted_at = ? WHERE id = ? AND user_id = ?`), FormatSQLDateTime(time.Now()), promptID, userID)
 	return err
 }
 

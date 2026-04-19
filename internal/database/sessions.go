@@ -32,7 +32,9 @@ func CreateSession(userID, token, ipAddress, userAgent string, expiresIn time.Du
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	now := time.Now()
-	_, err := DB.Exec(Rebind(query), sessionID, userID, tokenHash, ipAddress, userAgent, now, now, expiresAt)
+	nowStr := FormatSQLDateTime(now)
+	expStr := FormatSQLDateTime(expiresAt)
+	_, err := DB.Exec(Rebind(query), sessionID, userID, tokenHash, ipAddress, userAgent, nowStr, nowStr, expStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
@@ -59,7 +61,7 @@ func GetSessionByToken(token string) (*Session, error) {
 	query := `SELECT id, user_id, token_hash, ip_address, user_agent, created_at, last_active_at, expires_at
 	          FROM sessions WHERE token_hash = ? AND expires_at > ?`
 
-	err := DB.QueryRow(Rebind(query), tokenHash, time.Now()).Scan(
+	err := DB.QueryRow(Rebind(query), tokenHash, FormatSQLDateTime(time.Now())).Scan(
 		&s.ID, &s.UserID, &s.TokenHash, &s.IPAddress, &s.UserAgent,
 		&createdAtStr, &lastActiveStr, &expiresStr,
 	)
@@ -94,7 +96,7 @@ func GetSessionByToken(token string) (*Session, error) {
 // UpdateSessionActivity updates last_active_at for a session
 func UpdateSessionActivity(token string) error {
 	tokenHash := hashToken(token)
-	_, err := DB.Exec(Rebind(`UPDATE sessions SET last_active_at = ? WHERE token_hash = ?`), time.Now(), tokenHash)
+	_, err := DB.Exec(Rebind(`UPDATE sessions SET last_active_at = ? WHERE token_hash = ?`), FormatSQLDateTime(time.Now()), tokenHash)
 	if err != nil {
 		return fmt.Errorf("failed to update session activity: %w", err)
 	}
@@ -125,7 +127,7 @@ func DeleteAllUserSessions(userID string) error {
 
 // CleanupExpiredSessions removes expired sessions (run periodically)
 func CleanupExpiredSessions() error {
-	result, err := DB.Exec(Rebind(`DELETE FROM sessions WHERE expires_at < ?`), time.Now())
+	result, err := DB.Exec(Rebind(`DELETE FROM sessions WHERE expires_at < ?`), FormatSQLDateTime(time.Now()))
 	if err != nil {
 		return fmt.Errorf("failed to cleanup expired sessions: %w", err)
 	}
@@ -139,7 +141,7 @@ func CleanupExpiredSessions() error {
 // CleanupStaleSessions removes sessions that haven't been active for more than 30 minutes
 // This handles cases where users close the browser without logging out
 func CleanupStaleSessions() error {
-	result, err := DB.Exec(Rebind(`DELETE FROM sessions WHERE last_active_at < ?`), time.Now().Add(-30*time.Minute))
+	result, err := DB.Exec(Rebind(`DELETE FROM sessions WHERE last_active_at < ?`), FormatSQLDateTime(time.Now().Add(-30*time.Minute)))
 	if err != nil {
 		return fmt.Errorf("failed to cleanup stale sessions: %w", err)
 	}
@@ -172,7 +174,7 @@ func IsUserOnline(userID string) (bool, error) {
 	          AND expires_at > ? 
 	          AND last_active_at >= ?`
 	
-	err := DB.QueryRow(Rebind(query), userID, time.Now(), time.Now().Add(-10*time.Minute)).Scan(&count)
+	err := DB.QueryRow(Rebind(query), userID, FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-10*time.Minute))).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user online status: %w", err)
 	}
@@ -199,7 +201,7 @@ func GetOnlineReaderSessions() ([]OnlineReaderSession, error) {
 	          AND s.expires_at > ?
 	          AND s.last_active_at >= ?
 	          ORDER BY s.last_active_at DESC`
-	rows, err := DB.Query(Rebind(query), time.Now(), time.Now().Add(-15*time.Minute))
+	rows, err := DB.Query(Rebind(query), FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-15*time.Minute)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get online reader sessions: %w", err)
 	}
@@ -228,7 +230,7 @@ func CountReadersOnline() (int, error) {
 	          WHERE u.role = 'reader'
 	          AND s.expires_at > ?
 	          AND s.last_active_at >= ?`
-	err := DB.QueryRow(Rebind(query), time.Now(), time.Now().Add(-15*time.Minute)).Scan(&count)
+	err := DB.QueryRow(Rebind(query), FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-15*time.Minute))).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count readers online: %w", err)
 	}
@@ -254,7 +256,7 @@ func GetOnlineConsultantSessions() ([]OnlineConsultantSession, error) {
 	          AND s.expires_at > ?
 	          AND s.last_active_at >= ?
 	          ORDER BY s.last_active_at DESC`
-	rows, err := DB.Query(Rebind(query), time.Now(), time.Now().Add(-15*time.Minute))
+	rows, err := DB.Query(Rebind(query), FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-15*time.Minute)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get online consultant sessions: %w", err)
 	}
@@ -283,7 +285,7 @@ func CountConsultantsOnline() (int, error) {
 	          WHERE u.role = 'consultant'
 	          AND s.expires_at > ?
 	          AND s.last_active_at >= ?`
-	err := DB.QueryRow(Rebind(query), time.Now(), time.Now().Add(-15*time.Minute)).Scan(&count)
+	err := DB.QueryRow(Rebind(query), FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-15*time.Minute))).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count consultants online: %w", err)
 	}
@@ -302,7 +304,7 @@ func GetOnlineReaderIDs() (map[string]bool, error) {
 	          AND s.expires_at > ?
 	          AND s.last_active_at >= ?`
 	
-	rows, err := DB.Query(Rebind(query), time.Now(), time.Now().Add(-10*time.Minute))
+	rows, err := DB.Query(Rebind(query), FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now().Add(-10*time.Minute)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get online readers: %w", err)
 	}

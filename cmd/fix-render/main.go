@@ -45,7 +45,6 @@ func main() {
 	var err error
 
 	if database.DriverName == "postgres" {
-		// PostgreSQL: use information_schema (migrations create correct schema from the start)
 		var n int
 		err = database.DB.QueryRow(`
 			SELECT 1 FROM information_schema.tables 
@@ -55,7 +54,31 @@ func main() {
 		if !hasSectionsTable {
 			log.Fatal("❌ ERROR: No sections table found. Please run migrations first.")
 		}
-		fmt.Printf("   PostgreSQL: sections table exists (migrations define schema)\n")
+		// Migration 003 created sections_new but never renamed it to sections on Postgres.
+		// If sections still has chapter_id (legacy), swap in sections_new and re-seed below.
+		var legacyCols int
+		_ = database.DB.QueryRow(`
+			SELECT COUNT(*) FROM information_schema.columns
+			WHERE table_schema = 'public' AND table_name = 'sections' AND column_name = 'chapter_id'
+		`).Scan(&legacyCols)
+		var sectionsNewExists int
+		_ = database.DB.QueryRow(`
+			SELECT COUNT(*) FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'sections_new'
+		`).Scan(&sectionsNewExists)
+		if legacyCols > 0 && sectionsNewExists > 0 {
+			fmt.Println("   PostgreSQL: legacy sections (chapter_id) + sections_new detected — swapping to page-based schema...")
+			_, _ = database.DB.Exec("DELETE FROM glossary_section_links")
+			if _, err := database.DB.Exec("DROP TABLE sections CASCADE"); err != nil {
+				log.Fatalf("❌ Failed to DROP legacy sections: %v", err)
+			}
+			if _, err := database.DB.Exec("ALTER TABLE sections_new RENAME TO sections"); err != nil {
+				log.Fatalf("❌ Failed to RENAME sections_new: %v", err)
+			}
+			fmt.Println("   ✓ sections_new → sections (page-based)")
+		} else {
+			fmt.Printf("   PostgreSQL: sections table present\n")
+		}
 	} else {
 		// SQLite: check sqlite_master for structure and sections_new migration
 		var tableSQL string

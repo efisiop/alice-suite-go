@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -91,6 +92,13 @@ func Rebind(query string) string {
 		return sqlx.Rebind(sqlx.DOLLAR, query)
 	}
 	return query
+}
+
+// FormatSQLDateTime formats a time for TEXT and TIMESTAMP columns. PostgreSQL's pgx
+// driver cannot encode time.Time into TEXT (OID 25); use this for INSERT/UPDATE/WHERE
+// on schema columns declared as TEXT in migrations.
+func FormatSQLDateTime(t time.Time) string {
+	return t.UTC().Format("2006-01-02 15:04:05")
 }
 
 // ensureConsultantPromptsTable creates the consultant_prompts table if it doesn't exist

@@ -92,13 +92,22 @@ func GetBookByID(id string) (*models.Book, error) {
 	query := `SELECT id, title, author, description, total_pages, created_at
 	          FROM books WHERE id = ?`
 
+	var createdAtStr string
 	err := DB.QueryRow(Rebind(query), id).Scan(
-		&book.ID, &book.Title, &book.Author, &book.Description, &book.TotalPages, &book.CreatedAt,
+		&book.ID, &book.Title, &book.Author, &book.Description, &book.TotalPages, &createdAtStr,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return book, err
+	if err != nil {
+		return nil, err
+	}
+	if createdAtStr != "" {
+		if t, e := time.Parse("2006-01-02 15:04:05", createdAtStr); e == nil {
+			book.CreatedAt = t
+		}
+	}
+	return book, nil
 }
 
 // GetAllBooks retrieves all books
@@ -1272,16 +1281,27 @@ func GetCachedDefinition(word string) (*models.DictionaryCache, error) {
 	          FROM dictionary_cache WHERE word = ? LIMIT 1`
 
 	cache := &models.DictionaryCache{}
+	var createdAtStr, updatedAtStr string
 	err := DB.QueryRow(Rebind(query), normalizedWord).Scan(
 		&cache.ID, &cache.Word, &cache.Definition, &cache.Example,
 		&cache.Phonetic, &cache.PartOfSpeech, &cache.SourceAPI,
-		&cache.CreatedAt, &cache.UpdatedAt,
+		&createdAtStr, &updatedAtStr,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if createdAtStr != "" {
+		if t, e := time.Parse("2006-01-02 15:04:05", createdAtStr); e == nil {
+			cache.CreatedAt = t
+		}
+	}
+	if updatedAtStr != "" {
+		if t, e := time.Parse("2006-01-02 15:04:05", updatedAtStr); e == nil {
+			cache.UpdatedAt = t
+		}
 	}
 	return cache, nil
 }
@@ -1293,7 +1313,7 @@ func CacheDefinition(cache *models.DictionaryCache) error {
 		cache.ID = fmt.Sprintf("dict-cache-%s-%d", normalizedWord, time.Now().UnixNano())
 	}
 
-	now := time.Now()
+	now := FormatSQLDateTime(time.Now())
 	var query string
 	if DriverName == "postgres" {
 		query = `INSERT INTO dictionary_cache 
@@ -1487,11 +1507,10 @@ func FindPageByText(bookID, searchText string) (*models.Page, *models.Section, e
 		for rows.Next() {
 			var section models.Section
 			var pageIDFull, chapterID, chapterTitle, pageContent sql.NullString
-			var sectionCreatedAtStr string
 			err := rows.Scan(
 				&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
 				&section.Content, &section.WordCount, &pageIDFull, &chapterID, &chapterTitle,
-				&pageContent, &sectionCreatedAtStr,
+				&pageContent,
 			)
 			if err != nil {
 				continue
