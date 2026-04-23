@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/efisiopittau/alice-suite-go/internal/database"
 )
 
 // BuildSQL builds a SQL query from QueryParams
@@ -109,15 +111,18 @@ func buildFilterCondition(filter Filter, index int) (string, []interface{}) {
 
 // ExecuteQuery executes a query and returns rows
 func ExecuteQuery(db *sql.DB, sqlQuery string, args []interface{}) (*sql.Rows, error) {
-	// Convert $1, $2, etc. to ? for SQLite
-	sqlQuery = convertPlaceholders(sqlQuery)
+	// BuildSQL uses PostgreSQL-style $1, $2 placeholders. SQLite needs ?; PostgreSQL (e.g. Render) keeps $n.
+	if database.DriverName == "sqlite3" {
+		sqlQuery = convertPlaceholders(sqlQuery)
+	}
 	return db.Query(sqlQuery, args...)
 }
 
 // ExecuteQueryRow executes a query and returns a single row
 func ExecuteQueryRow(db *sql.DB, sqlQuery string, args []interface{}) *sql.Row {
-	// Convert $1, $2, etc. to ? for SQLite
-	sqlQuery = convertPlaceholders(sqlQuery)
+	if database.DriverName == "sqlite3" {
+		sqlQuery = convertPlaceholders(sqlQuery)
+	}
 	return db.QueryRow(sqlQuery, args...)
 }
 
