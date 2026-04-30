@@ -132,6 +132,44 @@ html {
     font-size: 1.2em;
 }
 
+/* Service menu icon rows (right panel) */
+.service-menu-header-label,
+.service-menu-item-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.service-menu-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.feature-label-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-label-with-icon img {
+    width: 20px;
+    height: 20px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.ai-chat-title-small .feature-label-with-icon img {
+    width: 16px;
+    height: 16px;
+}
+
+.ai-chat-title .feature-label-with-icon img {
+    width: 36px;
+    height: 36px;
+}
+
 /* Camera Preview Styling */
 #camera-preview {
     border-radius: 8px;
@@ -684,6 +722,14 @@ html {
     margin-bottom: 0.35rem;
 }
 
+.dictionary-popup-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
 .dictionary-popup-pos,
 .dictionary-popup-phonetic {
     font-size: 0.8rem;
@@ -691,9 +737,28 @@ html {
     margin-right: 0.5rem;
 }
 
+.dictionary-popup-phonetic {
+    font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
+}
+
+.dictionary-popup-example-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.dictionary-popup-example-text {
+    font-style: italic;
+    display: block;
+    margin-top: 0.2rem;
+}
+
 .dictionary-popup-example-inline {
     color: #555;
-    font-style: italic;
     font-size: 0.9rem;
     margin-top: 0.5rem;
     padding-left: 0.5rem;
@@ -1563,36 +1628,16 @@ html {
 
 {{define "content"}}
 <div class="row">
-    <!-- Page Navigation (Sections) - First Column (Left) -->
+    <!-- Sections (left) — only section list; page nav + scan live under Services → Navigation tools -->
     <div class="col-md-3">
         <div class="card">
-            <div class="card-header nav-collapse-header d-flex align-items-center justify-content-between" data-bs-toggle="collapse" data-bs-target="#navCollapseContent" aria-expanded="true" aria-controls="navCollapseContent" id="sections-nav-header">
+            <div class="card-header">
                 <h5 class="mb-0">Sections</h5>
-                <span class="nav-collapse-icon" aria-hidden="true">▼</span>
             </div>
-            <div class="collapse show" id="navCollapseContent">
-                <div class="card-body">
-                    <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
-                        <label for="page-number" class="form-label mb-0 small">Go to Page</label>
-                        <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
-                        <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
-                    </div>
-                    <div class="d-flex gap-2 mb-2">
-                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">Previous</button>
-                        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">Next</button>
-                    </div>
-                    <div class="border-top pt-2">
-                        <button class="btn btn-sm btn-outline-success w-100" onclick="event.preventDefault(); event.stopPropagation(); startScanToLocate(); return false;" id="scan-button">
-                            <span>📷</span> Scan to Locate
-                        </button>
-                        <p class="text-muted small mb-0 mt-1">Point camera at page text to find your location</p>
-                    </div>
-                </div>
-                <div class="card-body border-top">
-                    <h6 class="mb-2" id="section-snippets-heading">Select the section you're reading</h6>
-                    <div id="section-snippets">
-                        <p class="text-muted small">Loading sections...</p>
-                    </div>
+            <div class="card-body">
+                <h6 class="mb-2" id="section-snippets-heading">Select the section you're reading</h6>
+                <div id="section-snippets">
+                    <p class="text-muted small">Loading sections...</p>
                 </div>
             </div>
         </div>
@@ -1635,6 +1680,32 @@ html {
                 <div class="accordion accordion-flush" id="servicesAccordion">
                     <div class="accordion-item border-0 border-bottom">
                         <h2 class="accordion-header">
+                            <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesNavTools" aria-expanded="false" aria-controls="servicesNavTools">
+                                Navigation tools
+                            </button>
+                        </h2>
+                        <div id="servicesNavTools" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
+                            <div class="accordion-body pt-0 pb-2 px-3">
+                                <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
+                                    <label for="page-number" class="form-label mb-0 small">Go to Page</label>
+                                    <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
+                                    <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
+                                </div>
+                                <div class="d-flex gap-2 mb-2">
+                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">Previous</button>
+                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">Next</button>
+                                </div>
+                                <div class="border-top pt-2">
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="event.preventDefault(); event.stopPropagation(); startScanToLocate(); return false;" id="scan-button">
+                                        <span>📷</span> Scan to Locate
+                                    </button>
+                                    <p class="text-muted small mb-0 mt-1">Point camera at page text to find your location</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
                             <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesHelpCenter" aria-expanded="false" aria-controls="servicesHelpCenter">
                                 Help Center
                             </button>
@@ -1643,10 +1714,20 @@ html {
                             <div class="accordion-body pt-0 pb-2 px-3">
                                 <ul class="list-unstyled mb-0">
                                     <li class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showAIHelp()">AI Help</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showAIHelp()">
+                                            <span class="service-menu-item-label">
+                                                <img src="/static/images/menu-ai-assistant.png" alt="AI Assistant" class="service-menu-icon">
+                                                <span>AI Help</span>
+                                            </span>
+                                        </button>
                                     </li>
                                     <li class="mb-2">
-                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="requestHelp()">Human Consultant</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="requestHelp()">
+                                            <span class="service-menu-item-label">
+                                                <img src="/static/images/menu-consultant.png" alt="Consultant assistance" class="service-menu-icon">
+                                                <span>Human Consultant</span>
+                                            </span>
+                                        </button>
                                     </li>
                                     <li class="mb-2">
                                         <button type="button" class="btn btn-sm btn-outline-primary w-100 text-start" onclick="showDictionary()">Dictionary</button>
@@ -1661,7 +1742,10 @@ html {
                     <div class="accordion-item border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesInfoCenter" aria-expanded="false" aria-controls="servicesInfoCenter">
-                                Info Center
+                                <span class="service-menu-header-label">
+                                    <img src="/static/images/menu-infocenter.png" alt="Info Center" class="service-menu-icon">
+                                    <span>Info Center</span>
+                                </span>
                             </button>
                         </h2>
                         <div id="servicesInfoCenter" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
@@ -1879,7 +1963,12 @@ html {
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="consultantHelpModalLabel">Human Consultant Help</h5>
+                <h5 class="modal-title" id="consultantHelpModalLabel">
+                    <span class="feature-label-with-icon">
+                        <img src="/static/images/menu-consultant.png" alt="Consultant assistance">
+                        <span>Human Consultant Help</span>
+                    </span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -1968,20 +2057,30 @@ html {
 <!-- Touch Selection Overlay (for mobile) -->
 <div class="touch-selection-overlay" id="touch-selection-overlay"></div>
 
+<!-- Dictionary Modal: z-index above floating selection toolbar (1060) so the field is not covered -->
+<style>
+#dictionaryModal.modal { z-index: 1070 !important; }
+#dictionaryModal input,
+#dictionaryModal .form-control {
+    pointer-events: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+</style>
 <!-- Dictionary Modal (kept for manual lookup via Dictionary button) -->
-<div class="modal fade" id="dictionaryModal" tabindex="-1">
+<div class="modal fade" id="dictionaryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Dictionary</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="lookup-word" class="form-label">Look up word</label>
-                    <input type="text" class="form-control" id="lookup-word" placeholder="Enter word">
+                    <input type="text" class="form-control" id="lookup-word" name="lookup_word" placeholder="Enter word" autocomplete="off" autocorrect="on" inputmode="text" spellcheck="true">
                 </div>
-                <button class="btn btn-primary" onclick="lookupWord()">Look Up</button>
+                <button type="button" class="btn btn-primary" onclick="lookupWord()">Look Up</button>
                 <div id="dictionary-result" class="mt-3"></div>
             </div>
         </div>
@@ -1994,18 +2093,13 @@ html {
     <div class="ai-chat-header" id="ai-chat-header">
         <div class="d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2">
-                <span class="ai-chat-avatar">
-                    <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 40px; height: 40px;">
-                        <!-- Large 4-pointed star -->
-                        <path class="ai-sparkle-star" d="M50 5 C52 35, 65 48, 95 50 C65 52, 52 65, 50 95 C48 65, 35 52, 5 50 C35 48, 48 35, 50 5 Z"/>
-                        <!-- Medium star (bottom left) -->
-                        <path class="ai-sparkle-star-small" d="M25 60 C26 72, 33 79, 45 80 C33 81, 26 88, 25 100 C24 88, 17 81, 5 80 C17 79, 24 72, 25 60 Z" transform="scale(0.5) translate(10, 90)"/>
-                        <!-- Small star (left) -->
-                        <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
-                    </svg>
-                </span>
                 <div>
-                    <div class="ai-chat-title">AI Assistant</div>
+                    <div class="ai-chat-title">
+                        <span class="feature-label-with-icon">
+                            <img src="/static/images/menu-ai-assistant.png" alt="AI Assistant">
+                            <span>AI Assistant</span>
+                        </span>
+                    </div>
                     <small class="ai-chat-subtitle">Online</small>
                 </div>
             </div>
@@ -2086,18 +2180,13 @@ html {
 <div id="ai-chat-minimized" class="ai-chat-minimized" style="display: none;" onclick="expandAIChatFromBottom()">
     <div class="d-flex align-items-center justify-content-between p-2">
         <div class="d-flex align-items-center gap-2">
-            <span class="ai-chat-avatar-small">
-                <svg class="ai-sparkle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;">
-                    <!-- Large 4-pointed star -->
-                    <path class="ai-sparkle-star" d="M50 5 C52 35, 65 48, 95 50 C65 52, 52 65, 50 95 C48 65, 35 52, 5 50 C35 48, 48 35, 50 5 Z"/>
-                    <!-- Medium star (bottom left) -->
-                    <path class="ai-sparkle-star-small" d="M25 60 C26 72, 33 79, 45 80 C33 81, 26 88, 25 100 C24 88, 17 81, 5 80 C17 79, 24 72, 25 60 Z" transform="scale(0.5) translate(10, 90)"/>
-                    <!-- Small star (left) -->
-                    <path class="ai-sparkle-star-small" d="M15 45 C15.5 50, 18 52.5, 23 53 C18 53.5, 15.5 56, 15 61 C14.5 56, 12 53.5, 7 53 C12 52.5, 14.5 50, 15 45 Z"/>
-                </svg>
-            </span>
             <div>
-                <div class="ai-chat-title-small">AI Assistant</div>
+                <div class="ai-chat-title-small">
+                    <span class="feature-label-with-icon">
+                        <img src="/static/images/menu-ai-assistant.png" alt="AI Assistant">
+                        <span>AI Assistant</span>
+                    </span>
+                </div>
                 <small class="ai-chat-last-message" id="ai-chat-last-message-preview">Tap to open chat</small>
             </div>
         </div>
@@ -2818,6 +2907,35 @@ function hideDictionaryPopup() {
     }
 }
 
+// Map API source to a short, consistent label (roadmap 1.1)
+function formatDictionarySourceLabel(source) {
+    if (source === 'glossary') return 'Source: Alice glossary';
+    if (source === 'cache') return 'Source: dictionary (saved)';
+    if (source === 'external') return 'Source: dictionary';
+    return 'Source: dictionary';
+}
+
+// API may return phonetic with slashes already; avoid //word//
+function formatPhoneticForDisplay(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    var t = raw.trim();
+    if (t.startsWith('/')) t = t.slice(1);
+    if (t.endsWith('/')) t = t.slice(0, -1);
+    return t;
+}
+
+function getCurrentReaderSectionId() {
+    try {
+        if (typeof currentPageSections === 'undefined' || !currentPageSections || !currentPageSections.length) {
+            return null;
+        }
+        var s = currentPageSections[currentSectionIndex];
+        return (s && s.id) ? s.id : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 // Lookup word and display in inline popup
 function lookupWordInline(word, popupContent) {
     // Normalize word the same way as formatTextWithWordHighlights and backend DictionaryService
@@ -2835,16 +2953,16 @@ function lookupWordInline(word, popupContent) {
     }
     
     const token = getAuthToken();
+    const defPayload = { term: wordToLookup, book_id: bookId };
+    const secId = getCurrentReaderSectionId();
+    if (secId) defPayload.section_id = secId;
     fetch('/rest/v1/rpc/get_definition_with_context', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({
-            term: wordToLookup,
-            book_id: bookId
-        })
+        body: JSON.stringify(defPayload)
     })
     .then(res => {
         // Check if response is OK
@@ -2858,29 +2976,30 @@ function lookupWordInline(word, popupContent) {
     .then(data => {
         if (!data) return; // Error already handled
         
-        console.log('Dictionary lookup response:', data); // Debug log
-        
         if (data.definition && data.definition !== 'Word not found in dictionary.') {
             let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
             
-            // Source label (glossary or dictionary)
-            const sourceLabel = data.source === 'glossary' ? '📚 From Glossary' : '📖 From dictionary';
-            html += `<div class="dictionary-popup-source">${escapeHtml(sourceLabel)}</div>`;
+            html += `<div class="dictionary-popup-source">${escapeHtml(formatDictionarySourceLabel(data.source))}</div>`;
             
             // Part of speech and phonetic when available
             if (data.part_of_speech || data.phonetic) {
-                html += '<div class="dictionary-popup-meta mb-2">';
+                html += '<div class="dictionary-popup-meta">';
                 if (data.part_of_speech) html += `<span class="dictionary-popup-pos">${escapeHtml(data.part_of_speech)}</span>`;
-                if (data.phonetic) html += `<span class="dictionary-popup-phonetic">/${escapeHtml(data.phonetic)}/</span>`;
+                if (data.phonetic) {
+                    const ipa = formatPhoneticForDisplay(data.phonetic);
+                    if (ipa) html += `<span class="dictionary-popup-phonetic">/${escapeHtml(ipa)}/</span>`;
+                }
                 html += '</div>';
             }
             
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
             
-            // Show single example inline when present (dedicated line)
+            // Example: labeled line, first usage shown; more in Examples button
             if (data.example) {
                 const firstExample = data.example.split(' |||| ')[0].trim();
-                if (firstExample) html += `<div class="dictionary-popup-example-inline">${escapeHtml(firstExample)}</div>`;
+                if (firstExample) {
+                    html += '<div class="dictionary-popup-example-inline"><span class="dictionary-popup-example-label">Example</span><span class="dictionary-popup-example-text">' + escapeHtml(firstExample) + '</span></div>';
+                }
             }
             
             // Add two buttons side by side: Derivation (left) and Examples (right)
@@ -3191,94 +3310,64 @@ function lookupWord(word) {
         resultDiv.innerHTML = '<p class="text-muted">Loading...</p>';
     }
     
+    const modalPayload = { term: wordToLookup, book_id: bookId };
+    const modalSecId = getCurrentReaderSectionId();
+    if (modalSecId) modalPayload.section_id = modalSecId;
     fetch('/rest/v1/rpc/get_definition_with_context', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({
-            term: wordToLookup,
-            book_id: bookId
-        })
+        body: JSON.stringify(modalPayload)
     })
     .then(res => res.json())
     .then(data => {
         if (resultDiv) {
             if (data.definition && data.definition !== 'Word not found in dictionary.') {
-                let html = '';
-                
-                // Add glossary badge if definition is from glossary
-                if (data.source === 'glossary') {
-                    html += `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
-                }
-                
                 let exampleHtml = '';
-                
-                // Handle examples: Hidden by default, show with "See an example" button
                 if (data.example) {
                     const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
-                    
-                    if (examples.length > 0) {
-                        // Build examples HTML (hidden initially)
+                    if (examples.length === 1) {
+                        exampleHtml = '<div class="dictionary-popup-example-inline mt-2"><span class="dictionary-popup-example-label">Example</span><span class="dictionary-popup-example-text text-muted">' + escapeHtml(examples[0]) + '</span></div>';
+                    } else if (examples.length > 1) {
                         let examplesContent = '';
-                        if (examples.length === 1) {
-                            examplesContent = `<p class="text-muted"><em>${escapeHtml(examples[0])}</em></p>`;
-                        } else if (examples.length === 2) {
-                            examplesContent = examples.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('');
-                        } else if (examples.length >= 3) {
-                            // Show first 2, then button for rest
+                        if (examples.length === 2) {
+                            examplesContent = examples.map((ex) => '<p class="text-muted mb-1"><em>' + escapeHtml(ex) + '</em></p>').join('');
+                        } else {
                             const firstTwo = examples.slice(0, 2);
                             const rest = examples.slice(2);
-                            examplesContent = firstTwo.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('');
-                            
+                            examplesContent = firstTwo.map((ex) => '<p class="text-muted mb-1"><em>' + escapeHtml(ex) + '</em></p>').join('');
                             if (rest.length > 0) {
-                                examplesContent += `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">
-                                    See ${rest.length} more example${rest.length > 1 ? 's' : ''}
-                                </button>`;
-                                examplesContent += `<div class="mt-2 dictionary-popup-additional-examples">
-                                    ${rest.map(ex => `<p class="text-muted"><em>${escapeHtml(ex)}</em></p>`).join('')}
-                                </div>`;
+                                examplesContent += '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">See ' + rest.length + ' more example' + (rest.length > 1 ? 's' : '') + '</button>';
+                                examplesContent += '<div class="mt-2 dictionary-popup-additional-examples">' + rest.map((ex) => '<p class="text-muted"><em>' + escapeHtml(ex) + '</em></p>').join('') + '</div>';
                             }
                         }
-                        
-                        // Determine button text
-                        let buttonText = 'See an example';
-                        if (examples.length === 2) {
-                            buttonText = 'See 2 examples';
-                        } else if (examples.length > 2) {
-                            buttonText = 'See examples';
-                        }
-                        
-                        // Button and hidden container
-                        exampleHtml = `<button class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">
-                            ${escapeHtml(buttonText)}
-                        </button>`;
-                        exampleHtml += `<div class="dictionary-popup-examples-container mt-2" style="display: none;">
-                            ${examplesContent}
-                        </div>`;
+                        const buttonText = examples.length === 2 ? 'See 2 examples' : 'See examples';
+                        exampleHtml = '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">' + escapeHtml(buttonText) + '</button>';
+                        exampleHtml += '<div class="dictionary-popup-examples-container mt-2" style="display: none;">' + examplesContent + '</div>';
                     }
                 }
-                
-            // Build HTML with glossary badge if from glossary
-            let badgeHtml = '';
-            if (data.source === 'glossary') {
-                badgeHtml = `<div class="glossary-badge mb-2"><span class="badge bg-info text-white">📚 From Glossary</span></div>`;
-            }
-            
-            resultDiv.innerHTML = `
-                <div class="card">
-                    <div class="card-body">
-                            <h6>${escapeHtml(data.term || wordToLookup)}</h6>
-                            ${badgeHtml}
-                            <p>${escapeHtml(data.definition)}</p>
-                            ${exampleHtml}
-                    </div>
-                </div>
-            `;
-            // Track dictionary lookup
-            trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
-        } else {
+                let metaModal = '';
+                if (data.part_of_speech || data.phonetic) {
+                    metaModal = '<div class="dictionary-popup-meta mb-2">';
+                    if (data.part_of_speech) metaModal += '<span class="dictionary-popup-pos">' + escapeHtml(data.part_of_speech) + '</span>';
+                    if (data.phonetic) {
+                        const ipaM = formatPhoneticForDisplay(data.phonetic);
+                        if (ipaM) metaModal += '<span class="dictionary-popup-phonetic">/' + escapeHtml(ipaM) + '/</span>';
+                    }
+                    metaModal += '</div>';
+                }
+                resultDiv.innerHTML =
+                    '<div class="card"><div class="card-body">' +
+                    '<h6 class="mb-1">' + escapeHtml(data.term || wordToLookup) + '</h6>' +
+                    '<div class="dictionary-popup-source mb-2">' + escapeHtml(formatDictionarySourceLabel(data.source)) + '</div>' +
+                    metaModal +
+                    '<p class="dictionary-popup-definition mb-2">' + escapeHtml(data.definition) + '</p>' +
+                    exampleHtml +
+                    '</div></div>';
+                trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
+            } else {
                 resultDiv.innerHTML = '<p class="text-muted">Word not found in dictionary.</p>';
             }
         }
@@ -3323,18 +3412,7 @@ function trackActivity(eventType, data) {
 
 function jumpToSections() {
     const heading = document.getElementById('section-snippets-heading');
-    const collapseContent = document.getElementById('navCollapseContent');
-    const header = document.getElementById('sections-nav-header');
-    if (collapseContent && !collapseContent.classList.contains('show')) {
-        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-            const bsCollapse = bootstrap.Collapse.getInstance(collapseContent) || new bootstrap.Collapse(collapseContent, { toggle: true });
-            bsCollapse.show();
-        } else {
-            collapseContent.classList.add('show');
-        }
-    }
     if (heading) heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    else if (header) header.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function goToPage() {
@@ -3380,7 +3458,17 @@ function nextPage() {
 }
 
 function showDictionary() {
-    const modal = new bootstrap.Modal(document.getElementById('dictionaryModal'));
+    const modalEl = document.getElementById('dictionaryModal');
+    if (!modalEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    function focusLookupOnce() {
+        const inp = document.getElementById('lookup-word');
+        if (inp) {
+            inp.focus();
+            try { inp.select(); } catch (e) { /* ignore */ }
+        }
+    }
+    modalEl.addEventListener('shown.bs.modal', focusLookupOnce, { once: true });
     modal.show();
 }
 
@@ -3957,6 +4045,10 @@ function showAIHelp() {
                     if (window.suspendAIChatFocusKeeper) return;
                     var active = document.activeElement;
                     if (active === self) return;
+                    // Do not pull focus when user is typing in another dialog (Dictionary, quiz, etc.)
+                    if (active && active.closest && active.closest('.modal') && !chat.contains(active)) {
+                        return;
+                    }
                     if (active && chat.contains(active) && (active.tagName === 'BUTTON' || active.closest('button'))) return;
                     self.focus();
                 }, 100);
@@ -6188,11 +6280,13 @@ function handleClickOutside(e) {
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
+    const dictionaryModal = document.getElementById('dictionaryModal');
     const chatMessages = document.getElementById('ai-chat-messages');
     
     // Don't clear if clicking on toolbar, modal, page content, or chat messages
     if (toolbar && toolbar.contains(e.target)) return;
     if (modal && modal.contains(e.target)) return;
+    if (dictionaryModal && dictionaryModal.contains(e.target)) return;
     if (pageContent && pageContent.contains(e.target)) return;
     if (chatMessages && chatMessages.contains(e.target)) return;
     
@@ -6212,12 +6306,14 @@ function handleClickOutsideTouch(e) {
     const toolbar = document.getElementById('selection-toolbar');
     const pageContent = document.getElementById('page-content');
     const modal = document.getElementById('aiHelpModal');
+    const dictionaryModal = document.getElementById('dictionaryModal');
     const chatMessages = document.getElementById('ai-chat-messages');
     const target = e.target;
     
     // Don't clear if touching toolbar, modal, page content, or chat messages
     if (toolbar && toolbar.contains(target)) return;
     if (modal && modal.contains(target)) return;
+    if (dictionaryModal && dictionaryModal.contains(target)) return;
     if (pageContent && pageContent.contains(target)) return;
     if (chatMessages && chatMessages.contains(target)) return;
     
