@@ -44,7 +44,7 @@
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <main class="{{block "main_class" .}}container mt-4{{end}}">
         {{block "content" .}}{{end}}
     </main>
 
@@ -178,7 +178,7 @@
             body.setAttribute('data-app', 'consultant');
             // Hide default login/register links for consultant pages
             defaultLoginLinks.forEach(link => link.style.display = 'none');
-        } else if (path.startsWith('/reader') || path === '/login' || path === '/register' || path === '/verify') {
+        } else if (path === '/' || path.startsWith('/reader') || path === '/login' || path === '/register' || path === '/verify') {
             // Reader app pages including login/register/verify
             if (path.startsWith('/reader')) {
                 brandLink.href = '/reader/interaction'; // Go to Reading page instead of Dashboard
@@ -242,4 +242,3 @@
     </script>
 </body>
 </html>
-

@@ -14,6 +14,79 @@
 
 {{define "head"}}
 <style>
+.reader-interaction-main {
+    max-width: none;
+}
+
+.reader-workspace {
+    --bs-gutter-x: 1rem;
+    align-items: flex-start;
+}
+
+.reader-layout-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.reader-layout-toggle {
+    min-width: 116px;
+}
+
+.reader-workspace .card {
+    border-radius: 8px;
+}
+
+.reader-side-panel {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+#reading-card {
+    min-height: calc(100vh - 170px);
+}
+
+#reading-container {
+    min-height: calc(100vh - 230px);
+}
+
+.reader-workspace.is-left-hidden .reader-panel-left,
+.reader-workspace.is-right-hidden .reader-panel-right {
+    display: none;
+}
+
+@media (min-width: 992px) {
+    .reader-workspace {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.7fr) minmax(560px, 2.7fr) minmax(220px, 0.7fr);
+    }
+
+    .reader-workspace > [class*="col-"] {
+        flex: none;
+        width: auto;
+        max-width: none;
+    }
+
+    .reader-workspace.is-left-hidden {
+        grid-template-columns: minmax(680px, 3fr) minmax(220px, 0.7fr);
+    }
+
+    .reader-workspace.is-right-hidden {
+        grid-template-columns: minmax(220px, 0.7fr) minmax(680px, 3fr);
+    }
+
+    .reader-workspace.is-left-hidden.is-right-hidden {
+        grid-template-columns: minmax(720px, 1fr);
+    }
+
+}
+
 /* Section Snippets Styling */
 .section-snippet {
     padding: 0.65rem 0.75rem;
@@ -55,7 +128,8 @@
 /* Reading content area: comfortable width and line height */
 .reading-content {
     max-width: 42em;
-    line-height: 1.65;
+    font-size: 1.375rem;
+    line-height: 1.78;
 }
 
 .jump-to-sections-link {
@@ -87,7 +161,7 @@
 }
 
 #section-snippets {
-    max-height: 600px;
+    max-height: calc(100vh - 265px);
     overflow-y: auto;
 }
 
@@ -1558,6 +1632,7 @@ html {
 /* Improve text selection on mobile */
 @media (max-width: 768px) {
     .reading-content {
+        font-size: 1.2rem;
         -webkit-tap-highlight-color: rgba(255, 255, 0, 0.3);
         -webkit-user-select: text;
         user-select: text;
@@ -1623,14 +1698,38 @@ html {
         justify-content: center;
     }
 }
+
+@media (max-width: 991.98px) {
+    .reader-interaction-main {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .reader-side-panel {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+
+    #section-snippets {
+        max-height: none;
+    }
+
+    #reading-card,
+    #reading-container {
+        min-height: 0;
+    }
+}
 </style>
 {{end}}
 
+{{define "main_class"}}container-fluid reader-interaction-main mt-3 px-3 px-xl-4{{end}}
+
 {{define "content"}}
-<div class="row">
+<div class="row reader-workspace g-3" id="reader-workspace">
     <!-- Sections (left) — only section list; page nav + scan live under Services → Navigation tools -->
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-lg-3 reader-panel-left" id="reader-sections-panel">
+        <div class="card reader-side-panel">
             <div class="card-header">
                 <h5 class="mb-0">Sections</h5>
             </div>
@@ -1644,7 +1743,7 @@ html {
     </div>
 
     <!-- Page Content (Book Text) - Second Column (Middle) -->
-    <div class="col-md-6">
+    <div class="col-lg-6 reader-panel-center">
         <div class="card" id="reading-card">
             <div class="card-header">
                 <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
@@ -1665,14 +1764,17 @@ html {
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
                 </div>
-                
+                <div class="reader-layout-toolbar" aria-label="Reader layout controls">
+                    <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-sections-panel" aria-controls="reader-sections-panel" aria-pressed="false">Hide sections</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-services-panel" aria-controls="reader-services-panel" aria-pressed="false">Hide services</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Services - Third Column (Right) -->
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-lg-3 reader-panel-right" id="reader-services-panel">
+        <div class="card reader-side-panel">
             <div class="card-header">
                 <h5 class="mb-0">Services</h5>
             </div>
@@ -7642,6 +7744,52 @@ function submitConsultantHelpRequest() {
     });
 }
 
+function initReaderWorkspaceLayout() {
+    const workspace = document.getElementById('reader-workspace');
+    const sectionsButton = document.getElementById('toggle-sections-panel');
+    const servicesButton = document.getElementById('toggle-services-panel');
+    if (!workspace || !sectionsButton || !servicesButton) return;
+
+    const storageKey = 'alice-reader-layout';
+    let layout = { leftHidden: false, rightHidden: false };
+
+    try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        layout.leftHidden = !!saved.leftHidden;
+        layout.rightHidden = !!saved.rightHidden;
+    } catch (err) {
+        layout = { leftHidden: false, rightHidden: false };
+    }
+
+    function renderLayout() {
+        workspace.classList.toggle('is-left-hidden', layout.leftHidden);
+        workspace.classList.toggle('is-right-hidden', layout.rightHidden);
+
+        sectionsButton.textContent = layout.leftHidden ? 'Show sections' : 'Hide sections';
+        servicesButton.textContent = layout.rightHidden ? 'Show services' : 'Hide services';
+        sectionsButton.setAttribute('aria-pressed', String(layout.leftHidden));
+        servicesButton.setAttribute('aria-pressed', String(layout.rightHidden));
+
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(layout));
+        } catch (err) {
+            // Layout still works without persistence.
+        }
+    }
+
+    sectionsButton.addEventListener('click', function() {
+        layout.leftHidden = !layout.leftHidden;
+        renderLayout();
+    });
+
+    servicesButton.addEventListener('click', function() {
+        layout.rightHidden = !layout.rightHidden;
+        renderLayout();
+    });
+
+    renderLayout();
+}
+
 // Load first page on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[interaction.html] ========== DOMContentLoaded fired ==========');
@@ -7654,6 +7802,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof initChatInputKeydown === 'function') {
         initChatInputKeydown();
     }
+
+    initReaderWorkspaceLayout();
     
     // Attach logout handler (backup - app.js also handles this via event delegation)
     const logoutLink = document.getElementById('logout-link-reader');

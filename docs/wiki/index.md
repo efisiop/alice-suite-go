@@ -1,0 +1,31 @@
+# Alice Suite wiki index
+
+State-oriented map of active evolution topics.
+
+Update this file when the current state changes.
+
+---
+
+## Active topics
+
+
+| Topic                          | Status      | Owner        | Main files                                                                                                                                                                             |
+| ------------------------------ | ----------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product direction (north star) | in-progress | user         | `docs/wiki/DIRECTION.md`                                                                                                                                                               |
+| Obsidian as editor for repo docs | done      | user + agent | `docs/wiki/OBSIDIAN_STEPS.md`                                                                                                                                                          |
+| Obsidian vault file import workflow | done   | user + agent | `Alice Suite/IMPORT_INSTRUCTIONS.md`, `scripts/import_to_alice_vault.sh`                                                                                                              |
+| Evolution control workflow     | done        | user + agent | `docs/EVOLUTION_CONTROL.md`, `AGENTS.MD`, `docs/wiki/log.md`                                                                                                                           |
+| Default knowledge base routine | done        | user + agent | `docs/wiki/START_HERE.md`, `docs/EVOLUTION_CONTROL.md`, `docs/wiki/log.md`                                                                                                             |
+| Reader UX upgrades             | in-progress | user + agent | `docs/UPGRADE_ROADMAP.md` item 1.1, `docs/APP_UPGRADES.md`, `internal/templates/reader/interaction.html` (dictionary + reading layout: prominent center reader, hideable Sections/Services panels, Navigation tools under Services, responsive full-width workspace), `internal/templates/reader/login.html`, `internal/templates/reader/register.html`, `internal/templates/base.html` (auth-page navbar format restored; per-page main container override) |
+| Consultant UX upgrades         | in-progress | user + agent | `docs/UPGRADE_ROADMAP.md`, `docs/APP_UPGRADES.md`, `internal/templates/consultant/reader-inspector.html`                                                                               |
+| AI assistance UX/readability   | planned     | user + agent | `docs/UPGRADE_ROADMAP.md`                                                                                                                                                              |
+| Handover to Hermes (VPS)       | in-progress | user + agent | `docs/HERMES_HANDOVER_BRIEFING.md`, `ADMINISTRATOR_PROPOSAL.md`, `docs/UPGRADE_ROADMAP.md`                                                                                            |
+
+
+---
+
+## How to use
+
+- check this file first for current state
+- then open the linked docs for details
+- add/remove topics as scope changes
