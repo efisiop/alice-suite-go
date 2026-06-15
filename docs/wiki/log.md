@@ -498,3 +498,537 @@ Use this header format for every new entry:
 - `go build -o bin/server ./cmd/server` succeeded.
 - Restarted localhost server on port `8080`.
 - Confirmed `/reader/interaction` serves `#page-content` before `.reader-layout-toolbar`, with `Hide sections` and `Hide services` directly below the central book content.
+
+## [2026-06-12] docs | add Reader autoresearch workflow
+
+### what changed
+
+- Added an Alice-specific Reader autoresearch workflow inspired by Karpathy's `autoresearch` loop.
+- Added a fixed evaluator script for Reader layout/build checks with optional live localhost/Render checks.
+- Added the workflow to the wiki index.
+
+### why
+
+- User asked to adapt Karpathy's autoresearch idea as a source of testing and improvement hints for the Reader app.
+
+### files touched
+
+- `docs/READER_AUTORESEARCH.md`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally: Go build and Reader template marker checks.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+- `BASE_URL=https://alice-suite-go.onrender.com scripts/reader_autoresearch_check.sh` passed against Render: live health and Reader interaction markers.
+
+## [2026-06-12] docs | start Reader fix list
+
+### what changed
+
+- Added a Reader fix list with the first two user-reported issues.
+- Marked dictionary examples as the active item.
+- Added AI Assistant flow simplification/testing as the next item.
+
+### why
+
+- User wants unsequenced Reader interaction issues turned into a tracked list, then handled one by one and marked done.
+
+### files touched
+
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Pending implementation and Reader evaluator check.
+
+## [2026-06-12] fix | simplify dictionary examples
+
+### what changed
+
+- Removed inline display of stored dictionary/glossary examples from the word-click dictionary popup.
+- Changed the dictionary action label from `Examples` to `Example`.
+- Added generated everyday examples for the popup and manual Dictionary modal.
+- Marked Reader fix list item `R-001` done.
+
+### why
+
+- User reported the dictionary output felt clumsy and did not want Alice book excerpts as examples. The desired behavior is a short, simple life-usage example.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-13] fix | stabilize Sections sidebar height
+
+### what changed
+
+- Added a stable desktop minimum height to the left Sections card.
+- Made the Sections card body a vertical flex layout.
+- Gave the section snippets list its own minimum height and scroll area so it can show more entries without shrinking the whole box when only a few sections are present.
+- Kept mobile layout flexible by resetting the snippet minimum height at narrow widths.
+- Added evaluator checks for the stable Sections sidebar sizing.
+- Marked Reader fix list item `R-015` done.
+
+### why
+
+- User requested the left sidebar stay static and cover a larger amount of sections, while not collapsing when only two or three sections are shown.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-13] fix | vary dictionary examples on repeat clicks
+
+### what changed
+
+- Changed generated dictionary examples from one fixed pair into multiple varied example pairs.
+- Updated the word-click dictionary popup so each `Example` click advances to a different pair instead of only hiding the panel.
+- Kept the small `x` close control as the way to hide examples.
+- Added more varied meaning-aware chair examples, including direct-use and question-style sentences.
+- Added evaluator checks for varied example sets and cycling state.
+- Marked Reader fix list item `R-014` done.
+
+### why
+
+- User said the dictionary examples are much better but the two examples should not be too similar, and clicking the Example button again should present a totally different set.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-12] fix | align Reader service tools with dictionary popup style
+
+### what changed
+
+- Added a shared `reader-service-popup` visual shell for Reader service modals.
+- Applied it to Scan to Locate, Test your knowledge, Ah Ah Moments, Human Consultant, and manual Dictionary.
+- Centered the service modals so they read more like the prominent dictionary popup.
+- Matched the dictionary popup's restrained border, 8px radius, strong shadow, pale header, Lora title, quieter controls, and light focus surfaces.
+- Added evaluator checks that all service modals carry the shared dictionary-style popup class.
+- Marked Reader fix list item `R-013` done.
+
+### why
+
+- User requested all service tools such as Human Consultant, Quiz, Dictionary, and Ah Ah Moments visually move closer to the dictionary popup design type.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-12] fix | reorder Services and improve dictionary examples
+
+### what changed
+
+- Reordered the Reader Services sidebar so Navigation tools appears below Info Center.
+- Passed dictionary definitions into the generated example helper.
+- Added a definition-context helper so examples can refer to the meaning of the word, not just the word string.
+- Added a specific seating-context path for entries such as `chair`.
+- Removed the generic `I heard the word...` fallback from generated examples.
+- Added evaluator checks for Services order and definition-aware dictionary examples.
+- Marked Reader fix list items `R-011` and `R-012` done.
+
+### why
+
+- User requested Navigation tools move below Info Center and asked that dictionary examples include a little context about the actual meaning of the word.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-12] fix | align AI assistant popup with dictionary popup
+
+### what changed
+
+- Restyled the floating AI assistant to use the dictionary popup's visual language: 8px radius, pale draggable header, restrained border, stronger shadow, white content surface, and quieter controls.
+- Removed the WhatsApp-style green header, patterned message area, and green send button styling.
+- Made AI mode tabs, quick actions, selected-text controls, and chat bubbles visually closer to the dictionary popup's secondary action style.
+- Added evaluator markers for the dictionary-style AI assistant design.
+- Marked Reader fix list item `R-010` done.
+
+### why
+
+- User requested the AI assistant popup look very close to the dictionary popup as a design type.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+- Confirmed `/reader/interaction` serves `getGeneratedEverydayExamples` and `Generated everyday examples`.
+
+## [2026-06-12] fix | strengthen dictionary popup hierarchy
+
+### what changed
+
+- Made the word entry and definition the dominant dictionary popup content.
+- Reduced the visual weight of the popup chrome and Derivation/Example buttons.
+- Moved source attribution to the bottom of both dictionary popup and manual Dictionary modal output.
+- Changed the word-click dictionary popup to open more centrally and prominently.
+- Added evaluator markers for the more prominent dictionary popup.
+- Marked Reader fix list item `R-003` done.
+
+### why
+
+- User requested dictionary output that reads as the main thing when called, not side information: clear entry, applicable definition, smaller controls, source at the bottom, and a more central popup.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/READER_FIX_LIST.md`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+- Confirmed the served Reader page includes `dictionary-popup-actions`, centered popup placement, and prominent popup width markers.
+
+### update
+
+- Added a subtle light focus background behind the dictionary entry word and main definition.
+
+## [2026-06-12] fix | add close control to dictionary panels
+
+### what changed
+
+- Added a small close `x` to expanded Derivation and Example dictionary panels.
+- Added a shared helper to close the panel and reset the related button styling.
+- Added evaluator markers for the dictionary close control.
+- Marked Reader fix list item `R-004` done.
+
+### why
+
+- User requested a direct, reader-visible way to toggle out expanded Derivation or Example content.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/READER_FIX_LIST.md`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+- Confirmed evaluator checks for `dictionary-popup-panel-close` and `closeDictionaryPanel`.
+
+## [2026-06-12] fix | add close controls to Reader sidebars
+
+### what changed
+
+- Added small close `x` controls to the Sections and Services side panel headers.
+- Wired the header close controls to the existing Reader panel hide/show state.
+- Added evaluator markers for the sidebar close controls.
+- Marked Reader fix list item `R-005` done.
+
+### why
+
+- User requested the same direct close affordance on the left and right sidebars.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/READER_FIX_LIST.md`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+- Confirmed evaluator checks for `reader-panel-close` and `hideReaderPanelFromHeader`.
+
+## [2026-06-12] fix | move page arrows under Sections
+
+### what changed
+
+- Moved Previous/Next page navigation from Services → Navigation tools to a compact arrow row under the Sections list.
+- Left Go to Page and Scan to Locate inside Services → Navigation tools.
+- Added evaluator markers for the section page navigation arrow row.
+- Marked Reader fix list item `R-006` done.
+
+### why
+
+- User requested only the page backward/forward arrows be visibly available under Sections, while other navigation tools remain in Services.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/READER_FIX_LIST.md`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+- Confirmed evaluator checks for `section-page-nav`.
+
+### update
+
+- Added a small `Page` label beside the section-page arrow controls.
+- Added the current page number to the section-page arrow label and synced it from `loadPage()`.
+
+## [2026-06-12] docs | inventory AI Assistant flows
+
+### what changed
+
+- Added an AI Assistant flow inventory for the Reader app.
+- Listed current AI Assistant entry points, selection paths, conflicts, intended simplification direction, and a test checklist.
+- Marked Reader fix list item `R-002` as `doing`.
+
+### why
+
+- User reported the AI Assistant interaction is convoluted, especially moving between text selection, the small AI window, and the book.
+
+### files touched
+
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Documentation-only inventory; implementation checks pending with the first AI flow cleanup.
+
+## [2026-06-12] fix | make AI selected-text transfer explicit
+
+### what changed
+
+- Changed the AI chat selection button copy to `Select text from the book`.
+- Removed the visible `Press Enter` instruction from the AI selected-text status.
+- Added an explicit `Add selected text` button that appears when selected book text is ready for the assistant input.
+- Added evaluator markers for the explicit AI selected-text action.
+- Marked Reader fix list item `R-008` done while keeping broader AI Assistant flow item `R-002` in progress.
+
+### why
+
+- User reported that AI Assistant interaction is convoluted when moving between text selection, the floating chat window, and the book. The first simplification removes an Enter-key instruction that competes with sending chat messages.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-12] fix | route AI selection spark to floating chat
+
+### what changed
+
+- Changed `openAIHelpWithSelection()` to open the existing floating AI chat instead of the removed legacy Bootstrap modal.
+- Preserved the selected-text prefill as `Help me understand this: "..."`.
+- Removed the active modal/backdrop retry loop from the current chat selection mode.
+- Made Enter in the AI input consistently send the chat message; selected text transfer now uses `Add selected text`.
+- Added evaluator checks that the legacy selected-text modal path does not reappear.
+- Marked Reader fix list item `R-009` done while keeping broader AI Assistant flow item `R-002` in progress.
+
+### why
+
+- User reported conflicts moving between the book, selected text, and the AI window. The text-selection spark and Services AI Help should land in one assistant surface rather than split between old modal code and the current floating chat.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-13] feature | prototype visible AI reading context
+
+### what changed
+
+- Added a visible AI Assistant `Linked to` context bar.
+- Added reader-controlled scopes for `This section`, `This page`, and `Selected text`.
+- Added an `Ask about this` action that prefills the chat with the chosen reading context.
+- Updated the AI request context so the selected scope is sent to the backend.
+- Added evaluator markers and updated the Reader fix list and AI Assistant flow inventory.
+
+### why
+
+- The reader should be able to connect the assistant to what they are reading without fiddling with text selection for every question.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+
+## [2026-06-14] fix | simplify AI popup around context tools
+
+### what changed
+
+- Removed the visible AI mode tabs from the floating AI Assistant popup.
+- Removed the visible old select-text button and quick action buttons from the popup.
+- Made the context-linking block the dominant visible control: `This section`, `This page`, `Selected text`, and `Ask about this`.
+- Changed `Ask about this` to send the linked context directly when readable text is available.
+- Updated evaluator markers, Reader fix list, AI Assistant flow inventory, and wiki index.
+
+### why
+
+- User liked the context-linking concept but found the popup confusing because too many older tools competed for attention.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+
+## [2026-06-14] fix | make AI custom selection visible
+
+### what changed
+
+- Added a clearer selection-mode cue when the reader chooses `Selected text` in the AI popup.
+- Added a subtle outline around the reading area while AI custom selection is active.
+- Changed AI custom selection to persistently highlight the selected passage after mouseup/touchend.
+- Updated the AI context preview from the selected passage so the reader can see what the AI is linked to.
+- Added evaluator markers and updated the Reader fix list and AI Assistant flow inventory.
+
+### why
+
+- User reported that custom selection gave no visual response in the text, making it unclear what was actually selected.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the restarted local app.
+
+## [2026-06-14] fix | move reader panel toggles outside book card
+
+### what changed
+
+- Moved the Sections and Services hide/show buttons out of the central book card.
+- Positioned the button row as fixed page chrome at the bottom-right of the reader background.
+- Indented the fixed button row farther left from the right edge.
+- Overrode Bootstrap row-child sizing so the fixed control shrink-wraps the buttons instead of stretching full width.
+
+### why
+
+- User requested the hide/show controls sit outside the book section box, fixed down on the bottom-right background area.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally: Go build and Reader template marker checks.
+
+## [2026-06-14] fix | make AI assistant popup more ergonomic
+
+### what changed
+
+- Polished the floating AI Assistant header, context card, message area, input, and send button sizing.
+- Replaced the instructional empty state with direct linked-text starter actions: explain what is happening, make this easier to read, and what should I notice.
+- Added `runAIPromptForCurrentContext()` so starter actions use the current section/page/selection context and send through the existing AI flow.
+- Updated the Reader evaluator markers for the new starter-action empty state.
+- Updated the Reader fix list, AI Assistant flow inventory, and wiki index.
+
+### why
+
+- User wants the AI Assistant popup to feel neat, ergonomic, and user-friendly rather than technical or cluttered.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/AI_ASSISTANT_FLOW_INVENTORY.md`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally: Go build and Reader template marker checks.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.

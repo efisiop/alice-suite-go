@@ -24,17 +24,80 @@
 }
 
 .reader-layout-toolbar {
+    position: fixed;
+    right: 3rem;
+    bottom: 1.25rem;
+    z-index: 1030;
+    left: auto;
+    width: auto;
+    max-width: calc(100vw - 6rem);
+    flex: 0 0 auto;
     display: flex;
-    justify-content: flex-end;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 1.25rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(31, 41, 55, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
 }
 
 .reader-layout-toggle {
     min-width: 116px;
+}
+
+.reader-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.reader-panel-close {
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.reader-panel-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #212529;
+}
+
+.section-page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.section-page-nav-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.section-page-nav-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.15rem;
+    line-height: 1;
 }
 
 .reader-workspace .card {
@@ -46,6 +109,18 @@
     top: 1rem;
     max-height: calc(100vh - 120px);
     overflow-y: auto;
+}
+
+#reader-sections-panel .reader-side-panel {
+    min-height: min(620px, calc(100vh - 120px));
+    display: flex;
+    flex-direction: column;
+}
+
+#reader-sections-panel .reader-side-panel .card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
 }
 
 #reading-card {
@@ -161,8 +236,10 @@
 }
 
 #section-snippets {
-    max-height: calc(100vh - 265px);
+    min-height: 340px;
+    max-height: calc(100vh - 340px);
     overflow-y: auto;
+    padding-right: 0.15rem;
 }
 
 /* Collapsible Navigation Header */
@@ -345,11 +422,12 @@ html {
 .dictionary-popup {
     position: fixed;
     background-color: white;
-    border: 1px solid #ddd;
+    border: 1px solid rgba(31, 41, 55, 0.16);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.28);
     padding: 0;
-    max-width: 350px;
+    width: min(540px, calc(100vw - 32px));
+    max-width: 540px;
     z-index: 1050;
     display: none;
     animation: popupFadeIn 0.2s ease-out;
@@ -374,9 +452,9 @@ html {
 /* Draggable header area */
 .dictionary-popup-drag-handle {
     cursor: move;
-    padding: 0.75rem 1rem;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #ddd;
+    padding: 0.45rem 0.75rem;
+    background-color: #fafafa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px 8px 0 0;
     user-select: none;
     -webkit-user-select: none;
@@ -386,6 +464,111 @@ html {
 .dictionary-popup-drag-handle:active {
     cursor: grabbing;
     background-color: #e9ecef;
+}
+
+.reader-service-popup {
+    border: 1px solid rgba(31, 41, 55, 0.16);
+    border-radius: 8px;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.28);
+    overflow: hidden;
+}
+
+.reader-service-popup .modal-header {
+    background: #fafafa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.55rem 0.75rem;
+}
+
+.reader-service-popup .modal-title {
+    font-family: 'Lora', Georgia, serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    color: #1f2933;
+}
+
+.reader-service-popup .modal-body {
+    padding: 1.15rem 1.25rem 1rem;
+}
+
+.reader-service-popup .modal-footer {
+    background: white;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.75rem 1rem;
+}
+
+.reader-service-popup .btn-close {
+    border-radius: 50%;
+    opacity: 0.55;
+}
+
+.reader-service-popup .btn-close:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+    opacity: 0.8;
+}
+
+.reader-service-popup .btn-primary,
+.reader-service-popup .btn-success {
+    background: #1f2933;
+    border-color: #1f2933;
+}
+
+.reader-service-popup .btn-primary:hover,
+.reader-service-popup .btn-success:hover {
+    background: #111827;
+    border-color: #111827;
+}
+
+.reader-service-popup .btn-outline-primary,
+.reader-service-popup .btn-outline-secondary,
+.reader-service-popup .btn-secondary {
+    background: white;
+    border-color: rgba(0, 123, 255, 0.22);
+    color: #4b5563;
+}
+
+.reader-service-popup .btn-outline-primary:hover,
+.reader-service-popup .btn-outline-secondary:hover,
+.reader-service-popup .btn-secondary:hover {
+    background: #f6f8fb;
+    border-color: rgba(0, 123, 255, 0.35);
+    color: #1f2933;
+}
+
+.reader-service-popup .form-control,
+.reader-service-popup .form-select {
+    border-color: rgba(31, 41, 55, 0.16);
+    border-radius: 8px;
+}
+
+.reader-service-popup .card,
+.reader-service-popup .alert,
+.reader-service-popup .form-check,
+.reader-service-popup .quiz-option {
+    background: #f6f8fb;
+    border: 1px solid rgba(31, 41, 55, 0.08);
+    border-radius: 8px;
+}
+
+.reader-service-popup .form-check,
+.reader-service-popup .quiz-option {
+    padding: 0.65rem 0.75rem 0.65rem 2.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.reader-service-popup .alert {
+    color: #4b5563;
+}
+
+.reader-service-popup .text-primary,
+.reader-service-popup .form-text,
+.reader-service-popup .text-muted {
+    color: #6c757d !important;
+}
+
+.reader-service-popup #dictionary-result .card {
+    background: transparent;
+    border: 0;
 }
 
 /* AI Help Modal - Draggable and smaller */
@@ -450,21 +633,22 @@ html {
 }
 
 #ai-chat-empty-state {
-    color: rgba(0, 0, 0, 0.5) !important;
+    color: #4b5563 !important;
 }
 
-/* WhatsApp-style Floating Chat Container */
+/* Dictionary-style Floating AI Assistant */
 .ai-chat-container {
     position: fixed;
     right: 20px;
     bottom: 80px;
-    width: 380px;
+    width: min(540px, calc(100vw - 32px));
     max-width: calc(100vw - 40px);
-    height: 600px;
+    height: min(640px, calc(100vh - 100px));
     max-height: calc(100vh - 100px);
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border: 1px solid rgba(31, 41, 55, 0.16);
+    border-radius: 8px;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.28);
     display: flex;
     flex-direction: column;
     z-index: 1050;
@@ -483,10 +667,11 @@ html {
 }
 
 .ai-chat-header {
-    background: #075E54;
-    color: white;
-    padding: 1rem;
-    border-radius: 12px 12px 0 0;
+    background: #fafafa;
+    color: #1f2933;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px 8px 0 0;
     flex-shrink: 0;
     cursor: move;
     user-select: none;
@@ -494,6 +679,7 @@ html {
 
 .ai-chat-header.dragging {
     cursor: grabbing;
+    background-color: #e9ecef;
 }
 
 .ai-chat-avatar {
@@ -522,69 +708,176 @@ html {
 }
 
 .ai-chat-title {
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-weight: 700;
+    font-size: 0.98rem;
+    color: #1f2933;
 }
 
 .ai-chat-subtitle {
-    font-size: 0.75rem;
-    opacity: 0.8;
+    font-size: 0.74rem;
+    color: #6c757d;
+    opacity: 1;
 }
 
 .ai-help-tabs {
     display: flex;
-    gap: 0;
+    gap: 0.35rem;
     flex-shrink: 0;
+    padding: 0.65rem 0.75rem 0.35rem !important;
+    background: white !important;
+    border-bottom: 0 !important;
 }
 
 .ai-help-tab {
     flex: 1;
-    padding: 0.5rem 0.75rem;
-    border: none;
-    background: #f0f0f0;
-    color: #555;
-    font-size: 0.85rem;
+    padding: 0.32rem 0.5rem;
+    border: 1px solid rgba(0, 123, 255, 0.22);
+    border-radius: 6px;
+    background: white;
+    color: #4b5563;
+    font-size: 0.74rem;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .ai-help-tab:hover {
-    background: #e5e5e5;
-    color: #333;
+    background: #f6f8fb;
+    color: #1f2933;
+    border-color: rgba(0, 123, 255, 0.35);
 }
 
 .ai-help-tab.active {
-    background: white;
-    color: #075E54;
+    background: #f6f8fb;
+    color: #1f2933;
     font-weight: 600;
-    border-bottom-color: #075E54;
+    border-color: rgba(31, 41, 55, 0.16);
 }
 
 .ai-help-tab-hint {
     flex-shrink: 0;
+    margin: 0 0.75rem 0.6rem;
+    padding: 0.45rem 0.6rem !important;
+    background: #f6f8fb !important;
+    border: 1px solid rgba(31, 41, 55, 0.08);
+    border-radius: 8px;
+    color: #6c757d !important;
+}
+
+.ai-chat-context-bar {
+    flex-shrink: 0;
+    margin: 0.85rem 0.95rem 0.65rem;
+    padding: 0.85rem;
+    background: #f6f8fb;
+    border: 1px solid rgba(31, 41, 55, 0.1);
+    border-radius: 8px;
+}
+
+.ai-chat-context-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+}
+
+.ai-chat-context-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.ai-chat-context-title {
+    font-size: 0.98rem;
+    font-weight: 650;
+    color: #1f2933;
+    line-height: 1.25;
+}
+
+.ai-chat-context-preview {
+    margin-top: 0.55rem;
+    color: #4b5563;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    max-height: 3.7rem;
+    overflow: hidden;
+}
+
+.ai-chat-context-chips {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.8rem;
+}
+
+.ai-chat-context-chip,
+.ai-chat-context-action {
+    border: 1px solid rgba(31, 41, 55, 0.14);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #374151;
+    font-size: 0.82rem;
+    padding: 0.42rem 0.62rem;
+    line-height: 1.2;
+}
+
+.ai-chat-context-chip {
+    flex: 1;
+    min-width: 0;
+    font-weight: 650;
+}
+
+.ai-chat-context-chip:hover,
+.ai-chat-context-action:hover {
+    background: white;
+    border-color: rgba(31, 41, 55, 0.28);
+}
+
+.ai-chat-context-chip.active {
+    background: #1f2933;
+    color: white;
+    border-color: #1f2933;
+}
+
+.ai-chat-context-action {
+    margin-left: auto;
+    font-weight: 650;
+    background: #1f2933;
+    border-color: #1f2933;
+    color: white;
+    padding-inline: 0.8rem;
+    white-space: nowrap;
+}
+
+.ai-chat-context-action:hover {
+    background: #111827;
+    border-color: #111827;
+    color: white;
+}
+
+.ai-chat-legacy-tools {
+    display: none !important;
 }
 
 .ai-chat-header-btn {
     background: none;
     border: none;
-    color: white;
-    font-size: 1.2rem;
+    color: #6c757d;
+    font-size: 1rem;
     cursor: pointer;
     padding: 0.25rem;
-    width: 32px;
-    height: 32px;
+    width: 1.6rem;
+    height: 1.6rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.8;
-    border-radius: 4px;
+    opacity: 1;
+    border-radius: 50%;
     transition: all 0.2s ease;
 }
 
 .ai-chat-header-btn:hover {
-    opacity: 1;
-    background: rgba(255,255,255,0.1);
+    background: rgba(0, 0, 0, 0.06);
+    color: #212529;
 }
 
 .ai-chat-close-btn {
@@ -608,12 +901,12 @@ html {
 
 /* Resize states */
 .ai-chat-container.resized-small {
-    width: 300px !important;
-    height: 400px !important;
+    width: 360px !important;
+    height: 430px !important;
 }
 
 .ai-chat-container.resized-large {
-    width: 500px !important;
+    width: 620px !important;
     height: 700px !important;
 }
 
@@ -629,7 +922,7 @@ html {
     z-index: 1051;
     opacity: 0.6;
     transition: opacity 0.2s ease;
-    border-radius: 0 0 12px 0;
+    border-radius: 0 0 8px 0;
 }
 
 .ai-chat-resize-handle:hover {
@@ -643,61 +936,143 @@ html {
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
-    background: #ECE5DD;
-    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='chatPattern' x='0' y='0' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='50' cy='50' r='1' fill='%23D4D4D4' opacity='0.3'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23chatPattern)'/%3E%3C/svg%3E");
+    padding: 0.75rem 1rem 0.95rem;
+    background: white;
 }
 
 .ai-chat-input-area {
-    padding: 1rem;
+    padding: 0.8rem 0.95rem 0.95rem;
     background: white;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
     flex-shrink: 0;
     pointer-events: auto; /* ensure typing area is always interactive */
 }
 
 .ai-chat-input {
-    border: 1px solid #e0e0e0 !important;
+    border: 1px solid rgba(31, 41, 55, 0.16) !important;
+    border-radius: 8px !important;
+    min-height: 44px;
     pointer-events: auto !important;
     user-select: text;
     -webkit-user-select: text;
 }
 
+.ai-chat-empty-state {
+    padding: 1.1rem 0.15rem 0.75rem;
+}
+
+.ai-chat-empty-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1f2933;
+    margin-bottom: 0.35rem;
+}
+
+.ai-chat-empty-copy {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: #6c757d;
+    margin-bottom: 0.85rem;
+}
+
+.ai-chat-starter-grid {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.ai-chat-starter-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    background: #f6f8fb;
+    border: 1px solid rgba(31, 41, 55, 0.1);
+    border-radius: 8px;
+    color: #1f2933;
+    font-size: 0.9rem;
+    font-weight: 650;
+    text-align: left;
+}
+
+.ai-chat-starter-btn:hover {
+    background: white;
+    border-color: rgba(31, 41, 55, 0.22);
+}
+
+.ai-chat-starter-btn span:last-child {
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+#ai-select-text-btn,
+#ai-chat-add-selection-btn {
+    background: white !important;
+    border-color: rgba(0, 123, 255, 0.22) !important;
+    color: #4b5563 !important;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    padding: 0.34rem 0.5rem;
+    border-radius: 6px;
+}
+
+#ai-select-text-btn:hover,
+#ai-chat-add-selection-btn:hover {
+    background: #f6f8fb !important;
+    color: #1f2933 !important;
+    border-color: rgba(0, 123, 255, 0.35) !important;
+}
+
+#ai-chat-selection-status {
+    align-items: center;
+    color: #4b5563 !important;
+    font-weight: 500 !important;
+}
+
 .ai-chat-send-btn {
-    background: #25D366 !important;
+    background: #1f2933 !important;
     color: white;
+    border-radius: 8px !important;
+    font-size: 1rem;
 }
 
 .ai-chat-send-btn:hover {
-    background: #20BA5A !important;
+    background: #111827 !important;
 }
 
 .ai-quick-action-btn {
-    background: rgba(0,0,0,0.05);
-    border: 1px solid rgba(0,0,0,0.1);
-    color: #333;
-    font-size: 0.8rem;
-    padding: 0.25rem 0.75rem;
+    background: white;
+    border: 1px solid rgba(0, 123, 255, 0.22);
+    color: #4b5563;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    padding: 0.28rem 0.45rem;
+    border-radius: 6px;
 }
 
 .ai-quick-action-btn:hover {
-    background: rgba(0,0,0,0.1);
+    background: #f6f8fb;
+    color: #1f2933;
+    border-color: rgba(0, 123, 255, 0.35);
 }
 
-/* WhatsApp-style Chat Bubbles */
+/* Dictionary-style Chat Bubbles */
 .chat-bubble.user {
-    background-color: #DCF8C6;
-    color: #000;
-    border-bottom-right-radius: 4px;
+    background-color: #f6f8fb;
+    color: #202124;
+    border: 1px solid rgba(31, 41, 55, 0.08);
+    border-radius: 8px;
     margin-left: auto;
 }
 
 .chat-bubble.ai {
     background-color: white;
-    color: #000;
-    border: 1px solid #e0e0e0;
-    border-bottom-left-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    color: #202124;
+    border: 1px solid rgba(31, 41, 55, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 /* Minimized Chat Bar at Bottom - Right Side */
@@ -771,29 +1146,40 @@ html {
 }
 
 .dictionary-popup-content-inner {
-    padding: 1rem;
+    padding: 1.15rem 1.25rem 1rem;
+}
+
+.dictionary-popup-focus {
+    background: #f6f8fb;
+    border: 1px solid rgba(31, 41, 55, 0.08);
+    border-radius: 8px;
+    padding: 0.85rem 0.95rem;
+    margin-bottom: 0.85rem;
 }
 
 .dictionary-popup-header {
-    font-weight: bold;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    color: #333;
-    padding-bottom: 0.5rem;
+    font-family: 'Lora', Georgia, serif;
+    font-weight: 700;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    margin-bottom: 0.45rem;
+    color: #1f2933;
 }
 
 .dictionary-popup-definition {
-    color: #333;
-    font-size: 1rem;
+    color: #202124;
+    font-size: 1.22rem;
     font-weight: 500;
-    line-height: 1.5;
-    margin-bottom: 0.5rem;
+    line-height: 1.62;
+    margin-bottom: 0;
 }
 
 .dictionary-popup-source {
-    font-size: 0.75rem;
-    color: #6c757d;
-    margin-bottom: 0.35rem;
+    font-size: 0.72rem;
+    color: #8a8f98;
+    margin-top: 0.9rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .dictionary-popup-meta {
@@ -806,7 +1192,7 @@ html {
 
 .dictionary-popup-pos,
 .dictionary-popup-phonetic {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: #6c757d;
     margin-right: 0.5rem;
 }
@@ -862,9 +1248,9 @@ html {
 }
 
 .dictionary-popup-example {
-    color: #777;
+    color: #4b5563;
     font-style: italic;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     border-left: 3px solid #28a745;
     padding-left: 0.5rem;
     margin-top: 0.5rem;
@@ -887,7 +1273,7 @@ html {
 
 .dictionary-popup-derivation {
     color: #555;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     line-height: 1.6;
     border-left: 3px solid #007bff;
     padding-left: 0.5rem;
@@ -909,6 +1295,41 @@ html {
     cursor: pointer;
     transition: all 0.2s ease;
     display: inline-block;
+}
+
+.dictionary-popup-actions {
+    max-width: 260px;
+}
+
+.dictionary-popup-action-btn {
+    font-size: 0.72rem;
+    line-height: 1.1;
+    padding: 0.28rem 0.45rem;
+}
+
+.dictionary-popup-panel {
+    position: relative;
+    padding-right: 1.8rem;
+}
+
+.dictionary-popup-panel-close {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dictionary-popup-panel-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #212529;
 }
 
 .dictionary-popup-see-example:hover {
@@ -1223,19 +1644,25 @@ html {
 }
 
 .text-highlighted {
-    background-color: #ffff00 !important;
-    background-color: rgba(255, 255, 0, 0.7) !important;
-    padding: 2px 0;
-    border-radius: 2px;
+    background-color: #ffe08a !important;
+    background-color: rgba(255, 210, 89, 0.72) !important;
+    padding: 0.08em 0.04em;
+    border-radius: 3px;
     transition: background-color 0.2s ease;
-    box-shadow: 0 1px 2px rgba(255, 255, 0, 0.3);
+    box-shadow: 0 1px 0 rgba(107, 79, 29, 0.22);
     /* Make it look like a real highlighter marker */
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
 }
 
 .text-highlighted:hover {
-    background-color: rgba(255, 255, 0, 0.85) !important;
+    background-color: rgba(255, 210, 89, 0.9) !important;
+}
+
+.text-selection-active .section-content {
+    outline: 2px solid rgba(173, 128, 43, 0.22);
+    outline-offset: 8px;
+    border-radius: 8px;
 }
 
 /* Better selection styling - more visible when selection mode is active */
@@ -1252,8 +1679,8 @@ html {
 /* Enhanced selection visibility when selection mode is active */
 .text-selection-active ::selection,
 .text-selection-active ::-moz-selection {
-    background-color: #ffeb3b !important;
-    background-color: rgba(255, 235, 59, 0.9) !important;
+    background-color: #ffd259 !important;
+    background-color: rgba(255, 210, 89, 0.9) !important;
     color: inherit;
 }
 
@@ -1712,6 +2139,7 @@ html {
     }
 
     #section-snippets {
+        min-height: 0;
         max-height: none;
     }
 
@@ -1730,13 +2158,19 @@ html {
     <!-- Sections (left) — only section list; page nav + scan live under Services → Navigation tools -->
     <div class="col-lg-3 reader-panel-left" id="reader-sections-panel">
         <div class="card reader-side-panel">
-            <div class="card-header">
+            <div class="card-header reader-panel-header">
                 <h5 class="mb-0">Sections</h5>
+                <button type="button" class="reader-panel-close" aria-label="Hide sections panel" onclick="hideReaderPanelFromHeader('left')">&times;</button>
             </div>
             <div class="card-body">
                 <h6 class="mb-2" id="section-snippets-heading">Select the section you're reading</h6>
                 <div id="section-snippets">
                     <p class="text-muted small">Loading sections...</p>
+                </div>
+                <div class="section-page-nav" aria-label="Page navigation">
+                    <span class="section-page-nav-label">Page <span id="current-page-display-sections">1</span></span>
+                    <button type="button" class="btn btn-outline-primary section-page-nav-btn" aria-label="Previous page" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">&larr;</button>
+                    <button type="button" class="btn btn-outline-primary section-page-nav-btn" aria-label="Next page" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">&rarr;</button>
                 </div>
             </div>
         </div>
@@ -1764,10 +2198,6 @@ html {
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
                 </div>
-                <div class="reader-layout-toolbar" aria-label="Reader layout controls">
-                    <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-sections-panel" aria-controls="reader-sections-panel" aria-pressed="false">Hide sections</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-services-panel" aria-controls="reader-services-panel" aria-pressed="false">Hide services</button>
-                </div>
             </div>
         </div>
     </div>
@@ -1775,37 +2205,12 @@ html {
     <!-- Services - Third Column (Right) -->
     <div class="col-lg-3 reader-panel-right" id="reader-services-panel">
         <div class="card reader-side-panel">
-            <div class="card-header">
+            <div class="card-header reader-panel-header">
                 <h5 class="mb-0">Services</h5>
+                <button type="button" class="reader-panel-close" aria-label="Hide services panel" onclick="hideReaderPanelFromHeader('right')">&times;</button>
             </div>
             <div class="card-body p-0">
                 <div class="accordion accordion-flush" id="servicesAccordion">
-                    <div class="accordion-item border-0 border-bottom">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesNavTools" aria-expanded="false" aria-controls="servicesNavTools">
-                                Navigation tools
-                            </button>
-                        </h2>
-                        <div id="servicesNavTools" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
-                            <div class="accordion-body pt-0 pb-2 px-3">
-                                <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
-                                    <label for="page-number" class="form-label mb-0 small">Go to Page</label>
-                                    <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
-                                    <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
-                                </div>
-                                <div class="d-flex gap-2 mb-2">
-                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); previousPage(); return false;">Previous</button>
-                                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.preventDefault(); event.stopPropagation(); nextPage(); return false;">Next</button>
-                                </div>
-                                <div class="border-top pt-2">
-                                    <button class="btn btn-sm btn-outline-success w-100" onclick="event.preventDefault(); event.stopPropagation(); startScanToLocate(); return false;" id="scan-button">
-                                        <span>📷</span> Scan to Locate
-                                    </button>
-                                    <p class="text-muted small mb-0 mt-1">Point camera at page text to find your location</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="accordion-item border-0 border-bottom">
                         <h2 class="accordion-header">
                             <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesHelpCenter" aria-expanded="false" aria-controls="servicesHelpCenter">
@@ -1841,7 +2246,7 @@ html {
                             </div>
                         </div>
                     </div>
-                    <div class="accordion-item border-0">
+                    <div class="accordion-item border-0 border-bottom">
                         <h2 class="accordion-header">
                             <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesInfoCenter" aria-expanded="false" aria-controls="servicesInfoCenter">
                                 <span class="service-menu-header-label">
@@ -1866,16 +2271,43 @@ html {
                             </div>
                         </div>
                     </div>
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button btn-sm py-2 collapsed bg-white text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#servicesNavTools" aria-expanded="false" aria-controls="servicesNavTools">
+                                Navigation tools
+                            </button>
+                        </h2>
+                        <div id="servicesNavTools" class="accordion-collapse collapse" data-bs-parent="#servicesAccordion">
+                            <div class="accordion-body pt-0 pb-2 px-3">
+                                <div class="mb-2 d-flex align-items-center justify-content-between gap-2">
+                                    <label for="page-number" class="form-label mb-0 small">Go to Page</label>
+                                    <input type="number" class="form-control form-control-sm" id="page-number" min="1" value="1" style="width: 80px;">
+                                    <button class="btn btn-sm btn-primary" onclick="event.preventDefault(); event.stopPropagation(); goToPage(); return false;">Go</button>
+                                </div>
+                                <div class="border-top pt-2">
+                                    <button class="btn btn-sm btn-outline-success w-100" onclick="event.preventDefault(); event.stopPropagation(); startScanToLocate(); return false;" id="scan-button">
+                                        <span>📷</span> Scan to Locate
+                                    </button>
+                                    <p class="text-muted small mb-0 mt-1">Point camera at page text to find your location</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="reader-layout-toolbar" aria-label="Reader layout controls">
+        <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-sections-panel" aria-controls="reader-sections-panel" aria-pressed="false">Hide sections</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-services-panel" aria-controls="reader-services-panel" aria-pressed="false">Hide services</button>
     </div>
 </div>
 
 <!-- Scan to Locate Modal -->
 <div class="modal fade" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content reader-service-popup">
             <div class="modal-header">
                 <h5 class="modal-title" id="scanModalLabel">📷 Scan to Locate Your Reading Position</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1940,8 +2372,8 @@ html {
 
 <!-- Test your knowledge (Quiz) Modal -->
 <div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content reader-service-popup">
             <div class="modal-header">
                 <h5 class="modal-title" id="quizModalLabel">Test your knowledge</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2007,8 +2439,8 @@ html {
 <!-- Ah Ah Moments Modal (z-index above selection toolbar so the textarea is typeable) -->
 <style>#ahAhMomentsModal.modal { z-index: 1070 !important; }</style>
 <div class="modal fade" id="ahAhMomentsModal" tabindex="-1" aria-labelledby="ahAhMomentsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content reader-service-popup">
             <div class="modal-header">
                 <h5 class="modal-title" id="ahAhMomentsModalLabel">✨ Ah Ah Moments</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2062,8 +2494,8 @@ html {
 }
 </style>
 <div class="modal fade" id="consultantHelpModal" tabindex="-1" aria-labelledby="consultantHelpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content reader-service-popup">
             <div class="modal-header">
                 <h5 class="modal-title" id="consultantHelpModalLabel">
                     <span class="feature-label-with-icon">
@@ -2171,8 +2603,8 @@ html {
 </style>
 <!-- Dictionary Modal (kept for manual lookup via Dictionary button) -->
 <div class="modal fade" id="dictionaryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content reader-service-popup">
             <div class="modal-header">
                 <h5 class="modal-title">Dictionary</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2213,19 +2645,41 @@ html {
         </div>
     </div>
     
-    <!-- AI Help mode tabs -->
-    <div class="ai-help-tabs border-bottom bg-white px-2">
-        <button type="button" class="ai-help-tab active" data-mode="explain" aria-pressed="true">Explain</button>
-        <button type="button" class="ai-help-tab" data-mode="simplify" aria-pressed="false">Simplify</button>
-        <button type="button" class="ai-help-tab" data-mode="chat" aria-pressed="false">Chat</button>
+    <div class="ai-chat-context-bar" id="ai-chat-context-bar">
+        <div class="ai-chat-context-top">
+            <div>
+                <div class="ai-chat-context-label">Linked to</div>
+                <div class="ai-chat-context-title" id="ai-chat-context-title">Current section</div>
+            </div>
+            <button type="button" class="ai-chat-context-action" onclick="askAIAboutCurrentContext()">Ask about this</button>
+        </div>
+        <div class="ai-chat-context-preview" id="ai-chat-context-preview">The assistant will use the section you are reading.</div>
+        <div class="ai-chat-context-chips" role="group" aria-label="AI reading context">
+            <button type="button" class="ai-chat-context-chip active" data-ai-context-scope="section" onclick="setAIContextScope('section')">This section</button>
+            <button type="button" class="ai-chat-context-chip" data-ai-context-scope="page" onclick="setAIContextScope('page')">This page</button>
+            <button type="button" class="ai-chat-context-chip" data-ai-context-scope="selection" onclick="setAIContextScope('selection')">Selected text</button>
+        </div>
     </div>
-    <div class="ai-help-tab-hint small text-muted px-2 py-1 bg-light" id="ai-help-tab-hint">Explain: get a short explanation of the selected text.</div>
     
     <!-- Chat Messages -->
     <div id="ai-chat-messages" class="ai-chat-messages">
-        <div class="text-center text-muted py-5" id="ai-chat-empty-state">
-            <p>Start a conversation with the AI assistant!</p>
-            <small>Ask questions about what you're reading.</small>
+        <div class="ai-chat-empty-state" id="ai-chat-empty-state">
+            <div class="ai-chat-empty-title">Start with the linked text</div>
+            <p class="ai-chat-empty-copy">Pick a useful question, or write your own below.</p>
+            <div class="ai-chat-starter-grid" aria-label="AI starter questions">
+                <button type="button" class="ai-chat-starter-btn" onclick="runAIPromptForCurrentContext('explain')">
+                    <span>Explain what is happening</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </button>
+                <button type="button" class="ai-chat-starter-btn" onclick="runAIPromptForCurrentContext('simplify')">
+                    <span>Make this easier to read</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </button>
+                <button type="button" class="ai-chat-starter-btn" onclick="runAIPromptForCurrentContext('notice')">
+                    <span>What should I notice?</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </button>
+            </div>
         </div>
     </div>
     
@@ -2234,25 +2688,13 @@ html {
     
     <!-- Chat Input Area -->
     <div class="ai-chat-input-area">
-        <!-- Select Text Button -->
-        <div class="mb-2">
-            <button 
-                class="btn btn-outline-primary btn-sm w-100" 
-                id="ai-select-text-btn"
-                onclick="activateTextSelectionMode()" 
-                style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(255,255,255,0.95); border-color: rgba(0,123,255,0.3);">
-                <span>✏️</span>
-                <span>Select the text you want to clarify</span>
-            </button>
-        </div>
-        
         <div class="d-flex gap-2 align-items-end">
             <div class="flex-grow-1">
                 <textarea 
                     class="form-control ai-chat-input" 
                     id="ai-question" 
                     rows="1" 
-                    placeholder="Select text or type a message..."
+                    placeholder="Ask about the linked text..."
                     style="resize: none; max-height: 120px; background: white; border-radius: 20px; padding: 0.5rem 1rem;"
                     tabindex="0"
                     autocomplete="off"
@@ -2262,17 +2704,19 @@ html {
                 class="btn ai-chat-send-btn" 
                 onclick="askAI()" 
                 id="ai-ask-button"
-                style="height: 38px; width: 38px; border-radius: 50%; background: #25D366; border: none; padding: 0;">
+                style="height: 44px; width: 44px; border: none; padding: 0;"
+                aria-label="Send message">
                 <span class="spinner-border spinner-border-sm d-none" id="ai-loading-spinner" role="status" style="width: 1rem; height: 1rem;"></span>
-                <span id="ai-send-text">📤</span>
+                <span id="ai-send-text" aria-hidden="true">&uarr;</span>
             </button>
         </div>
-        <div class="mt-2 d-flex gap-2 flex-wrap align-items-center">
+        <div class="ai-chat-legacy-tools mt-2 d-flex gap-2 flex-wrap align-items-center" aria-hidden="true">
             <button class="btn btn-sm ai-quick-action-btn" onclick="findMisunderstoodWordsWithAI()" title="Find the misunderstood word">Find the misunderstood word</button>
             <button class="btn btn-sm ai-quick-action-btn" onclick="setQuickQuestion('visual_example')" title="Get visual example">Visual</button>
             <button class="btn btn-sm ai-quick-action-btn" onclick="clearChat()" title="Clear conversation">Clear</button>
             <div id="ai-chat-selection-status" class="ms-auto text-success small fw-bold" style="display: none;">
-                <span id="ai-chat-selection-status-text">Text selected - Press Enter</span>
+                <span id="ai-chat-selection-status-text">Text selected</span>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2" id="ai-chat-add-selection-btn" onclick="copySelectedTextToChatInput()">Add selected text</button>
             </div>
         </div>
     </div>
@@ -2323,6 +2767,8 @@ let glossaryTermsMap = new Map(); // Map of lowercase term -> original term obje
 let glossaryTermsList = []; // Array of all terms sorted by length (longest first) for multi-word matching
 let currentPageSections = []; // Store sections for current page
 let currentSectionIndex = 0; // Track current section index (0-based)
+let currentAIContextScope = 'section'; // section | page | selection
+let currentAISelectedContextText = '';
 
 // Load all glossary terms for highlighting
 function loadGlossaryTerms() {
@@ -2478,6 +2924,7 @@ function loadPage(pageNumber) {
 
         // Store sections data
         currentPageSections = sections;
+        currentPage = pageNumber;
         console.log('[loadPage] Stored', currentPageSections.length, 'sections in currentPageSections');
 
         // Build section snippets for middle column
@@ -2537,7 +2984,10 @@ function loadPage(pageNumber) {
         }
 
         document.getElementById('current-page-display-main').textContent = pageNumber;
+        const sectionPageDisplay = document.getElementById('current-page-display-sections');
+        if (sectionPageDisplay) sectionPageDisplay.textContent = pageNumber;
         currentPage = pageNumber;
+        updateAIContextBar();
 
         // Track page navigation with section information
         trackActivity('PAGE_SYNC', { 
@@ -2782,6 +3232,7 @@ function showSection(sectionIndex) {
         page_number: currentPage,
         section_index: sectionIndex
     });
+    updateAIContextBar();
     loadConsultantPromptForPage();
     console.log('========== [showSection] END ==========');
 }
@@ -2964,35 +3415,9 @@ function lookupWordFromText(word, event) {
     popupContent.innerHTML = '<div class="dictionary-popup-loading">Loading definition...</div>';
     popup.classList.add('show');
     
-    // Position popup near the clicked word
-    if (event && event.target) {
-        const rect = event.target.getBoundingClientRect();
-        popup.style.left = rect.left + 'px';
-        popup.style.top = (rect.bottom + 5) + 'px';
-        popup.style.transform = 'none';
-        
-        // Adjust if popup goes off-screen
-        setTimeout(() => {
-            const popupRect = popup.getBoundingClientRect();
-            if (popupRect.right > window.innerWidth) {
-                popup.style.left = (window.innerWidth - popupRect.width - 10) + 'px';
-            }
-            if (popupRect.bottom > window.innerHeight) {
-                popup.style.top = (rect.top - popupRect.height - 5) + 'px';
-            }
-            if (popupRect.top < 0) {
-                popup.style.top = '10px';
-            }
-            if (popupRect.left < 0) {
-                popup.style.left = '10px';
-            }
-        }, 0);
-    } else {
-        // Center popup if no event position
-        popup.style.left = '50%';
-        popup.style.top = '50%';
-        popup.style.transform = 'translate(-50%, -50%)';
-    }
+    popup.style.left = '50%';
+    popup.style.top = '42%';
+    popup.style.transform = 'translate(-50%, -42%)';
     
     // Fetch definition
     lookupWordInline(word, popupContent);
@@ -3079,9 +3504,8 @@ function lookupWordInline(word, popupContent) {
         if (!data) return; // Error already handled
         
         if (data.definition && data.definition !== 'Word not found in dictionary.') {
-            let html = `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
-            
-            html += `<div class="dictionary-popup-source">${escapeHtml(formatDictionarySourceLabel(data.source))}</div>`;
+            let html = '<div class="dictionary-popup-focus">';
+            html += `<div class="dictionary-popup-header">${escapeHtml(data.term || wordToLookup)}</div>`;
             
             // Part of speech and phonetic when available
             if (data.part_of_speech || data.phonetic) {
@@ -3095,23 +3519,16 @@ function lookupWordInline(word, popupContent) {
             }
             
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
-            
-            // Example: labeled line, first usage shown; more in Examples button
-            if (data.example) {
-                const firstExample = data.example.split(' |||| ')[0].trim();
-                if (firstExample) {
-                    html += '<div class="dictionary-popup-example-inline"><span class="dictionary-popup-example-label">Example</span><span class="dictionary-popup-example-text">' + escapeHtml(firstExample) + '</span></div>';
-                }
-            }
+            html += '</div>';
             
             // Add two buttons side by side: Derivation (left) and Examples (right)
             const safeWordId = wordToLookup.replace(/[^a-zA-Z0-9]/g, '_');
-            html += `<div class="d-flex gap-2 mt-2 mb-2">
-                <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showDerivation('${escapeHtml(wordToLookup)}', this)" id="derivation-btn-${safeWordId}">
+            html += `<div class="d-flex gap-1 mt-2 mb-2 dictionary-popup-actions">
+                <button class="btn btn-sm btn-outline-primary dictionary-popup-action-btn flex-fill" onclick="showDerivation('${escapeHtml(wordToLookup)}', this)" id="derivation-btn-${safeWordId}">
                     Derivation
                 </button>
-                <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showExamplesPopup('${escapeHtml(wordToLookup)}', this)" id="examples-btn-${safeWordId}">
-                    Examples
+                <button class="btn btn-sm btn-outline-primary dictionary-popup-action-btn flex-fill" onclick="showExamplesPopup('${escapeHtml(wordToLookup)}', this)" id="examples-btn-${safeWordId}">
+                    Example
                 </button>
             </div>`;
             
@@ -3119,11 +3536,12 @@ function lookupWordInline(word, popupContent) {
             html += `<div id="derivation-content-${safeWordId}" class="dictionary-popup-derivation-container" style="display: none;"></div>`;
             html += `<div id="examples-content-${safeWordId}" class="dictionary-popup-examples-container" style="display: none;"></div>`;
             
-            // Store examples data for later use
-            if (data.example) {
-                const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
-                window[`examples_${safeWordId}`] = examples;
-            }
+            window[`example_meta_${safeWordId}`] = {
+                partOfSpeech: data.part_of_speech || '',
+                definition: data.definition || ''
+            };
+
+            html += `<div class="dictionary-popup-source">${escapeHtml(formatDictionarySourceLabel(data.source))}</div>`;
             
             popupContent.innerHTML = html;
             
@@ -3166,6 +3584,18 @@ function showExamples(button) {
         container.classList.add('show');
         // Hide the "See an example" button
         button.style.display = 'none';
+    }
+}
+
+function closeDictionaryPanel(panelId, buttonId) {
+    const panel = document.getElementById(panelId);
+    const button = document.getElementById(buttonId);
+    if (panel) {
+        panel.style.display = 'none';
+    }
+    if (button) {
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
     }
 }
 
@@ -3228,7 +3658,7 @@ function showDerivation(word, button) {
         if (etymologyText && etymologyText.trim()) {
             // Clean up HTML tags if present
             etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
-            container.innerHTML = `<div class="dictionary-popup-derivation">${escapeHtml(etymologyText)}</div>`;
+            container.innerHTML = `<div class="dictionary-popup-derivation dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close derivation" onclick="closeDictionaryPanel('derivation-content-${safeWordId}', 'derivation-btn-${safeWordId}')">&times;</button>${escapeHtml(etymologyText)}</div>`;
         } else {
             container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
         }
@@ -3258,7 +3688,7 @@ function showDerivation(word, button) {
                 etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
                 
                 if (etymologyText) {
-                    container.innerHTML = `<div class="dictionary-popup-derivation">${escapeHtml(etymologyText)}</div>`;
+                    container.innerHTML = `<div class="dictionary-popup-derivation dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close derivation" onclick="closeDictionaryPanel('derivation-content-${safeWordId}', 'derivation-btn-${safeWordId}')">&times;</button>${escapeHtml(etymologyText)}</div>`;
                 } else {
                     container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
                 }
@@ -3272,7 +3702,220 @@ function showDerivation(word, button) {
     });
 }
 
-// Show examples popup (2-3 examples)
+function getShortDefinitionContext(definition) {
+    const cleanDefinition = (definition || '')
+        .replace(/\([^)]*\)/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!cleanDefinition) return '';
+
+    const firstMeaning = cleanDefinition.split(/[.;]/)[0].split(/,\s+(?:especially|usually|often|typically|used to|used for)/i)[0].trim();
+    const words = firstMeaning.split(' ').filter(Boolean).slice(0, 10).join(' ');
+    return words.replace(/[.!?;:,]+$/g, '').toLowerCase();
+}
+
+function flattenExampleSets(exampleSets) {
+    return exampleSets.reduce((all, set) => all.concat(set), []);
+}
+
+function getGeneratedEverydayExampleSets(word, partOfSpeech, definition) {
+    const cleanWord = (word || '').trim().replace(/[^\w'-]/g, '');
+    if (!cleanWord) return [];
+
+    const lowerWord = cleanWord.toLowerCase();
+    const pos = (partOfSpeech || '').toLowerCase();
+    const definitionContext = getShortDefinitionContext(definition);
+    const definitionLower = (definition || '').toLowerCase();
+    const startsWithVowel = /^[aeiou]/i.test(lowerWord);
+    const article = startsWithVowel ? 'an' : 'a';
+
+    if (definitionLower.includes('seat') || definitionLower.includes('sit') || lowerWord === 'chair') {
+        return [
+            [
+                `I pulled ${article} ${lowerWord} to the table and sat down to read.`,
+                `Could you bring another ${lowerWord} so my friend has a place to sit?`
+            ],
+            [
+                `The ${lowerWord} near the window was empty, so I rested there for a minute.`,
+                `After standing in line, I looked for ${article} ${lowerWord} in the waiting room.`
+            ],
+            [
+                `She pushed the ${lowerWord} back under the desk after dinner.`,
+                `This ${lowerWord} is too low for the table, so I need a taller one.`
+            ]
+        ];
+    }
+
+    if (pos.includes('verb')) {
+        if (definitionContext) {
+            return [
+                [
+                    `I need to ${lowerWord} before I can ${definitionContext}.`,
+                    `Could you show me how to ${lowerWord} in this situation?`
+                ],
+                [
+                    `She learned to ${lowerWord} because it helped her ${definitionContext}.`,
+                    `At work, we sometimes ${lowerWord} when a problem needs a clear answer.`
+                ],
+                [
+                    `He tried to ${lowerWord} carefully, not too quickly.`,
+                    `They decided to ${lowerWord} after talking through the meaning.`
+                ]
+            ];
+        }
+        return [
+            [
+                `I try to ${lowerWord} before I make an important choice.`,
+                `Can we ${lowerWord} together after lunch?`
+            ],
+            [
+                `She learned how to ${lowerWord} with practice.`,
+                `He did not want to ${lowerWord} until he understood the reason.`
+            ],
+            [
+                `The group agreed to ${lowerWord} before moving on.`,
+                `I watched someone ${lowerWord}, then I tried it myself.`
+            ]
+        ];
+    }
+
+    if (pos.includes('adjective')) {
+        if (definitionContext) {
+            return [
+                [
+                    `The room felt ${lowerWord} because it seemed ${definitionContext}.`,
+                    `Would you call this answer ${lowerWord}, or does it mean something else?`
+                ],
+                [
+                    `She chose the ${lowerWord} option when she wanted ${definitionContext}.`,
+                    `The mood became ${lowerWord} as soon as everyone understood the news.`
+                ],
+                [
+                    `It was a ${lowerWord} morning, so the walk felt different.`,
+                    `He noticed one ${lowerWord} detail that changed his opinion.`
+                ]
+            ];
+        }
+        return [
+            [
+                `The room felt ${lowerWord} after the rain stopped.`,
+                `Was his answer ${lowerWord}, or just confusing?`
+            ],
+            [
+                `It was a ${lowerWord} morning for a walk.`,
+                `She noticed a ${lowerWord} detail in the painting.`
+            ],
+            [
+                `The story had a ${lowerWord} ending.`,
+                `He used a ${lowerWord} tone when he spoke.`
+            ]
+        ];
+    }
+
+    if (pos.includes('adverb')) {
+        if (definitionContext) {
+            return [
+                [
+                    `She answered ${lowerWord}, in a way that showed ${definitionContext}.`,
+                    `How can I speak ${lowerWord} without sounding rude?`
+                ],
+                [
+                    `He moved ${lowerWord} because the situation called for care.`,
+                    `They worked ${lowerWord} when the instructions became clearer.`
+                ],
+                [
+                    `The child stepped ${lowerWord} across the quiet room.`,
+                    `She read the sentence ${lowerWord} so she would not miss the meaning.`
+                ]
+            ];
+        }
+        return [
+            [
+                `She answered ${lowerWord} and then smiled.`,
+                `Can you walk ${lowerWord} so we do not wake anyone?`
+            ],
+            [
+                `They worked ${lowerWord} until the job was done.`,
+                `He read ${lowerWord} when the page became difficult.`
+            ],
+            [
+                `The door closed ${lowerWord} behind her.`,
+                `I listened ${lowerWord} because the speaker was hard to hear.`
+            ]
+        ];
+    }
+
+    if (pos.includes('noun')) {
+        if (definitionContext) {
+            return [
+                [
+                    `I used ${article} ${lowerWord} when I needed ${definitionContext}.`,
+                    `Can you point to the ${lowerWord} that helps with this?`
+                ],
+                [
+                    `The ${lowerWord} was useful because it solved a small practical problem.`,
+                    `She kept the ${lowerWord} nearby so she could use it later.`
+                ],
+                [
+                    `The teacher mentioned ${article} ${lowerWord} while explaining ${definitionContext}.`,
+                    `I forgot the name, but I knew the ${lowerWord} was connected to ${definitionContext}.`
+                ]
+            ];
+        }
+        return [
+            [
+                `I saw ${article} ${lowerWord} and used it in the right moment.`,
+                `Where do you usually keep the ${lowerWord} at home?`
+            ],
+            [
+                `We talked about the ${lowerWord} because it mattered in real life.`,
+                `The ${lowerWord} helped solve a simple everyday problem.`
+            ],
+            [
+                `She noticed the ${lowerWord} before anyone else did.`,
+                `I needed ${article} ${lowerWord}, but I could not find one nearby.`
+            ]
+        ];
+    }
+
+    if (definitionContext) {
+        return [
+            [
+                `I used "${lowerWord}" while talking about ${definitionContext}.`,
+                `Could "${lowerWord}" fit in a sentence about ${definitionContext}?`
+            ],
+            [
+                `She wrote "${lowerWord}" when describing ${definitionContext}.`,
+                `The word "${lowerWord}" helped explain the idea more clearly.`
+            ],
+            [
+                `He asked what "${lowerWord}" meant in this exact situation.`,
+                `We chose "${lowerWord}" because it matched the meaning of the sentence.`
+            ]
+        ];
+    }
+
+    return [
+        [
+            `I used "${lowerWord}" in a simple real-life sentence.`,
+            `Could you give me another everyday sentence with "${lowerWord}"?`
+        ],
+        [
+            `She wrote "${lowerWord}" when describing something from everyday life.`,
+            `He asked where "${lowerWord}" would sound natural in conversation.`
+        ],
+        [
+            `We practiced "${lowerWord}" with a short sentence at school.`,
+            `The word "${lowerWord}" appeared in a note, so I checked its meaning.`
+        ]
+    ];
+}
+
+function getGeneratedEverydayExamples(word, partOfSpeech, definition) {
+    return flattenExampleSets(getGeneratedEverydayExampleSets(word, partOfSpeech, definition));
+}
+
+// Show simple generated examples for real-life usage.
 function showExamplesPopup(word, button) {
     if (!word || !button) return;
     
@@ -3281,28 +3924,24 @@ function showExamplesPopup(word, button) {
     
     if (!container) return;
     
-    // If already shown, hide it
-    if (container.style.display !== 'none') {
-        container.style.display = 'none';
-        button.classList.remove('btn-primary');
-        button.classList.add('btn-outline-primary');
-        return;
-    }
+    const exampleMeta = window[`example_meta_${safeWordId}`] || {};
+    const exampleSets = getGeneratedEverydayExampleSets(word, exampleMeta.partOfSpeech || '', exampleMeta.definition || '');
     
-    // Get stored examples
-    const examples = window[`examples_${safeWordId}`] || [];
-    
-    if (examples.length === 0) {
-        container.innerHTML = '<div class="dictionary-popup-loading text-muted">No examples available for this word.</div>';
+    if (exampleSets.length === 0) {
+        container.innerHTML = '<div class="dictionary-popup-loading text-muted">No simple example available for this word.</div>';
         container.style.display = 'block';
         return;
     }
+
+    const counterKey = `example_set_index_${safeWordId}`;
+    const currentIndex = window[counterKey] || 0;
+    const examplesToShow = exampleSets[currentIndex % exampleSets.length];
+    window[counterKey] = currentIndex + 1;
+
+    let examplesHtml = `<div class="dictionary-popup-source mb-2">Generated everyday examples ${exampleSets.length > 1 ? '(' + ((currentIndex % exampleSets.length) + 1) + '/' + exampleSets.length + ')' : ''}</div>`;
+    examplesHtml += examplesToShow.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
     
-    // Show 2-3 examples
-    const examplesToShow = examples.slice(0, 3);
-    let examplesHtml = examplesToShow.map(ex => `<div class="dictionary-popup-example">${escapeHtml(ex)}</div>`).join('');
-    
-    container.innerHTML = examplesHtml;
+    container.innerHTML = `<div class="dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close example" onclick="closeDictionaryPanel('examples-content-${safeWordId}', 'examples-btn-${safeWordId}')">&times;</button>${examplesHtml}</div>`;
     container.style.display = 'block';
     button.classList.remove('btn-outline-primary');
     button.classList.add('btn-primary');
@@ -3427,29 +4066,6 @@ function lookupWord(word) {
     .then(data => {
         if (resultDiv) {
             if (data.definition && data.definition !== 'Word not found in dictionary.') {
-                let exampleHtml = '';
-                if (data.example) {
-                    const examples = data.example.split(' |||| ').map(ex => ex.trim()).filter(ex => ex);
-                    if (examples.length === 1) {
-                        exampleHtml = '<div class="dictionary-popup-example-inline mt-2"><span class="dictionary-popup-example-label">Example</span><span class="dictionary-popup-example-text text-muted">' + escapeHtml(examples[0]) + '</span></div>';
-                    } else if (examples.length > 1) {
-                        let examplesContent = '';
-                        if (examples.length === 2) {
-                            examplesContent = examples.map((ex) => '<p class="text-muted mb-1"><em>' + escapeHtml(ex) + '</em></p>').join('');
-                        } else {
-                            const firstTwo = examples.slice(0, 2);
-                            const rest = examples.slice(2);
-                            examplesContent = firstTwo.map((ex) => '<p class="text-muted mb-1"><em>' + escapeHtml(ex) + '</em></p>').join('');
-                            if (rest.length > 0) {
-                                examplesContent += '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-more-examples" onclick="showMoreExamplesModal(this)">See ' + rest.length + ' more example' + (rest.length > 1 ? 's' : '') + '</button>';
-                                examplesContent += '<div class="mt-2 dictionary-popup-additional-examples">' + rest.map((ex) => '<p class="text-muted"><em>' + escapeHtml(ex) + '</em></p>').join('') + '</div>';
-                            }
-                        }
-                        const buttonText = examples.length === 2 ? 'See 2 examples' : 'See examples';
-                        exampleHtml = '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">' + escapeHtml(buttonText) + '</button>';
-                        exampleHtml += '<div class="dictionary-popup-examples-container mt-2" style="display: none;">' + examplesContent + '</div>';
-                    }
-                }
                 let metaModal = '';
                 if (data.part_of_speech || data.phonetic) {
                     metaModal = '<div class="dictionary-popup-meta mb-2">';
@@ -3460,13 +4076,21 @@ function lookupWord(word) {
                     }
                     metaModal += '</div>';
                 }
+                const generatedExamples = getGeneratedEverydayExamples(data.term || wordToLookup, data.part_of_speech || '', data.definition || '').slice(0, 2);
+                let exampleHtml = '';
+                if (generatedExamples.length > 0) {
+                    const examplesContent = '<div class="dictionary-popup-source mb-2">Generated everyday examples</div>' +
+                        generatedExamples.map((ex) => '<div class="dictionary-popup-example">' + escapeHtml(ex) + '</div>').join('');
+                    exampleHtml = '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">Example</button>';
+                    exampleHtml += '<div class="dictionary-popup-examples-container mt-2" style="display: none;">' + examplesContent + '</div>';
+                }
                 resultDiv.innerHTML =
                     '<div class="card"><div class="card-body">' +
                     '<h6 class="mb-1">' + escapeHtml(data.term || wordToLookup) + '</h6>' +
-                    '<div class="dictionary-popup-source mb-2">' + escapeHtml(formatDictionarySourceLabel(data.source)) + '</div>' +
                     metaModal +
                     '<p class="dictionary-popup-definition mb-2">' + escapeHtml(data.definition) + '</p>' +
                     exampleHtml +
+                    '<div class="dictionary-popup-source">' + escapeHtml(formatDictionarySourceLabel(data.source)) + '</div>' +
                     '</div></div>';
                 trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
             } else {
@@ -4036,6 +4660,163 @@ function handleOutsideChatInteraction(e) {
     }
 }
 
+function getAIContextPreviewText(text, maxLength) {
+    const cleanText = (text || '').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return '';
+    if (cleanText.length <= maxLength) return cleanText;
+    return cleanText.substring(0, maxLength).trim() + '...';
+}
+
+function getSelectedTextFromPage() {
+    try {
+        const selection = window.getSelection();
+        return selection ? selection.toString().trim() : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function getCurrentAIReadingContext(scope) {
+    const requestedScope = scope || currentAIContextScope || 'section';
+    const currentSection = currentPageSections[currentSectionIndex] || null;
+    const sectionText = currentSection ? (currentSection.content || '') : '';
+    const pageText = currentPageSections.map(function(section) {
+        return section && section.content ? section.content : '';
+    }).filter(Boolean).join('\n\n');
+    const selectionText = currentAISelectedContextText || selectedText || getSelectedTextFromPage() || '';
+
+    if (requestedScope === 'page' && pageText) {
+        return {
+            scope: 'page',
+            title: `Page ${currentPage}`,
+            label: `Linked to Page ${currentPage}`,
+            text: pageText,
+            sectionID: currentSection ? currentSection.id : null,
+            context: `You are reading page ${currentPage} of Alice's Adventures in Wonderland.\n\nCurrent page text (for context): ${getAIContextPreviewText(pageText, 1200)}`
+        };
+    }
+
+    if (requestedScope === 'selection' && selectionText.trim()) {
+        return {
+            scope: 'selection',
+            title: `Selected text on Page ${currentPage}`,
+            label: `Linked to selected text`,
+            text: selectionText,
+            sectionID: currentSection ? currentSection.id : null,
+            context: `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.\n\nSelected text (for context): ${selectionText.trim()}`
+        };
+    }
+
+    if (requestedScope === 'selection') {
+        return {
+            scope: 'selection',
+            title: 'Select text from the book',
+            label: 'Linked to selected text',
+            text: '',
+            sectionID: currentSection ? currentSection.id : null,
+            context: `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.\n\nCurrent section text (for context): ${getAIContextPreviewText(sectionText, 800)}`
+        };
+    }
+
+    return {
+        scope: 'section',
+        title: `Page ${currentPage}, Section ${currentSectionIndex + 1}`,
+        label: `Linked to Page ${currentPage}, Section ${currentSectionIndex + 1}`,
+        text: sectionText,
+        sectionID: currentSection ? currentSection.id : null,
+        context: `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.\n\nCurrent section text (for context): ${getAIContextPreviewText(sectionText, 800)}`
+    };
+}
+
+function updateAIContextBar() {
+    const bar = document.getElementById('ai-chat-context-bar');
+    if (!bar) return;
+
+    const selectedContext = getCurrentAIReadingContext(currentAIContextScope);
+    const titleEl = document.getElementById('ai-chat-context-title');
+    const previewEl = document.getElementById('ai-chat-context-preview');
+    const chips = document.querySelectorAll('.ai-chat-context-chip');
+
+    if (titleEl) titleEl.textContent = selectedContext.label;
+    if (previewEl) {
+        const previewText = getAIContextPreviewText(selectedContext.text, 145);
+        if (currentAIContextScope === 'selection' && aiChatSelectionModeActive && !previewText) {
+            previewEl.textContent = 'Select a passage in the book. The selected words will stay highlighted here.';
+        } else {
+            previewEl.textContent = previewText || 'No readable text is linked yet. Choose a section or select text from the book.';
+        }
+    }
+    chips.forEach(function(chip) {
+        const scope = chip.getAttribute('data-ai-context-scope');
+        chip.classList.toggle('active', scope === selectedContext.scope);
+        chip.setAttribute('aria-pressed', scope === selectedContext.scope ? 'true' : 'false');
+    });
+}
+
+function setAIContextScope(scope) {
+    currentAIContextScope = scope || 'section';
+    if (currentAIContextScope === 'selection' && !(currentAISelectedContextText || selectedText || getSelectedTextFromPage())) {
+        activateTextSelectionMode();
+    }
+    updateAIContextBar();
+}
+
+function askAIAboutCurrentContext() {
+    const context = getCurrentAIReadingContext(currentAIContextScope);
+    const questionInput = document.getElementById('ai-question');
+    if (!questionInput) return;
+
+    if (!context.text || !context.text.trim()) {
+        if (context.scope === 'selection') activateTextSelectionMode();
+        questionInput.value = '';
+        questionInput.placeholder = 'Select text in the book first...';
+        questionInput.focus();
+        return;
+    }
+
+    const contextText = getAIContextPreviewText(context.text, context.scope === 'page' ? 900 : 650);
+    const readableScope = context.scope === 'page' ? 'page' : (context.scope === 'selection' ? 'selected text' : 'section');
+    questionInput.value = contextText
+        ? `Help me understand this ${readableScope}:\n"${contextText}"`
+        : `Help me understand this ${readableScope}.`;
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+    questionInput.focus();
+    setTimeout(function() {
+        askAI();
+    }, 50);
+}
+
+function runAIPromptForCurrentContext(intent) {
+    const context = getCurrentAIReadingContext(currentAIContextScope);
+    const questionInput = document.getElementById('ai-question');
+    if (!questionInput) return;
+
+    if (!context.text || !context.text.trim()) {
+        if (context.scope === 'selection') activateTextSelectionMode();
+        questionInput.value = '';
+        questionInput.placeholder = 'Select text in the book first...';
+        questionInput.focus();
+        return;
+    }
+
+    const readableScope = context.scope === 'page' ? 'page' : (context.scope === 'selection' ? 'selected text' : 'section');
+    const contextText = getAIContextPreviewText(context.text, context.scope === 'page' ? 900 : 650);
+    const promptByIntent = {
+        explain: `Explain what is happening in this ${readableScope}:\n"${contextText}"`,
+        simplify: `Make this ${readableScope} easier to read without losing the meaning:\n"${contextText}"`,
+        notice: `What should I notice in this ${readableScope}?\n"${contextText}"`
+    };
+
+    questionInput.value = promptByIntent[intent] || `Help me understand this ${readableScope}:\n"${contextText}"`;
+    questionInput.style.height = 'auto';
+    questionInput.style.height = Math.min(questionInput.scrollHeight, 120) + 'px';
+    questionInput.focus();
+    setTimeout(function() {
+        askAI();
+    }, 50);
+}
+
 // AI Help mode: explain | simplify | chat (persisted in localStorage)
 window.currentAiHelpMode = window.currentAiHelpMode || (function() {
     try { return localStorage.getItem('alice_ai_help_mode') || 'chat'; } catch (e) { return 'chat'; }
@@ -4091,7 +4872,9 @@ function showAIHelp() {
     
     // Show the floating chat container (same as when clicking Tools "AI Help")
     if (chatContainer) {
-        initAiHelpTabs();
+        window.currentAiHelpMode = 'chat';
+        try { localStorage.setItem('alice_ai_help_mode', 'chat'); } catch (e) {}
+        updateAIContextBar();
         chatContainer.style.display = 'flex';
         if (minimizedBar) minimizedBar.style.display = 'none';
         isChatMinimized = false;
@@ -4332,6 +5115,8 @@ function initAIChatResize() {
 function activateTextSelectionMode() {
     aiChatSelectionModeActive = true;
     textSelectionModeActive = true;
+    currentAIContextScope = 'selection';
+    clearHighlights();
     
     // Update button appearance
     const selectBtn = document.getElementById('ai-select-text-btn');
@@ -4339,7 +5124,7 @@ function activateTextSelectionMode() {
         selectBtn.disabled = true;
         selectBtn.classList.remove('btn-outline-primary');
         selectBtn.classList.add('btn-primary');
-        selectBtn.innerHTML = '<span>✓</span> <span>Selection mode active - Select text and press Enter</span>';
+        selectBtn.innerHTML = '<span>✓</span> <span>Selection mode active - choose text in the book</span>';
     }
     
     // Hide selection status (will show when text is selected)
@@ -4351,10 +5136,16 @@ function activateTextSelectionMode() {
     const pageContent = document.getElementById('page-content');
     const readingContainer = document.getElementById('reading-container');
     const chatMessages = document.getElementById('ai-chat-messages');
+    const indicator = document.getElementById('selection-mode-indicator');
     
     if (pageContent) {
         pageContent.classList.add('text-selection-active');
-        readingContainer.classList.add('text-selection-active');
+        if (readingContainer) readingContainer.classList.add('text-selection-active');
+    }
+
+    if (indicator) {
+        indicator.classList.add('active');
+        indicator.innerHTML = '<span>Text selection</span><span>Select a passage in the book</span>';
     }
     
     // Enable text selection on chat messages
@@ -4363,59 +5154,11 @@ function activateTextSelectionMode() {
         enableChatMessagesTextSelection();
     }
     
-    // Make modal backdrop and dialog allow interaction with page behind it
-    const adjustModalForSelection = () => {
-        const backdrop = document.querySelector('.modal-backdrop');
-        const modalDialog = document.getElementById('aiHelpModalDialog');
-        const modal = document.getElementById('aiHelpModal');
-        
-        if (backdrop) {
-            backdrop.style.pointerEvents = 'none';
-            backdrop.style.backgroundColor = 'transparent'; // No grey backdrop - completely transparent
-        }
-        
-        // Make modal element itself allow pointer events through (except where we explicitly enable)
-        if (modal) {
-            modal.style.pointerEvents = 'none';
-        }
-        
-        // Make modal dialog and content allow pointer events to pass through
-        if (modalDialog) {
-            modalDialog.style.pointerEvents = 'none';
-        }
-        
-        const modalContent = modalDialog ? modalDialog.querySelector('.modal-content') : null;
-        if (modalContent) {
-            // Make modal content allow pointer events through by default
-            modalContent.style.pointerEvents = 'none';
-            
-            // But allow interaction with specific interactive elements
-            const interactiveElements = modalContent.querySelectorAll(
-                'button, textarea, input, #ai-chat-messages, .chat-message, .chat-bubble, .modal-header, .modal-body, .border-top'
-            );
-            interactiveElements.forEach(el => {
-                el.style.pointerEvents = 'auto';
-            });
-            
-            // Also make sure the entire chat messages container is interactive
-            const chatMessages = document.getElementById('ai-chat-messages');
-            if (chatMessages) {
-                chatMessages.style.pointerEvents = 'auto';
-            }
-        }
-        
-        // If backdrop or dialog don't exist yet, try again
-        if (!backdrop || !modalDialog) {
-            setTimeout(adjustModalForSelection, 50);
-        }
-    };
-    adjustModalForSelection();
-    
     // Enable selection on the page
     enableTextSelection();
+    updateAIContextBar();
     
-    // Add global Enter key handler to copy selected text
-    document.addEventListener('keydown', handleGlobalEnterKey, true);
+    // The selected text is moved into chat by the explicit Add selected text button.
 }
 
 // Enable text selection when AI chat modal is open (automatic - not used anymore)
@@ -4435,7 +5178,7 @@ function disableAIChatTextSelection() {
         selectBtn.disabled = false;
         selectBtn.classList.remove('btn-primary');
         selectBtn.classList.add('btn-outline-primary');
-        selectBtn.innerHTML = '<span>✏️</span> <span>Select the text you want to clarify</span>';
+        selectBtn.innerHTML = '<span>✏️</span> <span>Select text from the book</span>';
     }
     
     // Hide selection status
@@ -4447,10 +5190,16 @@ function disableAIChatTextSelection() {
     const pageContent = document.getElementById('page-content');
     const readingContainer = document.getElementById('reading-container');
     const chatMessages = document.getElementById('ai-chat-messages');
+    const indicator = document.getElementById('selection-mode-indicator');
     
     if (pageContent) {
         pageContent.classList.remove('text-selection-active');
-        readingContainer.classList.remove('text-selection-active');
+        if (readingContainer) readingContainer.classList.remove('text-selection-active');
+    }
+
+    if (indicator) {
+        indicator.classList.remove('active');
+        indicator.innerHTML = '<span>Text selection</span><span>Selection Mode Active - Tap text to select</span>';
     }
     
     // Disable text selection on chat messages
@@ -5514,14 +6263,12 @@ function askAI() {
         }
     }
     
-    // Get current section context
+    const readingContext = getCurrentAIReadingContext(currentAIContextScope);
     const currentSection = currentPageSections[currentSectionIndex];
     const fullSectionContent = currentSection ? (currentSection.content || '') : '';
     const sectionContent = fullSectionContent.substring(0, 500);
-    const sectionID = currentSection ? currentSection.id : null;
-    
-    // Prepare context string
-    let context = `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.`;
+    const sectionID = readingContext.sectionID || (currentSection ? currentSection.id : null);
+    let context = readingContext.context || `You are reading page ${currentPage}, section ${currentSectionIndex + 1} of Alice's Adventures in Wonderland.`;
     
     // For find_misunderstood_word, include prior sentence
     if (interactionType === 'find_misunderstood_word' && processedQuestion) {
@@ -5532,8 +6279,6 @@ function askAI() {
         if (sectionContent) {
             context += `\n\nCurrent section text (for context): ${sectionContent}...`;
         }
-    } else if (sectionContent) {
-        context += `\n\nCurrent section text (for context): ${sectionContent}...`;
     }
     
     // Add user message to chat immediately
@@ -5840,6 +6585,12 @@ let selectionToolbarAlwaysOn = true; // show AI spark on normal text selection
 let selectedText = '';
 let selectedRange = null;
 let aiChatSelectionModeActive = false; // Track if selection mode is active from AI chat
+
+function isRangeInsideReaderPage(range) {
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent || !range) return false;
+    return pageContent.contains(range.commonAncestorContainer);
+}
 
 // Toggle text selection mode (for AI chat modal)
 function toggleAIChatSelectionMode() {
@@ -6480,12 +7231,14 @@ function handleTextSelection(e) {
             
             selectedText = selection.toString().trim();
             
-            // Don't apply custom highlight on desktop - use native browser selection
-            // Native selection already has yellow highlight via CSS ::selection
-            // Custom highlighting causes layout issues with extra spacing
-            
             // If selection mode is active from AI chat, show status indicator
             if (aiChatSelectionModeActive) {
+                currentAISelectedContextText = selectedText;
+                if (selectedRange && isRangeInsideReaderPage(selectedRange)) {
+                    highlightSelectedText(selectedRange);
+                    const activeSelection = window.getSelection();
+                    if (activeSelection) activeSelection.removeAllRanges();
+                }
                 updateAIChatSelectionStatus(selectedText);
             } else {
                 // Old behavior: show floating toolbar (kept for backwards compatibility)
@@ -6675,6 +7428,12 @@ function handleTextSelectionMobile(e) {
             
             // If selection mode is active from AI chat, show status indicator
             if (aiChatSelectionModeActive) {
+                currentAISelectedContextText = selectedText;
+                if (selectedRange && isRangeInsideReaderPage(selectedRange)) {
+                    highlightSelectedText(selectedRange);
+                    const activeSelection = window.getSelection();
+                    if (activeSelection) activeSelection.removeAllRanges();
+                }
                 updateAIChatSelectionStatus(selectedText);
             } else {
                 // Old behavior: show floating toolbar (kept for backwards compatibility)
@@ -7061,37 +7820,10 @@ function openAIHelpWithSelection() {
     // Format the question with saved text
     const question = `Help me understand this: "${textToUse}"`;
     console.log('[openAIHelpWithSelection] Question:', question);
-    
-    // Open AI Help modal and set the question
-    const modalElement = document.getElementById('aiHelpModal');
-    if (!aiHelpModalInstance) {
-        aiHelpModalInstance = new bootstrap.Modal(modalElement, {
-            backdrop: 'static',
-            keyboard: true
-        });
-        modalElement.addEventListener('hidden.bs.modal', function() {
-            disableAIChatTextSelection();
-            aiHelpModalInstance = null;
-            // Re-init always-on selection toolbar when modal closes
-            if (selectionToolbarAlwaysOn) {
-                initSelectionToolbarAlwaysOn();
-            }
-        }, { once: false });
-    }
-    aiHelpModalInstance.show();
-    
-    // Reset modal to default size when opening
-    const modalDialog2 = document.getElementById('aiHelpModalDialog');
-    if (modalDialog2) {
-        modalDialog2.style.width = '520px';
-        modalDialog2.style.height = '330px';
-    }
+    currentAISelectedContextText = textToUse;
+    currentAIContextScope = 'selection';
 
-    // Initialize drag and resize for the modal
-    setTimeout(() => {
-        initAIHelpModalDrag();
-        initAIHelpModalResize();
-    }, 300);
+    showAIHelp();
 
     // Set the question in the input after a short delay
     setTimeout(() => {
@@ -7112,7 +7844,7 @@ function openAIHelpWithSelection() {
     selectedText = '';
 }
 
-// Handle chat input keyboard: Enter sends/copies; letters, punctuation, Backspace, Delete, arrows all handled manually.
+// Handle chat input keyboard: Enter sends; letters, punctuation, Backspace, Delete, arrows all handled manually.
 // Use capture phase so we run first; handle everything so nothing else can block typing.
 function handleChatInputKeydown(e) {
     if (!e.target || e.target.id !== 'ai-question') return;
@@ -7120,14 +7852,8 @@ function handleChatInputKeydown(e) {
     var start = el.selectionStart;
     var end = el.selectionEnd;
     var val = el.value || '';
-    // Enter: send message or copy selected text
+    // Enter: send message
     if (e.key === 'Enter') {
-        if (aiChatSelectionModeActive && !e.shiftKey && selectedText) {
-            e.preventDefault();
-            e.stopPropagation();
-            copySelectedTextToChatInput();
-            return;
-        }
         if (!e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
@@ -7248,18 +7974,24 @@ function copySelectedTextToChatInput() {
 function updateAIChatSelectionStatus(text) {
     const statusDiv = document.getElementById('ai-chat-selection-status');
     const statusText = document.getElementById('ai-chat-selection-status-text');
+    const addButton = document.getElementById('ai-chat-add-selection-btn');
     
     if (statusDiv && statusText) {
         if (text && text.trim().length > 0) {
             const previewText = text.length > 60 ? text.substring(0, 60) + '...' : text;
-            statusText.textContent = `Selected: "${previewText}" - Press Enter to add to chat`;
-            statusDiv.style.display = 'block';
+            statusText.textContent = `Selected: "${previewText}"`;
+            statusDiv.style.display = 'flex';
             statusDiv.classList.remove('text-muted');
             statusDiv.classList.add('text-success', 'fw-bold');
+            if (addButton) addButton.disabled = false;
+            currentAISelectedContextText = text.trim();
+            currentAIContextScope = 'selection';
         } else {
             statusDiv.style.display = 'none';
+            if (addButton) addButton.disabled = true;
         }
     }
+    updateAIContextBar();
 }
 
 // Placeholder for services not yet implemented (e.g. Ah Ah Moments)
@@ -7788,6 +8520,12 @@ function initReaderWorkspaceLayout() {
     });
 
     renderLayout();
+}
+
+function hideReaderPanelFromHeader(side) {
+    const buttonId = side === 'left' ? 'toggle-sections-panel' : 'toggle-services-panel';
+    const button = document.getElementById(buttonId);
+    if (button) button.click();
 }
 
 // Load first page on page load
