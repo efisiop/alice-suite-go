@@ -80,6 +80,9 @@ func InitDB(dbPath, databaseURL string) error {
 		if err := ensureAhAhMomentsTable(); err != nil {
 			return fmt.Errorf("ensure ah_ah_moments table: %w", err)
 		}
+		if err := ensureReaderPreferencesTable(); err != nil {
+			return fmt.Errorf("ensure reader_preferences table: %w", err)
+		}
 	}
 
 	return nil
@@ -186,6 +189,3 @@ func RunMigrations(migrationsPath string) error {
 	// For now, return nil
 	return nil
 }
-
-
-

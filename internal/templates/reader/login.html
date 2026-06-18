@@ -5,7 +5,7 @@
     <a class="nav-link" href="/">Home</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/register">Register</a>
+    <a class="nav-link" href="/reader/register">Register</a>
 </li>
 {{end}}
 
@@ -41,7 +41,7 @@
                 <div id="login-result"></div>
 
                 <div class="mt-3 text-center">
-                    <a href="/register">Don't have an account? Register</a>
+                    <a href="/reader/register">Don't have an account? Register</a>
                 </div>
             </div>
         </div>
@@ -60,6 +60,9 @@ function handleLoginResponse(event) {
             // Store token in sessionStorage (per-tab isolation)
             try {
                 sessionStorage.setItem('auth_token', token);
+                if (response.user && response.user.user_metadata && response.user.user_metadata.preferred_language_code) {
+                    sessionStorage.setItem('alice_reader_language', response.user.user_metadata.preferred_language_code);
+                }
                 console.log('Token stored in sessionStorage');
             } catch (e) {
                 console.error('Failed to store token in sessionStorage:', e);
@@ -137,6 +140,9 @@ document.querySelector('form').addEventListener('submit', function(e) {
         if (ok && data.access_token) {
             // Store token in sessionStorage (per-tab isolation)
             sessionStorage.setItem('auth_token', data.access_token);
+            if (data.user && data.user.user_metadata && data.user.user_metadata.preferred_language_code) {
+                sessionStorage.setItem('alice_reader_language', data.user.user_metadata.preferred_language_code);
+            }
             // Sync to cookie for server-side page navigation
             const expires = new Date();
             expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000)); // 24 hours

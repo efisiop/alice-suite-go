@@ -97,6 +97,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/reader/prompt-accept", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptAccept)))
 	mux.Handle("/api/reader/quiz", middleware.RequireAuth(http.HandlerFunc(HandleReaderQuiz)))
 	mux.Handle("/api/reader/ah-ah-moments", middleware.RequireAuth(http.HandlerFunc(HandleReaderAhAhMoments)))
+	mux.Handle("/api/reader/preferences", middleware.RequireAuth(http.HandlerFunc(HandleReaderPreferences)))
 	mux.Handle("/api/consultant/prompt-retrigger", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantPromptRetrigger)))
 
 	// Help requests API
@@ -884,14 +885,14 @@ func HandleReaderAhAhMoments(w http.ResponseWriter, r *http.Request) {
 		out := make([]map[string]interface{}, 0, len(list))
 		for _, m := range list {
 			item := map[string]interface{}{
-				"id":                 m.ID,
-				"content":            m.Content,
+				"id":                m.ID,
+				"content":           m.Content,
 				"page_number":       m.PageNumber,
 				"section_number":    m.SectionNumber,
-				"shared":             m.Shared,
-				"created_at":         m.CreatedAt,
-				"author_first_name":  m.AuthorFirstName,
-				"is_mine":            m.UserID == userID,
+				"shared":            m.Shared,
+				"created_at":        m.CreatedAt,
+				"author_first_name": m.AuthorFirstName,
+				"is_mine":           m.UserID == userID,
 			}
 			out = append(out, item)
 		}
@@ -1097,7 +1098,14 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 		interactionType = services.InteractionChat
 	}
 
-	interaction, err := aiService.AskAI(userID, req.BookID, interactionType, req.Question, req.SectionID, req.Context)
+	preferredLanguageCode := database.DefaultReaderLanguageCode
+	if pref, err := database.GetReaderPreference(userID); err == nil && pref != nil {
+		preferredLanguageCode = pref.PreferredLanguageCode
+	} else if err != nil {
+		log.Printf("Warning: failed to load reader preference for %s: %v", userID, err)
+	}
+
+	interaction, err := aiService.AskAI(userID, req.BookID, interactionType, req.Question, req.SectionID, req.Context, preferredLanguageCode)
 	if err != nil {
 		// Log the actual error for debugging
 		log.Printf("Error in HandleAskAI: %v", err)
@@ -1114,6 +1122,55 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(interaction)
+}
+
+// HandleReaderPreferences handles GET/PATCH /api/reader/preferences.
+func HandleReaderPreferences(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header required", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Authentication failed", http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		pref, err := database.GetReaderPreference(claims.UserID)
+		if err != nil {
+			http.Error(w, "Failed to load preferences", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(pref)
+	case http.MethodPatch, http.MethodPut:
+		var req struct {
+			PreferredLanguageCode string `json:"preferred_language_code"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		pref, err := database.UpsertReaderPreference(claims.UserID, req.PreferredLanguageCode)
+		if err != nil {
+			http.Error(w, "Failed to save preferences", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(pref)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // HandleGenerateImage handles POST /api/ai/generate-image

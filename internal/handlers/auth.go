@@ -143,6 +143,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Supabase-compatible response format
+	preferredLanguageCode := database.DefaultReaderLanguageCode
+	if user.Role == "reader" {
+		if pref, err := database.GetReaderPreference(user.ID); err == nil && pref != nil {
+			preferredLanguageCode = pref.PreferredLanguageCode
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token": token,
@@ -155,8 +161,9 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"aud":   "authenticated",
 			"role":  "authenticated",
 			"user_metadata": map[string]string{
-				"first_name": user.FirstName,
-				"last_name":  user.LastName,
+				"first_name":              user.FirstName,
+				"last_name":               user.LastName,
+				"preferred_language_code": preferredLanguageCode,
 			},
 		},
 	})
@@ -170,10 +177,11 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		Email                 string `json:"email"`
+		Password              string `json:"password"`
+		FirstName             string `json:"first_name"`
+		LastName              string `json:"last_name"`
+		PreferredLanguageCode string `json:"preferred_language_code"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -181,7 +189,7 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName)
+	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName, req.PreferredLanguageCode)
 	if err != nil {
 		if err == auth.ErrUserExists {
 			http.Error(w, "User already exists", http.StatusConflict)
@@ -195,10 +203,11 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": map[string]interface{}{
-			"id":         user.ID,
-			"email":      user.Email,
-			"first_name": user.FirstName,
-			"last_name":  user.LastName,
+			"id":                      user.ID,
+			"email":                   user.Email,
+			"first_name":              user.FirstName,
+			"last_name":               user.LastName,
+			"preferred_language_code": database.NormalizeReaderLanguageCode(req.PreferredLanguageCode),
 		},
 	})
 }
@@ -230,6 +239,12 @@ func HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Supabase-compatible response format
+	preferredLanguageCode := database.DefaultReaderLanguageCode
+	if user.Role == "reader" {
+		if pref, err := database.GetReaderPreference(user.ID); err == nil && pref != nil {
+			preferredLanguageCode = pref.PreferredLanguageCode
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":    user.ID,
@@ -237,8 +252,9 @@ func HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		"aud":   "authenticated",
 		"role":  "authenticated",
 		"user_metadata": map[string]string{
-			"first_name": user.FirstName,
-			"last_name":  user.LastName,
+			"first_name":              user.FirstName,
+			"last_name":               user.LastName,
+			"preferred_language_code": preferredLanguageCode,
 		},
 	})
 }

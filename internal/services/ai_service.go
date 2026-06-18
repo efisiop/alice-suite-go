@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	ErrAIServiceUnavailable = errors.New("AI service unavailable")
+	ErrAIServiceUnavailable   = errors.New("AI service unavailable")
 	ErrInvalidInteractionType = errors.New("invalid interaction type")
 )
 
@@ -33,11 +33,11 @@ const (
 
 // AIService handles AI interactions
 type AIService struct {
-	provider     AIProvider
-	geminiKey    string
-	moonshotKey  string
-	moonshotURL  string
-	client       *http.Client
+	provider    AIProvider
+	geminiKey   string
+	moonshotKey string
+	moonshotURL string
+	client      *http.Client
 }
 
 // NewAIService creates a new AI service with support for multiple providers
@@ -48,7 +48,7 @@ func NewAIService() *AIService {
 		providerStr = "auto"
 	}
 	provider := AIProvider(providerStr)
-	
+
 	// Get API keys
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 	moonshotKey := os.Getenv("MOONSHOT_API_KEY")
@@ -77,7 +77,7 @@ func NewAIService() *AIService {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
-	
+
 	// For Moonshot TLS certificate issues, we can skip verification if needed
 	// This is a workaround for the "x509: negative serial number" error
 	// Only use this if Moonshot's certificate has issues
@@ -104,33 +104,33 @@ func NewAIService() *AIService {
 type InteractionType string
 
 const (
-	InteractionExplain            InteractionType = "explain"
-	InteractionQuiz               InteractionType = "quiz"
-	InteractionSimplify           InteractionType = "simplify"
-	InteractionDefinition         InteractionType = "definition"
-	InteractionChat               InteractionType = "chat"
+	InteractionExplain               InteractionType = "explain"
+	InteractionQuiz                  InteractionType = "quiz"
+	InteractionSimplify              InteractionType = "simplify"
+	InteractionDefinition            InteractionType = "definition"
+	InteractionChat                  InteractionType = "chat"
 	InteractionFindMisunderstoodWord InteractionType = "find_misunderstood_word"
-	InteractionVisualExample      InteractionType = "visual_example"
+	InteractionVisualExample         InteractionType = "visual_example"
 )
 
 // AskAI sends a question to the AI and returns a response
-func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType, question string, sectionID *string, context string) (*models.AIInteraction, error) {
+func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType, question string, sectionID *string, context string, outputLanguageCode string) (*models.AIInteraction, error) {
 	// Validate interaction type
 	validTypes := map[InteractionType]bool{
-		InteractionExplain:            true,
-		InteractionQuiz:               true,
-		InteractionSimplify:           true,
-		InteractionDefinition:         true,
-		InteractionChat:               true,
+		InteractionExplain:               true,
+		InteractionQuiz:                  true,
+		InteractionSimplify:              true,
+		InteractionDefinition:            true,
+		InteractionChat:                  true,
 		InteractionFindMisunderstoodWord: true,
-		InteractionVisualExample:      true,
+		InteractionVisualExample:         true,
 	}
 	if !validTypes[interactionType] {
 		return nil, ErrInvalidInteractionType
 	}
 
 	// Build prompt based on interaction type
-	prompt := s.buildPrompt(interactionType, question, context)
+	prompt := s.buildPrompt(interactionType, question, context, outputLanguageCode)
 
 	// Call AI API (with automatic fallback if using "auto" provider)
 	response, providerUsed, err := s.callAI(prompt)
@@ -140,15 +140,15 @@ func (s *AIService) AskAI(userID, bookID string, interactionType InteractionType
 
 	// Create interaction record
 	interaction := &models.AIInteraction{
-		UserID:         userID,
-		BookID:         bookID,
-		SectionID:      sectionID,
+		UserID:          userID,
+		BookID:          bookID,
+		SectionID:       sectionID,
 		InteractionType: string(interactionType),
-		Question:       question,
-		Prompt:         prompt,
-		Response:       response,
-		Context:        context,
-		Provider:       string(providerUsed),
+		Question:        question,
+		Prompt:          prompt,
+		Response:        response,
+		Context:         context,
+		Provider:        string(providerUsed),
 	}
 
 	// Save to database
@@ -196,7 +196,8 @@ Rules:
 }
 
 // buildPrompt builds a prompt based on interaction type
-func (s *AIService) buildPrompt(interactionType InteractionType, question, context string) string {
+func (s *AIService) buildPrompt(interactionType InteractionType, question, context, outputLanguageCode string) string {
+	outputLanguageName := database.ReaderLanguageName(outputLanguageCode)
 	basePrompt := "You are a helpful reading assistant for Alice's Adventures in Wonderland. "
 	basePrompt += "This is a physical book companion app - users read from their physical book and use this app for assistance.\n\n"
 	basePrompt += "IMPORTANT RULES:\n"
@@ -204,6 +205,10 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 	basePrompt += "2. Focus your answer ONLY on the specific text or question the user highlighted/asked about.\n"
 	basePrompt += "3. Use the surrounding context to understand the situation, but do NOT expand your answer to cover the entire context.\n"
 	basePrompt += "4. Keep your response concise and directly relevant to what was asked.\n\n"
+	basePrompt += "LANGUAGE RULES:\n"
+	basePrompt += fmt.Sprintf("1. Write your answer in %s.\n", outputLanguageName)
+	basePrompt += "2. Keep book titles, character names, and quoted source text in the original language unless the user explicitly asks for translation.\n"
+	basePrompt += "3. If the user asks about an English phrase, explain it in the selected help language while preserving the original phrase.\n\n"
 
 	switch interactionType {
 	case InteractionExplain:
@@ -249,9 +254,9 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 		visualPrompt += "- Keep the image generation prompt clear and suitable for all audiences\n"
 		visualPrompt += "- Focus on clarity and educational value\n"
 		visualPrompt += "- The image should be simple, light, and educational (like a pencil drawing)\n\n"
-		visualPrompt += "IMPORTANT: Your response should be ONLY a concise image generation prompt (1-2 sentences) that describes what the visual should look like. "+
-			"This prompt will be used to generate an actual image. Make it specific enough for image generation but appropriate for all ages. "+
-			"If the topic requires discretion, provide a simplified, educational version that maintains appropriateness for all ages.\n\n"+
+		visualPrompt += "IMPORTANT: Your response should be ONLY a concise image generation prompt (1-2 sentences) that describes what the visual should look like. " +
+			"This prompt will be used to generate an actual image. Make it specific enough for image generation but appropriate for all ages. " +
+			"If the topic requires discretion, provide a simplified, educational version that maintains appropriateness for all ages.\n\n" +
 			"Example format: \"A simple pencil sketch of [educational description], suitable for all ages, educational illustration style\""
 		return visualPrompt
 	default:
@@ -264,9 +269,9 @@ func (s *AIService) buildPrompt(interactionType InteractionType, question, conte
 func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 	// Determine which provider(s) to try based on configured keys
 	var providers []AIProvider
-	
+
 	switch s.provider {
-		case ProviderGemini:
+	case ProviderGemini:
 		if s.geminiKey != "" {
 			providers = []AIProvider{ProviderGemini}
 		} else {
@@ -308,7 +313,7 @@ func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 	for _, provider := range providers {
 		var response string
 		var err error
-		
+
 		switch provider {
 		case ProviderGemini:
 			log.Printf("Trying Gemini API...")
@@ -325,7 +330,7 @@ func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 		default:
 			continue
 		}
-		
+
 		if err == nil && response != "" {
 			log.Printf("AI API call successful using %s", provider)
 			return response, provider, nil
@@ -337,7 +342,7 @@ func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 	if lastErr != nil {
 		return "", "", fmt.Errorf("all AI providers failed. Last error: %w", lastErr)
 	}
-	
+
 	return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
 }
 
@@ -356,12 +361,12 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 	// Try multiple model names in order (fallback if one doesn't work)
 	// Start with models from the API if available, then fallback to known models
 	modelNames := []string{}
-	
+
 	// Add available models first
 	for _, model := range availableModels {
 		modelNames = append(modelNames, model)
 	}
-	
+
 	// Add fallback models
 	fallbackModels := []string{
 		"gemini-1.5-flash-001",
@@ -396,7 +401,7 @@ func (s *AIService) callGemini(prompt string) (string, error) {
 			},
 		},
 		"generationConfig": map[string]interface{}{
-			"temperature": 0.7,
+			"temperature":     0.7,
 			"maxOutputTokens": 4096, // Increased from 1000 to allow complete responses
 		},
 	}
@@ -460,7 +465,7 @@ func (s *AIService) listGeminiModels() ([]string, error) {
 	}
 
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models?key=%s", s.geminiKey)
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -483,7 +488,7 @@ func (s *AIService) listGeminiModels() ([]string, error) {
 
 	var modelsResponse struct {
 		Models []struct {
-			Name         string   `json:"name"`
+			Name             string   `json:"name"`
 			SupportedMethods []string `json:"supportedGenerationMethods"`
 		} `json:"models"`
 	}
@@ -503,7 +508,7 @@ func (s *AIService) listGeminiModels() ([]string, error) {
 				break
 			}
 		}
-		
+
 		if supportsGenerateContent {
 			// Extract just the model name (format is "models/gemini-1.5-pro")
 			parts := strings.Split(model.Name, "/")
@@ -548,14 +553,14 @@ func (s *AIService) parseGeminiResponse(body []byte) (string, error) {
 	}
 
 	responseText := geminiResponse.Candidates[0].Content.Parts[0].Text
-	
+
 	// Check if response was truncated due to token limit
 	if geminiResponse.Candidates[0].FinishReason == "MAX_TOKENS" {
 		log.Printf("Warning: Gemini response may be incomplete (MAX_TOKENS finish reason)")
 		// Optionally append a note or try to extend the response
 		// For now, just log it - the response should still be useful
 	}
-	
+
 	return responseText, nil
 }
 
@@ -639,21 +644,21 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 	}
 
 	responseText := moonshotResponse.Choices[0].Message.Content
-	
+
 	// Check if response was truncated due to token limit
 	if moonshotResponse.Choices[0].FinishReason == "length" {
 		log.Printf("Warning: Moonshot response may be incomplete (length finish reason)")
 		// The response should still be useful, just log it
 	}
-	
+
 	return responseText, nil
 }
 
 // QuizQuestion represents one multiple-choice question for the "Test your knowledge" quiz
 type QuizQuestion struct {
-	Question    string   `json:"question"`
-	Options     []string `json:"options"`
-	CorrectIndex int     `json:"correct_index"` // 0-based index into Options
+	Question     string   `json:"question"`
+	Options      []string `json:"options"`
+	CorrectIndex int      `json:"correct_index"` // 0-based index into Options
 }
 
 // GenerateQuizFromPassage asks the AI to generate 3-5 multiple-choice comprehension questions from the given passage.
@@ -774,6 +779,3 @@ func (s *AIService) GetProviderStatus() map[string]interface{} {
 
 	return status
 }
-
-
-

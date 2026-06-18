@@ -7,6 +7,97 @@ Use this header format for every new entry:
 
 ---
 
+## [2026-06-19] feature | Italian reader interface demo
+
+### what changed
+
+- Added a Reader UI translation layer for Italian that uses the saved reader language preference.
+- Translated the main reader navigation, dashboard, My Page/account settings, and visible reading/AI/dictionary controls for the demo.
+- Kept the translator away from book/page text containers so the physical book source text is not rewritten.
+- Added preferred language to login responses and browser session storage so the UI can switch after login.
+
+### why
+
+- User confirmed AI output was Italian but the overall Reader interface still looked English.
+
+### files touched
+
+- `internal/static/js/app.js`
+- `internal/handlers/auth.go`
+- `internal/templates/reader/login.html`
+- `internal/templates/reader/my-page.html`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `node --check internal/static/js/app.js` passed.
+
+## [2026-06-19] feature | reader help language preference
+
+### what changed
+
+- Added `reader_preferences` storage for a reader's selected help/output language.
+- Added a `Help Language` selector during reader registration.
+- Added Account Settings on My Page so readers can change their help language after signup.
+- Added `/api/reader/preferences` for authenticated preference load/save.
+- Updated AI assistant prompt construction so answers use the saved help language while preserving book quotes, titles, and character names unless translation is requested.
+
+### why
+
+- User requested language selection at signup and under account settings, while keeping a clear boundary between the physical book edition language and the app's help/output language.
+
+### files touched
+
+- `migrations/017_reader_preferences.sql`
+- `internal/models/models.go`
+- `internal/database/database.go`
+- `internal/database/reader_preferences.go`
+- `pkg/auth/auth.go`
+- `internal/handlers/auth.go`
+- `internal/handlers/helpers.go`
+- `internal/handlers/api.go`
+- `internal/services/ai_service.go`
+- `internal/templates/reader/register.html`
+- `internal/templates/reader/my-page.html`
+- `archive/old-code/handlers-stub.go`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `go build ./cmd/server` passed.
+- `go build ./cmd/migrate` passed.
+- `go test ./internal/database ./pkg/auth ./cmd/server ./cmd/migrate` passed.
+- `go test ./...` was run; it is still blocked by existing failures in `internal/services/book_service_test.go:300`, `internal/handlers/api_test.go`, and `internal/middleware/auth_test.go`.
+
+## [2026-06-17] feature | dictionary picture action
+
+### what changed
+
+- Added a `Picture` action to the word-click dictionary popup.
+- Added a picture panel that first tries a fast Wikipedia summary thumbnail for the looked-up term.
+- Added fallback generation through Alice's existing `/api/ai/generate-image` and `/api/ai/image-status` endpoints.
+- Added evaluator markers for the picture button, Wikipedia lookup, generated fallback, and picture panel container.
+- Marked Reader fix list item `R-021` done.
+
+### why
+
+- User requested a graphical representation of the looked-up word or definition inside the dictionary popup.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
 ## [2026-06-06] fix | Restore reader auth-page navbar format
 
 ### what changed
@@ -31,6 +122,31 @@ Use this header format for every new entry:
 
 - `go build -o bin/server ./cmd/server` succeeded.
 - Restarted local server and confirmed `/reader/register` renders `Home`, `Login`, and `Create Account`.
+
+## [2026-06-16] fix | tighten dictionary derivation and examples
+
+### what changed
+
+- Added a concise derivation cleanup/summarizer before showing Wiktionary etymology in the dictionary popup.
+- Replaced generated example fallbacks that framed the looked-up term as a vocabulary word with natural usage-context sentences.
+- Added evaluator markers for the derivation summarizer and regression checks for `I used...` / `The word...` example phrasing.
+- Marked Reader fix list item `R-020` done.
+
+### why
+
+- User requested derivation show only the main origin, not a long history tree, and examples should be direct usage sentences instead of repeated word-awareness phrases.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
 
 ## [2026-06-03] docs | Hermes handover briefing (VPS) with required skills
 

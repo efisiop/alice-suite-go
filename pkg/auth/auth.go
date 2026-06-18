@@ -29,7 +29,7 @@ func VerifyPassword(hashedPassword, password string) error {
 }
 
 // Register creates a new user account
-func Register(email, password, firstName, lastName string) (*models.User, error) {
+func Register(email, password, firstName, lastName, preferredLanguageCode string) (*models.User, error) {
 	// Check if user already exists
 	existing, err := database.GetUserByEmail(email)
 	if err != nil {
@@ -57,6 +57,9 @@ func Register(email, password, firstName, lastName string) (*models.User, error)
 
 	err = database.CreateUser(user)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := database.UpsertReaderPreference(user.ID, preferredLanguageCode); err != nil {
 		return nil, err
 	}
 
@@ -128,6 +131,3 @@ func GetUserFromToken(token string) (*models.User, error) {
 
 	return user, nil
 }
-
-
-

@@ -15,6 +15,14 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+// ReaderPreference stores reader-specific app preferences.
+type ReaderPreference struct {
+	UserID                string    `json:"user_id"`
+	PreferredLanguageCode string    `json:"preferred_language_code"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
 // Book represents a book in the system
 type Book struct {
 	ID          string    `json:"id"`
@@ -190,14 +198,14 @@ type ReadingStats struct {
 
 // AhAhMoment represents a reader's "ah ah moment" (success or realization) that can be shared with other readers
 type AhAhMoment struct {
-	ID           string     `json:"id"`
-	UserID       string     `json:"user_id"`
-	BookID       string     `json:"book_id"`
-	Content      string     `json:"content"`
-	PageNumber   *int       `json:"page_number,omitempty"`
+	ID            string    `json:"id"`
+	UserID        string    `json:"user_id"`
+	BookID        string    `json:"book_id"`
+	Content       string    `json:"content"`
+	PageNumber    *int      `json:"page_number,omitempty"`
 	SectionNumber *int      `json:"section_number,omitempty"`
-	Shared       bool       `json:"shared"` // if true, visible to other readers in the feed
-	CreatedAt    time.Time  `json:"created_at"`
+	Shared        bool      `json:"shared"` // if true, visible to other readers in the feed
+	CreatedAt     time.Time `json:"created_at"`
 	// Display only (joined): first name of author for feed
 	AuthorFirstName string `json:"author_first_name,omitempty"`
 }

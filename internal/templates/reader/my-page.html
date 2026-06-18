@@ -90,6 +90,42 @@
             </div>
         </div>
     </div>
+
+    <div class="row mt-3">
+        <div class="col-lg-6">
+            <div class="card section-card">
+                <div class="card-header section-header" data-bs-toggle="collapse" data-bs-target="#accountSettingsContent" aria-expanded="true">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-gear me-2"></i>
+                            Account Settings
+                        </span>
+                        <i class="bi bi-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div class="collapse show" id="accountSettingsContent">
+                    <div class="card-body section-body">
+                        <form id="reader-preferences-form">
+                            <div class="mb-3">
+                                <label for="account-preferred-language" class="form-label">Help Language</label>
+                                <select class="form-select" id="account-preferred-language" name="preferred_language_code">
+                                    <option value="en">English</option>
+                                    <option value="it">Italian</option>
+                                    <option value="da">Danish</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="pt">Portuguese</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+                            <span id="reader-preferences-status" class="small ms-2 text-muted" aria-live="polite"></span>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Help Request Modal -->
@@ -292,11 +328,100 @@ document.addEventListener('DOMContentLoaded', function() {
     loadMyHelpRequests();
     loadMyMessages();
     loadMyProgress();
+    loadReaderPreferences();
+
+    const preferencesForm = document.getElementById('reader-preferences-form');
+    if (preferencesForm) {
+        preferencesForm.addEventListener('submit', saveReaderPreferences);
+    }
     
     // Auto-refresh every 30 seconds
     setInterval(loadMyHelpRequests, 30000);
     setInterval(loadMyMessages, 30000);
 });
+
+function loadReaderPreferences() {
+    const token = getAuthToken();
+    if (!token) return;
+
+    fetch('/api/reader/preferences', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(preferences => {
+        const languageSelect = document.getElementById('account-preferred-language');
+        if (languageSelect && preferences.preferred_language_code) {
+            languageSelect.value = preferences.preferred_language_code;
+        }
+    })
+    .catch(err => {
+        console.error('Error loading reader preferences:', err);
+        const status = document.getElementById('reader-preferences-status');
+        if (status) {
+            status.textContent = 'Could not load settings';
+            status.className = 'small ms-2 text-danger';
+        }
+    });
+}
+
+function saveReaderPreferences(e) {
+    e.preventDefault();
+    const token = getAuthToken();
+    if (!token) return;
+
+    const languageSelect = document.getElementById('account-preferred-language');
+    const status = document.getElementById('reader-preferences-status');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (!languageSelect) return;
+
+    if (status) {
+        status.textContent = 'Saving...';
+        status.className = 'small ms-2 text-muted';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
+
+    fetch('/api/reader/preferences', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            preferred_language_code: languageSelect.value
+        })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(preferences => {
+        languageSelect.value = preferences.preferred_language_code || languageSelect.value;
+        if (window.setAliceReaderLanguagePreference) {
+            window.setAliceReaderLanguagePreference(languageSelect.value);
+        }
+        if (status) {
+            status.textContent = 'Saved';
+            status.className = 'small ms-2 text-success';
+        }
+    })
+    .catch(err => {
+        console.error('Error saving reader preferences:', err);
+        if (status) {
+            status.textContent = 'Save failed';
+            status.className = 'small ms-2 text-danger';
+        }
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+    });
+}
 
 // Load and display reader's help requests
 function loadMyHelpRequests() {

@@ -57,10 +57,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		Email                 string `json:"email"`
+		Password              string `json:"password"`
+		FirstName             string `json:"first_name"`
+		LastName              string `json:"last_name"`
+		PreferredLanguageCode string `json:"preferred_language_code"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -68,7 +69,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName)
+	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName, req.PreferredLanguageCode)
 	if err != nil {
 		if err == auth.ErrUserExists {
 			http.Error(w, "User already exists", http.StatusConflict)
@@ -142,4 +143,3 @@ func GetInteractions(w http.ResponseWriter, r *http.Request) {
 func TrackEvent(w http.ResponseWriter, r *http.Request) {
 	HandleTrackActivity(w, r) // Reuse existing implementation
 }
-

@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	bookService      = services.NewBookService()
+	bookService       = services.NewBookService()
 	dictionaryService = services.NewDictionaryService()
-	aiService        = services.NewAIService()
-	helpService      = services.NewHelpService()
+	aiService         = services.NewAIService()
+	helpService       = services.NewHelpService()
 )
 
 // HealthCheck returns API health status
@@ -85,10 +85,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		Email                 string `json:"email"`
+		Password              string `json:"password"`
+		FirstName             string `json:"first_name"`
+		LastName              string `json:"last_name"`
+		PreferredLanguageCode string `json:"preferred_language_code"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,7 +97,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName)
+	user, err := auth.Register(req.Email, req.Password, req.FirstName, req.LastName, req.PreferredLanguageCode)
 	if err != nil {
 		if err == auth.ErrUserExists {
 			http.Error(w, "User already exists", http.StatusConflict)
@@ -194,7 +195,7 @@ func GetPage(w http.ResponseWriter, r *http.Request) {
 
 	bookID := r.URL.Query().Get("book_id")
 	pageNumberStr := r.URL.Query().Get("page_number")
-	
+
 	if bookID == "" || pageNumberStr == "" {
 		http.Error(w, "book_id and page_number parameters required", http.StatusBadRequest)
 		return
@@ -284,12 +285,12 @@ func AskAI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		UserID         string  `json:"user_id"`
-		BookID         string  `json:"book_id"`
-		InteractionType string `json:"interaction_type"`
-		Question       string  `json:"question"`
-		SectionID      *string `json:"section_id"`
-		Context        string  `json:"context"`
+		UserID          string  `json:"user_id"`
+		BookID          string  `json:"book_id"`
+		InteractionType string  `json:"interaction_type"`
+		Question        string  `json:"question"`
+		SectionID       *string `json:"section_id"`
+		Context         string  `json:"context"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -302,7 +303,7 @@ func AskAI(w http.ResponseWriter, r *http.Request) {
 		interactionType = services.InteractionChat
 	}
 
-	interaction, err := aiService.AskAI(req.UserID, req.BookID, interactionType, req.Question, req.SectionID, req.Context)
+	interaction, err := aiService.AskAI(req.UserID, req.BookID, interactionType, req.Question, req.SectionID, req.Context, database.DefaultReaderLanguageCode)
 	if err != nil {
 		if err == services.ErrAIServiceUnavailable {
 			http.Error(w, "AI service unavailable", http.StatusServiceUnavailable)

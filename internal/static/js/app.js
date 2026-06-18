@@ -248,6 +248,264 @@ function apiRequest(url, options = {}) {
     });
 }
 
+// Reader interface localization. This is intentionally UI-only: it skips the
+// book/page text containers so the physical book source stays unchanged.
+const aliceReaderTranslations = {
+    it: {
+        text: {
+            'Alice in Wonderland': 'Alice nel Paese delle Meraviglie',
+            'Home': 'Home',
+            'Login': 'Accedi',
+            'Register': 'Registrati',
+            'Create Account': 'Crea account',
+            'Email': 'Email',
+            'Password': 'Password',
+            'First Name': 'Nome',
+            'Last Name': 'Cognome',
+            'Help Language': 'Lingua di aiuto',
+            'English': 'Inglese',
+            'Italian': 'Italiano',
+            'Danish': 'Danese',
+            'Spanish': 'Spagnolo',
+            'French': 'Francese',
+            'German': 'Tedesco',
+            'Portuguese': 'Portoghese',
+            'Already have an account? Login': 'Hai gia un account? Accedi',
+            "Don't have an account? Register": 'Non hai un account? Registrati',
+            'Logging in...': 'Accesso in corso...',
+            'Login failed. Please try again.': 'Accesso non riuscito. Riprova.',
+            'Invalid email or password': 'Email o password non validi',
+            'Reading': 'Lettura',
+            'My Page': 'La mia pagina',
+            'Logout': 'Esci',
+            'Reader Dashboard': 'Dashboard lettore',
+            'Start Reading': 'Inizia a leggere',
+            'Pick up where you left off.': 'Riprendi da dove avevi lasciato.',
+            'Open Book': 'Apri libro',
+            'Reading Progress': 'Progresso di lettura',
+            'See your progress and stats.': 'Vedi i tuoi progressi e le statistiche.',
+            'View Stats': 'Vedi statistiche',
+            'View your help requests and activity.': 'Vedi richieste di aiuto e attivita.',
+            'Go to My Page': 'Vai alla mia pagina',
+            'Recent Activity': 'Attivita recente',
+            'Loading activity...': 'Caricamento attivita...',
+            'No recent activity yet - start reading to see it here.': 'Nessuna attivita recente: inizia a leggere per vederla qui.',
+            'No recent activity yet — start reading to see it here.': 'Nessuna attivita recente: inizia a leggere per vederla qui.',
+            'My Help Requests': 'Le mie richieste di aiuto',
+            'My Messages': 'I miei messaggi',
+            'My Progress': 'I miei progressi',
+            'Account Settings': 'Impostazioni account',
+            'Save Settings': 'Salva impostazioni',
+            'Saving...': 'Salvataggio...',
+            'Saved': 'Salvato',
+            'Could not load settings': 'Impossibile caricare le impostazioni',
+            'Save failed': 'Salvataggio non riuscito',
+            'Loading...': 'Caricamento...',
+            'Request Help': 'Richiedi aiuto',
+            'What do you need help with?': 'Di cosa hai bisogno?',
+            'Submit Request': 'Invia richiesta',
+            'No help requests yet': 'Nessuna richiesta di aiuto',
+            'Pending': 'In attesa',
+            'Assigned': 'Assegnata',
+            'Resolved': 'Risolta',
+            'No messages yet': 'Nessun messaggio',
+            'Consultant responses will appear here': 'Le risposte del consulente appariranno qui',
+            'Days Active': 'Giorni attivi',
+            'Word Lookups': 'Parole cercate',
+            'Total Interactions': 'Interazioni totali',
+            'Chapters Progress': 'Progresso capitoli',
+            'Start reading to track progress': 'Inizia a leggere per tracciare i progressi',
+            'Reading Statistics': 'Statistiche di lettura',
+            'Pages Read': 'Pagine lette',
+            'Reading Time': 'Tempo di lettura',
+            'Words Looked Up': 'Parole cercate',
+            'Loading progress data...': 'Caricamento dati progresso...',
+            'Verify Book Code': 'Verifica codice libro',
+            'Enter your book verification code to get started reading.': 'Inserisci il codice di verifica del libro per iniziare a leggere.',
+            'Verification Code': 'Codice di verifica',
+            'Verify': 'Verifica',
+            'Sections': 'Sezioni',
+            "Select the section you're reading": 'Seleziona la sezione che stai leggendo',
+            'Loading sections...': 'Caricamento sezioni...',
+            'Page': 'Pagina',
+            ' - Section ': ' - Sezione ',
+            'Section': 'Sezione',
+            'Jump to table of contents': 'Vai all indice',
+            'Services': 'Servizi',
+            'AI Help': 'Aiuto AI',
+            'Human Consultant': 'Consulente umano',
+            'Dictionary': 'Dizionario',
+            'Test your knowledge': 'Verifica la comprensione',
+            'Info Center': 'Centro informazioni',
+            'Ah Ah Moments': 'Momenti ah ah',
+            'Lectures in town': 'Conferenze in citta',
+            'Publisher connection': 'Contatto editore',
+            'Go to Page': 'Vai a pagina',
+            'Point camera at page text to find your location': 'Punta la fotocamera sul testo della pagina per trovare la posizione',
+            'Hide sections': 'Nascondi sezioni',
+            'Hide services': 'Nascondi servizi',
+            'Show sections': 'Mostra sezioni',
+            'Show services': 'Mostra servizi',
+            'Look up word': 'Cerca parola',
+            'Look Up': 'Cerca',
+            'Enter word': 'Inserisci parola',
+            'Loading definition...': 'Caricamento definizione...',
+            'Word not found in dictionary.': 'Parola non trovata nel dizionario.',
+            'AI Assistant': 'Assistente AI',
+            'Online': 'Online',
+            'Linked to': 'Collegato a',
+            'Current section': 'Sezione corrente',
+            'Ask about this': 'Chiedi su questo',
+            'The assistant will use the section you are reading.': 'L assistente usera la sezione che stai leggendo.',
+            'This section': 'Questa sezione',
+            'This page': 'Questa pagina',
+            'Selected text': 'Testo selezionato',
+            'Start with the linked text': 'Inizia dal testo collegato',
+            'Pick a useful question, or write your own below.': 'Scegli una domanda utile oppure scrivine una sotto.',
+            'Explain what is happening': 'Spiega cosa sta succedendo',
+            'Make this easier to read': 'Rendilo piu facile da leggere',
+            'What should I notice?': 'Cosa dovrei notare?',
+            'Find the misunderstood word': 'Trova la parola non capita',
+            'Visual': 'Visuale',
+            'Clear': 'Cancella',
+            'Text selected': 'Testo selezionato',
+            'Add selected text': 'Aggiungi testo selezionato',
+            'Tap to open chat': 'Tocca per aprire la chat',
+            'Thinking...': 'Sto pensando...',
+            'Thinking…': 'Sto pensando...',
+            'Human Consultant Help': 'Aiuto del consulente umano',
+            'Share clear details so your consultant can help you faster.': 'Condividi dettagli chiari cosi il consulente puo aiutarti piu rapidamente.',
+            'Good request includes:': 'Una buona richiesta include:',
+            'What you are trying to understand': 'Cosa stai cercando di capire',
+            'Where you are in the book (page and section)': 'Dove sei nel libro (pagina e sezione)',
+            'What is confusing right now': 'Cosa ti confonde adesso',
+            'Priority': 'Priorita',
+            'Normal': 'Normale',
+            'High': 'Alta',
+            'Urgent': 'Urgente',
+            'Cancel': 'Annulla',
+            'Send to consultant': 'Invia al consulente',
+            'Share with other readers': 'Condividi con altri lettori',
+            'Share moment': 'Condividi momento',
+            'Moments from you and other readers': 'Momenti tuoi e di altri lettori',
+            'No moments yet. Be the first to share one!': 'Ancora nessun momento. Sii il primo a condividerne uno!'
+        },
+        attrs: {
+            'Ask about the linked text...': 'Chiedi del testo collegato...',
+            'Type a message to the AI assistant': 'Scrivi un messaggio all assistente AI',
+            'Describe what you need help with...': 'Descrivi di cosa hai bisogno...',
+            'Enter code': 'Inserisci codice',
+            'Page number': 'Numero pagina',
+            'Section number': 'Numero sezione',
+            "Example: I checked the dictionary and AI Help, but I still don't understand the sentence meaning.": 'Esempio: ho controllato il dizionario e l aiuto AI, ma non capisco ancora il significato della frase.',
+            'Close': 'Chiudi',
+            'Send message': 'Invia messaggio',
+            'Hide sections panel': 'Nascondi pannello sezioni',
+            'Hide services panel': 'Nascondi pannello servizi',
+            'Previous page': 'Pagina precedente',
+            'Next page': 'Pagina successiva',
+            'AI suggestion for this passage': 'Suggerimento AI per questo passaggio',
+            'Dismiss': 'Ignora',
+            'Resize': 'Ridimensiona',
+            'Minimize to bottom': 'Riduci in basso',
+            'Drag to resize': 'Trascina per ridimensionare'
+        }
+    }
+};
+
+function normalizeI18nText(text) {
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+function shouldSkipI18nNode(node) {
+    const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+    if (!element) return true;
+    return !!element.closest('script, style, template, noscript, #page-content, #section-snippets, .section-snippet, .page-content, .book-page-content, .reader-book-text, .chat-message-content, .dictionary-popup-definition');
+}
+
+function translateTextNodes(root, translations) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            if (shouldSkipI18nNode(node)) return NodeFilter.FILTER_REJECT;
+            const normalized = normalizeI18nText(node.nodeValue || '');
+            return translations[normalized] ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        }
+    });
+    const nodes = [];
+    while (walker.nextNode()) {
+        nodes.push(walker.currentNode);
+    }
+    nodes.forEach(node => {
+        const original = node.nodeValue || '';
+        const normalized = normalizeI18nText(original);
+        node.nodeValue = original.replace(normalized, translations[normalized]);
+    });
+}
+
+function translateAttributes(root, attrTranslations) {
+    const attrs = ['placeholder', 'aria-label', 'title'];
+    root.querySelectorAll('*').forEach(el => {
+        if (shouldSkipI18nNode(el)) return;
+        attrs.forEach(attr => {
+            const value = el.getAttribute(attr);
+            if (!value) return;
+            const normalized = normalizeI18nText(value);
+            if (attrTranslations[normalized]) {
+                el.setAttribute(attr, attrTranslations[normalized]);
+            }
+        });
+    });
+}
+
+function applyAliceReaderLanguage(languageCode) {
+    const language = (languageCode || 'en').toLowerCase();
+    document.documentElement.lang = language === 'it' ? 'it' : 'en';
+    sessionStorage.setItem('alice_reader_language', language);
+
+    if (language !== 'it') return;
+    const pack = aliceReaderTranslations.it;
+    translateTextNodes(document.body, pack.text);
+    translateAttributes(document.body, pack.attrs);
+}
+
+window.setAliceReaderLanguagePreference = applyAliceReaderLanguage;
+
+function loadAliceReaderLanguagePreference() {
+    const cachedLanguage = sessionStorage.getItem('alice_reader_language');
+    if (cachedLanguage) {
+        applyAliceReaderLanguage(cachedLanguage);
+    }
+
+    const token = getAuthToken();
+    const path = window.location.pathname;
+    if (!token || !path.startsWith('/reader')) return;
+
+    fetch('/api/reader/preferences', {
+        headers: {'Authorization': 'Bearer ' + token}
+    })
+    .then(res => res.ok ? res.json() : null)
+    .then(preferences => {
+        if (preferences && preferences.preferred_language_code) {
+            applyAliceReaderLanguage(preferences.preferred_language_code);
+        }
+    })
+    .catch(err => console.warn('[i18n] Could not load reader language preference:', err));
+}
+
+function watchAliceReaderLanguageMutations() {
+    let scheduled = false;
+    const observer = new MutationObserver(() => {
+        const language = sessionStorage.getItem('alice_reader_language');
+        if (language !== 'it' || scheduled) return;
+        scheduled = true;
+        window.setTimeout(() => {
+            scheduled = false;
+            applyAliceReaderLanguage(language);
+        }, 50);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
 // Dictionary lookup
 function lookupWord(word, bookId, sectionId) {
     return apiRequest('/rest/v1/rpc/get_definition_with_context', {
@@ -461,6 +719,8 @@ function loadUserInfoInNavbar() {
 // Initialize HTMX configuration
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[app.js] DOMContentLoaded fired');
+    loadAliceReaderLanguagePreference();
+    watchAliceReaderLanguageMutations();
     
     // Sync cookie from sessionStorage on page load (for server-side navigation)
     // Only sync once per page load
@@ -543,4 +803,3 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('beforeunload', function() {
     disconnectSSE();
 });
-
