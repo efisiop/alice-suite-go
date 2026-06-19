@@ -98,6 +98,31 @@ Use this header format for every new entry:
 - `scripts/reader_autoresearch_check.sh` passed locally.
 - `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
 
+## [2026-06-19] infra | publish dictionary Picture action for Render
+
+### what changed
+
+- Published the dictionary Picture action to `main` in commit `8a15f01`.
+- Render is configured to auto-deploy `main` through `render.yaml`.
+
+### why
+
+- The Picture control existed only in the working tree, while the deployed Render revision could not include it.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `scripts/reader_autoresearch_check.sh`
+- `docs/READER_FIX_LIST.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/reader_autoresearch_check.sh` passed locally.
+- The GitHub push to `main` completed.
+- Render's public endpoint timed out from this environment, so final live-page verification remains pending.
+
 ## [2026-06-06] fix | Restore reader auth-page navbar format
 
 ### what changed
