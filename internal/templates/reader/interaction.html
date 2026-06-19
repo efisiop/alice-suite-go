@@ -1237,13 +1237,15 @@ html {
     border-radius: 4px;
 }
 
-/* Examples container - hidden by default */
-.dictionary-popup-examples-container {
+/* Expanded dictionary panels - hidden by default */
+.dictionary-popup-examples-container,
+.dictionary-popup-picture-container {
     margin-top: 0.5rem;
     display: none; /* Hidden by default, shown when button is clicked */
 }
 
-.dictionary-popup-examples-container.show {
+.dictionary-popup-examples-container.show,
+.dictionary-popup-picture-container.show {
     display: block;
 }
 
@@ -1298,7 +1300,7 @@ html {
 }
 
 .dictionary-popup-actions {
-    max-width: 260px;
+    max-width: 340px;
 }
 
 .dictionary-popup-action-btn {
@@ -1310,6 +1312,28 @@ html {
 .dictionary-popup-panel {
     position: relative;
     padding-right: 1.8rem;
+}
+
+.dictionary-popup-picture {
+    border-left: 3px solid #8b5e34;
+    padding-left: 0.6rem;
+}
+
+.dictionary-popup-picture img {
+    display: block;
+    width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid rgba(31, 41, 55, 0.12);
+    border-radius: 6px;
+}
+
+.dictionary-popup-picture-caption {
+    color: #4b5563;
+    font-size: 0.84rem;
+    line-height: 1.35;
+    margin-top: 0.45rem;
 }
 
 .dictionary-popup-panel-close {
@@ -3521,7 +3545,7 @@ function lookupWordInline(word, popupContent) {
             html += `<div class="dictionary-popup-definition">${escapeHtml(data.definition)}</div>`;
             html += '</div>';
             
-            // Add two buttons side by side: Derivation (left) and Examples (right)
+            // Add dictionary action buttons.
             const safeWordId = wordToLookup.replace(/[^a-zA-Z0-9]/g, '_');
             html += `<div class="d-flex gap-1 mt-2 mb-2 dictionary-popup-actions">
                 <button class="btn btn-sm btn-outline-primary dictionary-popup-action-btn flex-fill" onclick="showDerivation('${escapeHtml(wordToLookup)}', this)" id="derivation-btn-${safeWordId}">
@@ -3530,13 +3554,22 @@ function lookupWordInline(word, popupContent) {
                 <button class="btn btn-sm btn-outline-primary dictionary-popup-action-btn flex-fill" onclick="showExamplesPopup('${escapeHtml(wordToLookup)}', this)" id="examples-btn-${safeWordId}">
                     Example
                 </button>
+                <button class="btn btn-sm btn-outline-primary dictionary-popup-action-btn flex-fill" onclick="showPicturePopup('${escapeHtml(wordToLookup)}', this)" id="picture-btn-${safeWordId}">
+                    Picture
+                </button>
             </div>`;
             
-            // Containers for derivation and examples (hidden initially)
+            // Containers for expanded dictionary panels (hidden initially)
             html += `<div id="derivation-content-${safeWordId}" class="dictionary-popup-derivation-container" style="display: none;"></div>`;
             html += `<div id="examples-content-${safeWordId}" class="dictionary-popup-examples-container" style="display: none;"></div>`;
+            html += `<div id="picture-content-${safeWordId}" class="dictionary-popup-picture-container" style="display: none;"></div>`;
             
             window[`example_meta_${safeWordId}`] = {
+                partOfSpeech: data.part_of_speech || '',
+                definition: data.definition || ''
+            };
+            window[`picture_meta_${safeWordId}`] = {
+                term: data.term || wordToLookup,
                 partOfSpeech: data.part_of_speech || '',
                 definition: data.definition || ''
             };
@@ -3599,6 +3632,44 @@ function closeDictionaryPanel(panelId, buttonId) {
     }
 }
 
+function cleanEtymologyText(rawText) {
+    return (rawText || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/\([^)]*(?:IPA|audio|file|listen|compare)[^)]*\)/gi, '')
+        .replace(/\b(?:Cognate with|Compare|See also|Further reading)\b.*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function summarizeEtymologyText(rawText) {
+    const cleaned = cleanEtymologyText(rawText);
+    if (!cleaned) return '';
+
+    const sentences = cleaned
+        .split(/[.!?]\s+/)
+        .map(sentence => sentence.trim())
+        .filter(Boolean);
+    const derivationSentence = sentences.find(sentence => /\b(from|derived|borrowed|inherited|via|ultimately)\b/i.test(sentence)) || sentences[0] || cleaned;
+    const mainClause = derivationSentence
+        .split(/\s+(?:Cognate with|Compare|See also|Further reading)\b/i)[0]
+        .split(/;\s+(?=(?:compare|cognate|see)\b)/i)[0]
+        .trim();
+    const words = mainClause.split(/\s+/).filter(Boolean);
+    const concise = words.length > 34 ? words.slice(0, 34).join(' ') + '...' : mainClause;
+
+    return concise.replace(/[;:,]+$/g, '').trim();
+}
+
+function renderDerivationPanel(container, safeWordId, derivationText) {
+    const conciseDerivation = summarizeEtymologyText(derivationText);
+    if (conciseDerivation) {
+        container.innerHTML = `<div class="dictionary-popup-derivation dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close derivation" onclick="closeDictionaryPanel('derivation-content-${safeWordId}', 'derivation-btn-${safeWordId}')">&times;</button>${escapeHtml(conciseDerivation)}</div>`;
+    } else {
+        container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
+    }
+}
+
 // Show derivation (etymology) for a word
 function showDerivation(word, button) {
     if (!word || !button) return;
@@ -3655,13 +3726,7 @@ function showDerivation(word, button) {
             }
         }
         
-        if (etymologyText && etymologyText.trim()) {
-            // Clean up HTML tags if present
-            etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
-            container.innerHTML = `<div class="dictionary-popup-derivation dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close derivation" onclick="closeDictionaryPanel('derivation-content-${safeWordId}', 'derivation-btn-${safeWordId}')">&times;</button>${escapeHtml(etymologyText)}</div>`;
-        } else {
-            container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
-        }
+        renderDerivationPanel(container, safeWordId, etymologyText);
     })
     .catch(err => {
         console.error('Error fetching derivation:', err);
@@ -3685,13 +3750,7 @@ function showDerivation(word, button) {
                 if (nextP && nextP.tagName === 'P') {
                     etymologyText += ' ' + nextP.textContent;
                 }
-                etymologyText = etymologyText.replace(/<[^>]*>/g, '').trim();
-                
-                if (etymologyText) {
-                    container.innerHTML = `<div class="dictionary-popup-derivation dictionary-popup-panel"><button type="button" class="dictionary-popup-panel-close" aria-label="Close derivation" onclick="closeDictionaryPanel('derivation-content-${safeWordId}', 'derivation-btn-${safeWordId}')">&times;</button>${escapeHtml(etymologyText)}</div>`;
-                } else {
-                    container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
-                }
+                renderDerivationPanel(container, safeWordId, etymologyText);
             } else {
                 container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
             }
@@ -3699,6 +3758,188 @@ function showDerivation(word, button) {
         .catch(err2 => {
             container.innerHTML = '<div class="dictionary-popup-loading text-muted">Derivation not available for this word.</div>';
         });
+    });
+}
+
+function renderDictionaryPicturePanel(container, safeWordId, buttonId, imageUrl, caption, sourceLabel, sourceUrl) {
+    const sourceLink = sourceUrl
+        ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceLabel)}</a>`
+        : escapeHtml(sourceLabel);
+    container.innerHTML = `
+        <div class="dictionary-popup-panel dictionary-popup-picture">
+            <button type="button" class="dictionary-popup-panel-close" aria-label="Close picture" onclick="closeDictionaryPanel('picture-content-${safeWordId}', '${buttonId}')">&times;</button>
+            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(caption)}" loading="lazy" onclick="window.open(this.src, '_blank')" title="Open picture">
+            <div class="dictionary-popup-picture-caption">${escapeHtml(caption)}</div>
+            <div class="dictionary-popup-source mt-1">${sourceLink}</div>
+        </div>`;
+}
+
+function renderDictionaryPictureMessage(container, safeWordId, buttonId, message, muted) {
+    const toneClass = muted ? 'text-muted' : 'text-danger';
+    container.innerHTML = `
+        <div class="dictionary-popup-panel">
+            <button type="button" class="dictionary-popup-panel-close" aria-label="Close picture" onclick="closeDictionaryPanel('picture-content-${safeWordId}', '${buttonId}')">&times;</button>
+            <div class="dictionary-popup-loading ${toneClass}">${escapeHtml(message)}</div>
+        </div>`;
+}
+
+function getDictionaryPicturePrompt(word, definition, partOfSpeech) {
+    const cleanWord = (word || '').trim();
+    const cleanDefinition = getShortDefinitionContext(definition) || (definition || '').trim();
+    const posHint = partOfSpeech ? `${partOfSpeech} ` : '';
+    const meaningHint = cleanDefinition ? `Meaning: ${cleanDefinition}. ` : '';
+    return `A clear simple educational picture for a dictionary entry. Word: ${cleanWord}. ${meaningHint}Show one concrete ${posHint}visual representation in an everyday context. No written labels, no letters, no caption text.`;
+}
+
+function lookupWikipediaPicture(word) {
+    const searchTerm = (word || '').trim();
+    if (!searchTerm) return Promise.resolve(null);
+
+    return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchTerm)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(res => {
+        if (!res.ok) return null;
+        return res.json();
+    })
+    .then(data => {
+        if (!data || data.type === 'disambiguation' || !data.thumbnail || !data.thumbnail.source) {
+            return null;
+        }
+        return {
+            imageUrl: data.thumbnail.source,
+            caption: data.title ? `Picture for ${data.title}` : `Picture for ${searchTerm}`,
+            sourceLabel: 'Source: Wikipedia',
+            sourceUrl: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : ''
+        };
+    })
+    .catch(() => null);
+}
+
+function generateDictionaryPicture(word, meta, container, safeWordId, buttonId) {
+    const token = getAuthToken();
+    if (!token) {
+        renderDictionaryPictureMessage(container, safeWordId, buttonId, 'Please log in to generate a picture.', false);
+        return;
+    }
+
+    fetch('/api/ai/generate-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            prompt: getDictionaryPicturePrompt(word, meta.definition || '', meta.partOfSpeech || ''),
+            aspect_ratio: 'square',
+            resolution: '1k'
+        })
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || `HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.status === 'completed' && data.image_url) {
+            renderDictionaryPictureImageResult(container, safeWordId, buttonId, data.image_url, word, true);
+            return;
+        }
+        if (!data.task_id) {
+            throw new Error('No image task was returned.');
+        }
+        pollDictionaryPictureStatus(data.task_id, 'mystic', container, safeWordId, buttonId, word);
+    })
+    .catch(err => {
+        renderDictionaryPictureMessage(container, safeWordId, buttonId, `Picture not available: ${err.message}`, false);
+    });
+}
+
+function renderDictionaryPictureImageResult(container, safeWordId, buttonId, imageUrl, word, generated) {
+    const caption = generated ? `Generated picture for ${word}` : `Picture for ${word}`;
+    const sourceLabel = generated ? 'Source: generated image' : 'Source: image lookup';
+    renderDictionaryPicturePanel(container, safeWordId, buttonId, imageUrl, caption, sourceLabel, '');
+}
+
+function pollDictionaryPictureStatus(taskID, model, container, safeWordId, buttonId, word) {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const maxAttempts = 60;
+    let attempt = 0;
+
+    const poll = () => {
+        if (attempt >= maxAttempts) {
+            renderDictionaryPictureMessage(container, safeWordId, buttonId, 'Picture generation timed out. Please try again.', false);
+            return;
+        }
+        attempt++;
+
+        fetch(`/api/ai/image-status?task_id=${encodeURIComponent(taskID)}&model=${encodeURIComponent(model)}`, {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText || `HTTP ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.status === 'completed' && data.image_url) {
+                renderDictionaryPictureImageResult(container, safeWordId, buttonId, data.image_url, word, true);
+            } else if (data.status === 'failed') {
+                renderDictionaryPictureMessage(container, safeWordId, buttonId, data.error || 'Picture generation failed.', false);
+            } else {
+                setTimeout(poll, 2000);
+            }
+        })
+        .catch(err => {
+            console.error('Error checking dictionary picture status:', err);
+            setTimeout(poll, 2000);
+        });
+    };
+
+    setTimeout(poll, 2000);
+}
+
+function showPicturePopup(word, button) {
+    if (!word || !button) return;
+
+    const safeWordId = word.replace(/[^a-zA-Z0-9]/g, '_');
+    const buttonId = `picture-btn-${safeWordId}`;
+    const container = document.getElementById(`picture-content-${safeWordId}`);
+    if (!container) return;
+
+    if (container.style.display !== 'none' && container.innerHTML.trim()) {
+        container.style.display = 'none';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
+        return;
+    }
+
+    const meta = window[`picture_meta_${safeWordId}`] || {};
+    const displayWord = meta.term || word;
+    container.innerHTML = `
+        <div class="dictionary-popup-panel">
+            <button type="button" class="dictionary-popup-panel-close" aria-label="Close picture" onclick="closeDictionaryPanel('picture-content-${safeWordId}', '${buttonId}')">&times;</button>
+            <div class="dictionary-popup-loading">Finding picture...</div>
+        </div>`;
+    container.style.display = 'block';
+    button.classList.remove('btn-outline-primary');
+    button.classList.add('btn-primary');
+
+    lookupWikipediaPicture(displayWord).then(picture => {
+        if (picture && picture.imageUrl) {
+            renderDictionaryPicturePanel(container, safeWordId, buttonId, picture.imageUrl, picture.caption, picture.sourceLabel, picture.sourceUrl);
+            return;
+        }
+        container.querySelector('.dictionary-popup-loading').textContent = 'Generating picture...';
+        generateDictionaryPicture(displayWord, meta, container, safeWordId, buttonId);
     });
 }
 
@@ -3849,8 +4090,8 @@ function getGeneratedEverydayExampleSets(word, partOfSpeech, definition) {
         if (definitionContext) {
             return [
                 [
-                    `I used ${article} ${lowerWord} when I needed ${definitionContext}.`,
-                    `Can you point to the ${lowerWord} that helps with this?`
+                    `The ${lowerWord} on the shelf was needed for ${definitionContext}.`,
+                    `Can you point to the ${lowerWord} connected with ${definitionContext}?`
                 ],
                 [
                     `The ${lowerWord} was useful because it solved a small practical problem.`,
@@ -3881,32 +4122,32 @@ function getGeneratedEverydayExampleSets(word, partOfSpeech, definition) {
     if (definitionContext) {
         return [
             [
-                `I used "${lowerWord}" while talking about ${definitionContext}.`,
-                `Could "${lowerWord}" fit in a sentence about ${definitionContext}?`
+                `The ${lowerWord} mattered when everyone talked about ${definitionContext}.`,
+                `Her note connected the ${lowerWord} with ${definitionContext}.`
             ],
             [
-                `She wrote "${lowerWord}" when describing ${definitionContext}.`,
-                `The word "${lowerWord}" helped explain the idea more clearly.`
+                `She noticed the ${lowerWord} while dealing with ${definitionContext}.`,
+                `The ${lowerWord} made sense once the problem involved ${definitionContext}.`
             ],
             [
-                `He asked what "${lowerWord}" meant in this exact situation.`,
-                `We chose "${lowerWord}" because it matched the meaning of the sentence.`
+                `The ${lowerWord} became important when the situation involved ${definitionContext}.`,
+                `Their plan changed because the ${lowerWord} was tied to ${definitionContext}.`
             ]
         ];
     }
 
     return [
         [
-            `I used "${lowerWord}" in a simple real-life sentence.`,
-            `Could you give me another everyday sentence with "${lowerWord}"?`
+            `The ${lowerWord} appeared in a simple note on the kitchen table.`,
+            `The ${lowerWord} was part of an ordinary conversation after lunch.`
         ],
         [
-            `She wrote "${lowerWord}" when describing something from everyday life.`,
-            `He asked where "${lowerWord}" would sound natural in conversation.`
+            `She wrote ${lowerWord} while describing something from everyday life.`,
+            `He heard ${lowerWord} during a normal conversation at home.`
         ],
         [
-            `We practiced "${lowerWord}" with a short sentence at school.`,
-            `The word "${lowerWord}" appeared in a note, so I checked its meaning.`
+            `The class practiced ${lowerWord} with a short sentence at school.`,
+            `A note on the door included ${lowerWord} near the end.`
         ]
     ];
 }
