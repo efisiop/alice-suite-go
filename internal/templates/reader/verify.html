@@ -30,27 +30,29 @@
 <script>
 document.getElementById('verify-form').addEventListener('submit', function(e) {
     e.preventDefault();
-    const code = document.getElementById('code').value;
-    const token = localStorage.getItem('auth_token');
+	const code = document.getElementById('code').value;
+	const token = sessionStorage.getItem('auth_token');
     
     if (!token) {
         window.location.href = '/reader/login';
         return;
     }
 
-    // Get user ID from token (simplified - in production, decode JWT)
-    fetch('/auth/v1/user', {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => res.json())
-    .then(user => {
-        return fetch('/rest/v1/rpc/verify-book-code', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify({code: code, user_id: user.id})
-        });
-    })
-    .then(res => res.json())
+	fetch('/rest/v1/rpc/verify-book-code', {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+		body: JSON.stringify({code: code})
+	})
+	.then(async res => {
+		const text = await res.text();
+		if (!res.ok) {
+			const message = (res.status === 400 || res.status === 409)
+				? text.trim()
+				: 'Verification failed. Please try again.';
+			throw new Error(message);
+		}
+		return JSON.parse(text);
+	})
     .then(data => {
         if (data.valid) {
             document.getElementById('success-message').textContent = 'Book verified successfully!';
@@ -63,11 +65,10 @@ document.getElementById('verify-form').addEventListener('submit', function(e) {
             document.getElementById('error-message').classList.remove('d-none');
         }
     })
-    .catch(err => {
-        document.getElementById('error-message').textContent = 'Verification failed. Please try again.';
+	.catch(err => {
+		document.getElementById('error-message').textContent = err.message || 'Verification failed. Please try again.';
         document.getElementById('error-message').classList.remove('d-none');
     });
 });
 </script>
 {{end}}
-

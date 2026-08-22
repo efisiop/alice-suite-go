@@ -766,9 +766,19 @@ func VerifyCode(code, bookID string) (*models.VerificationCode, error) {
 
 // UseVerificationCode marks a verification code as used
 func UseVerificationCode(code, userID string) error {
-	query := `UPDATE verification_codes SET is_used = 1, used_by = ?, used_at = ? WHERE code = ?`
-	_, err := DB.Exec(Rebind(query), userID, time.Now(), code)
-	return err
+	query := `UPDATE verification_codes SET is_used = 1, used_by = ? WHERE code = ? AND is_used = 0`
+	result, err := DB.Exec(Rebind(query), userID, code)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 1 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 // Reading Progress Queries

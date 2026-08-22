@@ -11,11 +11,11 @@ import (
 // SetupReaderRoutes sets up routes for the Reader app
 func SetupReaderRoutes(mux *http.ServeMux) {
 	// Reader app pages
-	mux.Handle("/reader", middleware.RequireReader(http.HandlerFunc(HandleReaderDashboard)))
-	mux.Handle("/reader/interaction", middleware.RequireReader(http.HandlerFunc(HandleReaderInteraction)))
-	mux.Handle("/reader/my-page", middleware.RequireReader(http.HandlerFunc(HandleReaderMyPage)))
-	mux.Handle("/reader/book/", middleware.RequireReader(http.HandlerFunc(HandleReaderBook)))
-	mux.Handle("/reader/statistics", middleware.RequireReader(http.HandlerFunc(HandleReaderStatistics)))
+	mux.Handle("/reader", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderDashboard)))
+	mux.Handle("/reader/interaction", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderInteraction)))
+	mux.Handle("/reader/my-page", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderMyPage)))
+	mux.Handle("/reader/book/", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderBook)))
+	mux.Handle("/reader/statistics", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderStatistics)))
 
 	// Reader authentication pages
 	mux.HandleFunc("/reader/login", HandleReaderLogin)
@@ -27,7 +27,9 @@ func SetupReaderRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/reader/register", http.StatusMovedPermanently)
 	})
-	mux.HandleFunc("/verify", HandleReaderVerify)
+	// Verification requires a signed-in reader but, unlike reading pages, does
+	// not require the physical book to have been verified yet.
+	mux.Handle("/verify", middleware.RequireReaderAccountPage(http.HandlerFunc(HandleReaderVerify)))
 	mux.HandleFunc("/welcome", HandleReaderWelcome)
 	mux.HandleFunc("/forgot-password", HandleReaderForgotPassword)
 

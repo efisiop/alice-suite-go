@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -48,6 +49,18 @@ func TestHandleSignUpRecoversMissingReaderPreferencesSchema(t *testing.T) {
 
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("signup status = %d, want %d; body=%q", recorder.Code, http.StatusCreated, recorder.Body.String())
+	}
+	var response struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode signup response: %v", err)
+	}
+	if response.AccessToken == "" {
+		t.Fatal("signup response did not establish a verification session")
+	}
+	if cookies := recorder.Result().Cookies(); len(cookies) == 0 || cookies[0].Name != "auth_token" {
+		t.Fatal("signup response did not set the authentication cookie")
 	}
 
 	var language string

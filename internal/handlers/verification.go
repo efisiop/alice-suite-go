@@ -36,6 +36,10 @@ func HandleVerifyBookCode(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Authentication failed", http.StatusUnauthorized)
 		return
 	}
+	if claims.Role != "reader" {
+		http.Error(w, "Reader access required", http.StatusForbidden)
+		return
+	}
 
 	// Extract user_id from token (not from request body)
 	userID := claims.UserID
@@ -115,4 +119,3 @@ func HandleCheckBookVerified(w http.ResponseWriter, r *http.Request) {
 		"verified": verified,
 	})
 }
-

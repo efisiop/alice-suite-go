@@ -4,6 +4,16 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 
 ---
 
+## Reader onboarding and book verification (2026-08-22)
+
+- **Physical-book purpose:** The landing page now says clearly that Alice Suite accompanies a physical copy and does not replace it.
+- **Registration hand-off:** A successful registration now establishes the reader session before opening the book-code page.
+- **Book-code verification:** PostgreSQL-compatible queries, an atomic code claim, and the real schema are used so an invalid code returns a clear response and a valid code cannot be consumed by a partial failure.
+- **Access gate:** Signed-out visitors are guided to Reader Login. Signed-in readers must verify their physical book before reader pages and reader-only APIs open.
+- **Regression coverage:** Production-style verification, onboarding session, physical-book messaging, login redirects, and the verification gate are covered by automated tests.
+
+---
+
 ## Cross-app: Login pages (JavaScript required message)
 
 - **Consultant** `internal/templates/consultant/login.html`: Added `<noscript>` block with message “JavaScript is disabled. Please enable JavaScript to use the login form.” (same as Reader).
@@ -36,4 +46,4 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 
 ---
 
-*Last updated: 2025-03 (session). Re-index with `qmd update` and `qmd embed` if using qmd.*
+*Last updated: 2026-08-22. Re-index with `qmd update` and `qmd embed` if using qmd.*

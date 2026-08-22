@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/efisiopittau/alice-suite-go/internal/database"
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
 
@@ -66,6 +67,10 @@ func RequireAuth(next http.Handler) http.Handler {
 
 // RequireRole requires a specific role (reader or consultant)
 func RequireRole(requiredRole string) func(http.Handler) http.Handler {
+	return requireRole(requiredRole, false)
+}
+
+func requireRole(requiredRole string, redirectReaderToLogin bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract token from Authorization header or cookie
@@ -86,6 +91,10 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 						}
 					}
 					if err != nil || cookie == nil || cookie.Value == "" {
+						if requiredRole == "reader" && redirectReaderToLogin {
+							http.Redirect(w, r, "/reader/login", http.StatusFound)
+							return
+						}
 						// For consultant routes, redirect to login instead of showing error
 						if requiredRole == "consultant" {
 							http.Redirect(w, r, "/consultant/login", http.StatusFound)
@@ -110,6 +119,10 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 
 			token, err := auth.ExtractTokenFromHeader(authHeader)
 			if err != nil {
+				if requiredRole == "reader" && redirectReaderToLogin {
+					http.Redirect(w, r, "/reader/login", http.StatusFound)
+					return
+				}
 				// For consultant/admin routes, redirect to login instead of showing error
 				if requiredRole == "consultant" {
 					http.Redirect(w, r, "/consultant/login", http.StatusFound)
@@ -126,6 +139,10 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 			// Validate token and get claims
 			claims, err := auth.ValidateJWT(token)
 			if err != nil {
+				if requiredRole == "reader" && redirectReaderToLogin {
+					http.Redirect(w, r, "/reader/login", http.StatusFound)
+					return
+				}
 				// For consultant/admin routes, redirect to login instead of showing error
 				if requiredRole == "consultant" {
 					http.Redirect(w, r, "/consultant/login", http.StatusFound)
@@ -209,7 +226,47 @@ func RequireConsultant(next http.Handler) http.Handler {
 
 // RequireReader requires reader role
 func RequireReader(next http.Handler) http.Handler {
-	return RequireRole("reader")(next)
+	return RequireRole("reader")(requireVerifiedReader(next, false))
+}
+
+// RequireReaderPage protects browser pages while guiding signed-out readers to login.
+// Reader APIs continue to use RequireReader and return 401/403 responses.
+func RequireReaderPage(next http.Handler) http.Handler {
+	return requireRole("reader", true)(requireVerifiedReader(next, true))
+}
+
+// RequireReaderAccountPage protects pages used before book verification, such
+// as the verification form itself.
+func RequireReaderAccountPage(next http.Handler) http.Handler {
+	return requireRole("reader", true)(next)
+}
+
+func requireVerifiedReader(next http.Handler, redirectToVerification bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := ClaimsFromRequest(r)
+		if !ok {
+			http.Error(w, "Authorization required", http.StatusUnauthorized)
+			return
+		}
+		user, err := database.GetUserByID(claims.UserID)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		if user == nil {
+			http.Error(w, "Authorization required", http.StatusUnauthorized)
+			return
+		}
+		if !user.IsVerified {
+			if redirectToVerification {
+				http.Redirect(w, r, "/verify", http.StatusFound)
+				return
+			}
+			http.Error(w, "Book verification required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // RequireAdmin requires administrator role

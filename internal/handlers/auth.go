@@ -200,9 +200,34 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Registration continues directly to book verification, so establish the
+	// same reader session that a normal login would create.
+	token, err := auth.GenerateJWT(user.ID, user.Email, user.Role)
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if _, err := database.CreateSession(user.ID, token, r.RemoteAddr, r.UserAgent(), 24*time.Hour); err != nil {
+		log.Printf("Warning: Failed to create registration session for user %s: %v", user.ID, err)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Path:     "/",
+		Expires:  expiresAt,
+		SameSite: http.SameSiteLaxMode,
+		HttpOnly: false,
+		Secure:   false,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token": token,
+		"token_type":   "bearer",
+		"expires_in":   86400,
+		"expires_at":   expiresAt.Unix(),
 		"user": map[string]interface{}{
 			"id":                      user.ID,
 			"email":                   user.Email,

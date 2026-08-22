@@ -81,18 +81,31 @@ document.getElementById('register-form').addEventListener('submit', function(e) 
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     })
-    .then(res => res.json())
+	.then(async res => {
+		const text = await res.text();
+		if (!res.ok) {
+			const message = res.status === 409
+				? 'An account with this email already exists.'
+				: 'Registration failed. Please try again.';
+			throw new Error(message);
+		}
+		return JSON.parse(text);
+	})
     .then(data => {
-        if (data.user) {
-            // Redirect to verification page
+		if (data.user && data.access_token) {
+			// Keep the new reader signed in while they verify their physical book.
+			sessionStorage.setItem('auth_token', data.access_token);
+			if (data.user.preferred_language_code) {
+				sessionStorage.setItem('alice_reader_language', data.user.preferred_language_code);
+			}
             window.location.href = '/verify';
         } else {
             document.getElementById('error-message').textContent = 'Registration failed. Please try again.';
             document.getElementById('error-message').classList.remove('d-none');
         }
     })
-    .catch(err => {
-        document.getElementById('error-message').textContent = 'Registration failed. Please try again.';
+	.catch(err => {
+		document.getElementById('error-message').textContent = err.message || 'Registration failed. Please try again.';
         document.getElementById('error-message').classList.remove('d-none');
     });
 });
