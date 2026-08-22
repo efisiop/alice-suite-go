@@ -17,7 +17,7 @@ func init() {
 	sql.Register(textTimestampDriverName, textTimestampDriver{})
 }
 
-func TestCreateUserFormatsTimestampsForTextColumns(t *testing.T) {
+func TestCreateUserUsesPostgresCompatibleColumnValues(t *testing.T) {
 	testDB, err := sql.Open(textTimestampDriverName, "")
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +36,7 @@ func TestCreateUserFormatsTimestampsForTextColumns(t *testing.T) {
 		Role:         "reader",
 	}
 	if err := CreateUser(user); err != nil {
-		t.Fatalf("CreateUser passed a non-text timestamp: %v", err)
+		t.Fatalf("CreateUser passed an incompatible PostgreSQL value: %v", err)
 	}
 }
 
@@ -61,6 +61,9 @@ func (textTimestampConn) Begin() (driver.Tx, error) {
 func (textTimestampConn) CheckNamedValue(value *driver.NamedValue) error {
 	if _, ok := value.Value.(time.Time); ok {
 		return errors.New("time.Time cannot be written to a TEXT column")
+	}
+	if _, ok := value.Value.(bool); ok {
+		return errors.New("bool cannot be written to an INTEGER column")
 	}
 	return nil
 }

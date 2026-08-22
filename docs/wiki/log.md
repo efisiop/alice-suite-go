@@ -17,6 +17,7 @@ Use this header format for every new entry:
 - Added a narrow registration schema guard so a missing `reader_preferences` table is repaired before account creation.
 - Made the reader-preferences timestamp defaults valid for PostgreSQL text columns after the first live re-audit exposed a database-specific mismatch.
 - Formatted new-user timestamps as text before PostgreSQL inserts; PostgreSQL's driver rejects Go time values for the existing text timestamp columns.
+- Stored the new user's verification state as the schema's 0/1 integer instead of relying on SQLite's automatic boolean conversion.
 
 ### why
 
