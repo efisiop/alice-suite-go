@@ -102,10 +102,7 @@ func EnsureReaderPreferencesTable() error {
 }
 
 func ensureReaderPreferencesTable() error {
-	tsDefault := "CURRENT_TIMESTAMP"
-	if DriverName == "sqlite3" {
-		tsDefault = "datetime('now')"
-	}
+	tsDefault := readerPreferencesTimestampDefault(DriverName)
 	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS reader_preferences (
 		user_id TEXT PRIMARY KEY,
 		preferred_language_code TEXT NOT NULL DEFAULT 'en',
@@ -118,4 +115,13 @@ func ensureReaderPreferencesTable() error {
 	}
 	_, err := DB.Exec(`CREATE INDEX IF NOT EXISTS idx_reader_preferences_language ON reader_preferences(preferred_language_code)`)
 	return err
+}
+
+func readerPreferencesTimestampDefault(driver string) string {
+	if driver == "sqlite3" {
+		return "datetime('now')"
+	}
+	// PostgreSQL does not implicitly cast a TIMESTAMPTZ default into a TEXT
+	// column, so make the schema's existing text representation explicit.
+	return "CAST(CURRENT_TIMESTAMP AS TEXT)"
 }

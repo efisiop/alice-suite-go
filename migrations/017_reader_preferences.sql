@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS reader_preferences (
   user_id TEXT PRIMARY KEY,
   preferred_language_code TEXT NOT NULL DEFAULT 'en',
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_at TEXT NOT NULL DEFAULT (CAST(datetime('now') AS TEXT)),
+  updated_at TEXT NOT NULL DEFAULT (CAST(datetime('now') AS TEXT)),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
