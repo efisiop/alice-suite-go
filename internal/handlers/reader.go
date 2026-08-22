@@ -4,16 +4,18 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+
+	"github.com/efisiopittau/alice-suite-go/internal/middleware"
 )
 
 // SetupReaderRoutes sets up routes for the Reader app
 func SetupReaderRoutes(mux *http.ServeMux) {
 	// Reader app pages
-	mux.HandleFunc("/reader", HandleReaderDashboard)
-	mux.HandleFunc("/reader/interaction", HandleReaderInteraction)
-	mux.HandleFunc("/reader/my-page", HandleReaderMyPage)
-	mux.HandleFunc("/reader/book/", HandleReaderBook)
-	mux.HandleFunc("/reader/statistics", HandleReaderStatistics)
+	mux.Handle("/reader", middleware.RequireReader(http.HandlerFunc(HandleReaderDashboard)))
+	mux.Handle("/reader/interaction", middleware.RequireReader(http.HandlerFunc(HandleReaderInteraction)))
+	mux.Handle("/reader/my-page", middleware.RequireReader(http.HandlerFunc(HandleReaderMyPage)))
+	mux.Handle("/reader/book/", middleware.RequireReader(http.HandlerFunc(HandleReaderBook)))
+	mux.Handle("/reader/statistics", middleware.RequireReader(http.HandlerFunc(HandleReaderStatistics)))
 
 	// Reader authentication pages
 	mux.HandleFunc("/reader/login", HandleReaderLogin)
@@ -62,7 +64,7 @@ func HandleReaderLogin(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-		
+
 		tmpl, err := template.ParseFiles(
 			filepath.Join("internal", "templates", "base.html"),
 			filepath.Join("internal", "templates", "reader", "login.html"),
@@ -154,16 +156,13 @@ func HandleReaderForgotPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleReaderDashboard handles GET /reader
-// REVERTED: Removed server-side auth check - let JavaScript handle authentication
-// This restores the previous behavior that was working
+// Authentication and reader-role authorization are applied by SetupReaderRoutes.
 func HandleReaderDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Serve the dashboard - authentication is handled client-side by JavaScript
-	// This matches the previous working behavior
 	tmpl, err := template.ParseFiles(
 		filepath.Join("internal", "templates", "base.html"),
 		filepath.Join("internal", "templates", "reader", "dashboard.html"),
@@ -260,4 +259,3 @@ func HandleReaderMyPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl.Execute(w, nil)
 }
-

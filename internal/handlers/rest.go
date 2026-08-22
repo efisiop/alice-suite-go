@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
+	"github.com/efisiopittau/alice-suite-go/internal/middleware"
 	"github.com/efisiopittau/alice-suite-go/internal/query"
 	"github.com/google/uuid"
 )
@@ -28,6 +29,15 @@ func HandleRESTTable(w http.ResponseWriter, r *http.Request) {
 	// Validate table name (prevent SQL injection)
 	if !isValidTableName(table) {
 		http.Error(w, "Invalid table name", http.StatusBadRequest)
+		return
+	}
+
+	claims, ok := middleware.ClaimsFromRequest(r)
+	if !ok {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	if !authorizeRESTTable(w, r, table, claims.UserID, claims.Role) {
 		return
 	}
 
@@ -52,6 +62,14 @@ func handleGETTable(w http.ResponseWriter, r *http.Request, table string) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid query parameters: %v", err), http.StatusBadRequest)
 		return
+	}
+	if table == "users" {
+		// Authentication records are never part of the generic REST response.
+		queryParams.Select = []string{
+			"id", "email", "first_name", "last_name", "role",
+			"is_verified", "created_at", "updated_at",
+		}
+		queryParams.Joins = nil
 	}
 
 	// Build SQL query
@@ -119,6 +137,57 @@ func handleGETTable(w http.ResponseWriter, r *http.Request, table string) {
 		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func authorizeRESTTable(w http.ResponseWriter, r *http.Request, table, userID, role string) bool {
+	switch table {
+	case "users":
+		if role != "consultant" {
+			http.Error(w, "Insufficient permissions", http.StatusForbidden)
+			return false
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return false
+		}
+		return true
+
+	case "activity_logs", "ai_interactions", "reading_progress", "help_requests":
+		if role == "consultant" {
+			return true
+		}
+		if role != "reader" {
+			http.Error(w, "Insufficient permissions", http.StatusForbidden)
+			return false
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "Insufficient permissions", http.StatusForbidden)
+			return false
+		}
+		if !requestFiltersOwnUser(r, userID) {
+			http.Error(w, "Insufficient permissions", http.StatusForbidden)
+			return false
+		}
+		return true
+
+	default:
+		http.Error(w, "Table not available", http.StatusNotFound)
+		return false
+	}
+}
+
+func requestFiltersOwnUser(r *http.Request, userID string) bool {
+	params, err := query.ParseQuery(r.URL.Query())
+	if err != nil {
+		return false
+	}
+	for _, filter := range params.Filters {
+		if filter.Column == "user_id" && filter.Operator == "eq" {
+			value, ok := filter.Value.(string)
+			return ok && value == userID
+		}
+	}
+	return false
 }
 
 // handlePOSTTable handles POST /rest/v1/:table
@@ -215,14 +284,14 @@ func handlePOSTTable(w http.ResponseWriter, r *http.Request, table string) {
 							}
 						}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode([]map[string]interface{}{resultRow})
-		
-		// Broadcast help request to consultants
-		BroadcastHelpRequest(resultRow)
-		return
-	}
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusCreated)
+						json.NewEncoder(w).Encode([]map[string]interface{}{resultRow})
+
+						// Broadcast help request to consultants
+						BroadcastHelpRequest(resultRow)
+						return
+					}
 				}
 			}
 		}
@@ -472,4 +541,3 @@ func getTableColumns(table string) ([]string, error) {
 
 	return columns, nil
 }
-

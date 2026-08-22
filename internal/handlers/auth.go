@@ -195,6 +195,7 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "User already exists", http.StatusConflict)
 			return
 		}
+		log.Printf("Registration error for %s: %v", req.Email, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

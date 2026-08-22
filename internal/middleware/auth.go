@@ -1,12 +1,26 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/efisiopittau/alice-suite-go/pkg/auth"
 )
+
+type claimsContextKey struct{}
+
+// ClaimsFromRequest returns claims validated by authentication middleware.
+func ClaimsFromRequest(r *http.Request) (*auth.JWTClaims, bool) {
+	claims, ok := r.Context().Value(claimsContextKey{}).(*auth.JWTClaims)
+	return claims, ok && claims != nil
+}
+
+func requestWithClaims(r *http.Request, claims *auth.JWTClaims) *http.Request {
+	ctx := context.WithValue(r.Context(), claimsContextKey{}, claims)
+	return r.WithContext(ctx)
+}
 
 // RequireAuth validates JWT token and requires authentication
 func RequireAuth(next http.Handler) http.Handler {
@@ -35,7 +49,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Validate token
-		_, err = auth.ValidateJWT(token)
+		claims, err := auth.ValidateJWT(token)
 		if err != nil {
 			if err == auth.ErrInvalidToken || err == auth.ErrExpiredToken {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
@@ -45,8 +59,8 @@ func RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Token is valid, continue
-		next.ServeHTTP(w, r)
+		// Token is valid, continue with claims available to downstream handlers.
+		next.ServeHTTP(w, requestWithClaims(r, claims))
 	})
 }
 
@@ -140,8 +154,8 @@ func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Role check passed, continue
-			next.ServeHTTP(w, r)
+			// Role check passed, continue with claims available to downstream handlers.
+			next.ServeHTTP(w, requestWithClaims(r, claims))
 		})
 	}
 }

@@ -42,7 +42,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 
 	// Generic REST endpoint for all tables
 	// This will catch /rest/v1/:table and /rest/v1/:table/ paths
-	mux.HandleFunc("/rest/v1/", HandleRESTTable)
+	mux.Handle("/rest/v1/", middleware.RequireAuth(http.HandlerFunc(HandleRESTTable)))
 	// Books API
 	mux.HandleFunc("/rest/v1/books", HandleBooks)
 	mux.HandleFunc("/rest/v1/chapters", HandleChapters)
@@ -50,8 +50,8 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/rest/v1/pages", HandlePages)
 
 	// Reading progress API
-	mux.HandleFunc("/rest/v1/reading_progress", HandleReadingProgress)
-	mux.HandleFunc("/rest/v1/reading_stats", HandleReadingStats)
+	mux.Handle("/rest/v1/reading_progress", middleware.RequireAuth(http.HandlerFunc(HandleReadingProgress)))
+	mux.Handle("/rest/v1/reading_stats", middleware.RequireReader(http.HandlerFunc(HandleReadingStats)))
 
 	// Dictionary/Glossary API
 	mux.HandleFunc("/rest/v1/alice_glossary", HandleGlossaryTerms)
@@ -66,7 +66,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/realtime/ws", HandleWebSocket)
 
 	// Activity tracking
-	mux.HandleFunc("/api/activity/track", HandleTrackActivity)
+	mux.Handle("/api/activity/track", middleware.RequireReader(http.HandlerFunc(HandleTrackActivity)))
 
 	// Consultant reader activity endpoints (protected with authentication middleware)
 	mux.Handle("/api/consultant/reader-activities", middleware.RequireConsultant(http.HandlerFunc(HandleGetReaderActivities)))
@@ -92,23 +92,23 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/reader/prompts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderPrompts)))
 
 	// Reader: get consultant prompts for current page/section (reader sees their own prompts only)
-	mux.Handle("/api/reader/prompts", middleware.RequireAuth(http.HandlerFunc(HandleReaderPrompts)))
-	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptDismiss)))
-	mux.Handle("/api/reader/prompt-accept", middleware.RequireAuth(http.HandlerFunc(HandleReaderPromptAccept)))
-	mux.Handle("/api/reader/quiz", middleware.RequireAuth(http.HandlerFunc(HandleReaderQuiz)))
-	mux.Handle("/api/reader/ah-ah-moments", middleware.RequireAuth(http.HandlerFunc(HandleReaderAhAhMoments)))
-	mux.Handle("/api/reader/preferences", middleware.RequireAuth(http.HandlerFunc(HandleReaderPreferences)))
+	mux.Handle("/api/reader/prompts", middleware.RequireReader(http.HandlerFunc(HandleReaderPrompts)))
+	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireReader(http.HandlerFunc(HandleReaderPromptDismiss)))
+	mux.Handle("/api/reader/prompt-accept", middleware.RequireReader(http.HandlerFunc(HandleReaderPromptAccept)))
+	mux.Handle("/api/reader/quiz", middleware.RequireReader(http.HandlerFunc(HandleReaderQuiz)))
+	mux.Handle("/api/reader/ah-ah-moments", middleware.RequireReader(http.HandlerFunc(HandleReaderAhAhMoments)))
+	mux.Handle("/api/reader/preferences", middleware.RequireReader(http.HandlerFunc(HandleReaderPreferences)))
 	mux.Handle("/api/consultant/prompt-retrigger", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantPromptRetrigger)))
 
 	// Help requests API
-	mux.HandleFunc("/rest/v1/help_requests", HandleHelpRequests)
+	mux.Handle("/rest/v1/help_requests", middleware.RequireAuth(http.HandlerFunc(HandleHelpRequests)))
 	mux.Handle("/api/consultant/help-requests/", middleware.RequireConsultant(http.HandlerFunc(HandleGetHelpRequestByID)))
 
 	// Interactions API
-	mux.HandleFunc("/rest/v1/interactions", HandleInteractions)
+	mux.Handle("/rest/v1/interactions", middleware.RequireAuth(http.HandlerFunc(HandleInteractions)))
 
 	// Profiles API
-	mux.HandleFunc("/rest/v1/profiles", HandleProfiles)
+	mux.Handle("/rest/v1/profiles", middleware.RequireAuth(http.HandlerFunc(HandleProfiles)))
 	mux.HandleFunc("/rest/v1/user", HandleGetUserProfile)
 
 	// Verification codes API

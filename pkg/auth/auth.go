@@ -39,6 +39,12 @@ func Register(email, password, firstName, lastName, preferredLanguageCode string
 		return nil, ErrUserExists
 	}
 
+	// Registration must not create a partial account when the optional reader
+	// preferences migration has not reached the runtime database yet.
+	if err := database.EnsureReaderPreferencesTable(); err != nil {
+		return nil, err
+	}
+
 	// Hash password
 	passwordHash, err := HashPassword(password)
 	if err != nil {

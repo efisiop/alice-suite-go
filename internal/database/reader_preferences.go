@@ -95,6 +95,12 @@ func UpsertReaderPreference(userID, languageCode string) (*models.ReaderPreferen
 	}, nil
 }
 
+// EnsureReaderPreferencesTable repairs schema drift before registration writes.
+// Migrations remain the primary schema mechanism; this is a narrow runtime guard.
+func EnsureReaderPreferencesTable() error {
+	return ensureReaderPreferencesTable()
+}
+
 func ensureReaderPreferencesTable() error {
 	tsDefault := "CURRENT_TIMESTAMP"
 	if DriverName == "sqlite3" {

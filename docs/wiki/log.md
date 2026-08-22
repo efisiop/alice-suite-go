@@ -7,6 +7,26 @@ Use this header format for every new entry:
 
 ---
 
+## [2026-08-22] security | enforce reader authorization and protect generic REST data
+
+### what changed
+
+- Required the reader role for reader pages and `/api/reader/*` endpoints while keeping login and registration public.
+- Required authentication for shared personal-data routes and restricted generic REST access by role and reader ownership.
+- Limited generic user listings to consultants and removed authentication fields such as `password_hash` from responses.
+- Added a narrow registration schema guard so a missing `reader_preferences` table is repaired before account creation.
+
+### why
+
+- A production audit found registration returning HTTP 500 and reader pages relying on client-side authentication.
+- Local reproduction showed a missing preferences table produced the registration 500 and left a partial user row.
+- An unauthenticated generic REST request exposed complete user rows, including password hashes.
+
+### verification
+
+- Focused handler registration and authorization regression tests pass.
+- Local HTTP checks: drifted-schema signup returns 201; anonymous reader page and user-table requests return 401; an authenticated reader page returns 200; a reader token receives 403 for consultant-only user data.
+
 ## [2026-06-19] feature | Italian reader interface demo
 
 ### what changed
