@@ -16,6 +16,7 @@ Use this header format for every new entry:
 - Limited generic user listings to consultants and removed authentication fields such as `password_hash` from responses.
 - Added a narrow registration schema guard so a missing `reader_preferences` table is repaired before account creation.
 - Made the reader-preferences timestamp defaults valid for PostgreSQL text columns after the first live re-audit exposed a database-specific mismatch.
+- Formatted new-user timestamps as text before PostgreSQL inserts; PostgreSQL's driver rejects Go time values for the existing text timestamp columns.
 
 ### why
 

@@ -17,10 +17,11 @@ import (
 // CreateUser creates a new user
 func CreateUser(user *models.User) error {
 	user.ID = uuid.New().String()
+	now := FormatSQLDateTime(time.Now())
 	query := `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := DB.Exec(Rebind(query), user.ID, user.Email, user.PasswordHash, user.FirstName, user.LastName,
-		user.Role, user.IsVerified, time.Now(), time.Now())
+		user.Role, user.IsVerified, now, now)
 	return err
 }
 
