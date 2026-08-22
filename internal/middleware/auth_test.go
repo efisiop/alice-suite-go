@@ -81,8 +81,8 @@ func TestRequireRole_Reader(t *testing.T) {
 	}
 }
 
-// TestRequireRole_WrongRole tests role-based access control with wrong role
-func TestRequireRole_WrongRole(t *testing.T) {
+// TestRequireRole_WrongRoleRedirectsConsultantLogin tests the consultant-page policy.
+func TestRequireRole_WrongRoleRedirectsConsultantLogin(t *testing.T) {
 	token, err := auth.GenerateJWT("test-user", "test@example.com", "reader")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
@@ -102,8 +102,10 @@ func TestRequireRole_WrongRole(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusForbidden {
-		t.Errorf("Handler returned wrong status code: got %v want %v", status, http.StatusForbidden)
+	if status := rr.Code; status != http.StatusFound {
+		t.Errorf("Handler returned wrong status code: got %v want %v", status, http.StatusFound)
+	}
+	if location := rr.Header().Get("Location"); location != "/consultant/login" {
+		t.Errorf("Handler redirected to %q, want %q", location, "/consultant/login")
 	}
 }
-

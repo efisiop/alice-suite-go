@@ -1,13 +1,38 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/efisiopittau/alice-suite-go/internal/database"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestHandleBooks_Success tests successful book retrieval
 func TestHandleBooks_Success(t *testing.T) {
+	testDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { testDB.Close() })
+	if _, err := testDB.Exec(`CREATE TABLE books (
+		id TEXT PRIMARY KEY,
+		title TEXT NOT NULL,
+		author TEXT NOT NULL,
+		description TEXT,
+		total_pages INTEGER NOT NULL,
+		created_at TEXT
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	originalDB, originalDriver := database.DB, database.DriverName
+	database.DB, database.DriverName = testDB, "sqlite3"
+	t.Cleanup(func() {
+		database.DB, database.DriverName = originalDB, originalDriver
+	})
+
 	req, err := http.NewRequest("GET", "/rest/v1/books", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -84,4 +109,3 @@ func TestHealthCheck(t *testing.T) {
 		t.Errorf("Handler returned wrong content type: got %v want application/json", contentType)
 	}
 }
-
