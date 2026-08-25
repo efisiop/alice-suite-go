@@ -1,28 +1,294 @@
 {{define "title"}}Verify Book Code - Alice Suite Reader{{end}}
 
+{{define "head"}}
+<style>
+/* Warm background matching reader app */
+.verify-page {
+    background: linear-gradient(180deg, #f5f2ed 0%, #ede8e0 100%);
+    min-height: calc(100vh - 56px);
+    padding: 2rem 0 3rem;
+}
+
+.verify-card {
+    border-radius: 16px;
+    border: 1px solid rgba(21, 87, 36, 0.12);
+    box-shadow: 0 4px 20px rgba(21, 87, 36, 0.08);
+    overflow: hidden;
+}
+
+.verify-card .card-header-green {
+    background: linear-gradient(135deg, #2d5a27, #3a7233);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    text-align: center;
+}
+
+.verify-card .card-header-green h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.verify-card .card-body {
+    background: linear-gradient(180deg, #fefefe, #faf8f5);
+}
+
+/* Book with flyer illustration */
+.book-flyer-illustration {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem 0 0.5rem;
+}
+
+.book-open {
+    position: relative;
+    width: 220px;
+    height: 150px;
+}
+
+/* Left page of open book */
+.book-page-left {
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 105px;
+    height: 130px;
+    background: #faf7f2;
+    border-radius: 4px 0 0 4px;
+    border: 1px solid #d4c9b8;
+    border-right: none;
+    box-shadow: -3px 2px 8px rgba(0,0,0,0.08);
+    transform: perspective(400px) rotateY(8deg);
+    transform-origin: right center;
+    overflow: hidden;
+    padding: 12px 10px;
+}
+
+/* Right page of open book */
+.book-page-right {
+    position: absolute;
+    right: 0;
+    top: 10px;
+    width: 105px;
+    height: 130px;
+    background: #faf7f2;
+    border-radius: 0 4px 4px 0;
+    border: 1px solid #d4c9b8;
+    border-left: none;
+    box-shadow: 3px 2px 8px rgba(0,0,0,0.08);
+    transform: perspective(400px) rotateY(-8deg);
+    transform-origin: left center;
+    overflow: hidden;
+    padding: 12px 10px;
+}
+
+/* Book spine */
+.book-spine {
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 6px;
+    height: 134px;
+    background: linear-gradient(90deg, #d4c9b8, #c9bca8, #d4c9b8);
+    transform: translateX(-50%);
+    border-radius: 1px;
+    z-index: 2;
+}
+
+/* Fake text lines on pages */
+.page-line {
+    height: 3px;
+    background: #e0d8cc;
+    border-radius: 1px;
+    margin-bottom: 5px;
+}
+
+.page-line.short { width: 70%; }
+.page-line.medium { width: 85%; }
+.page-line.long { width: 95%; }
+
+/* The flyer/card sitting on top of the book */
+.book-flyer {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-3deg);
+    width: 110px;
+    height: 65px;
+    background: linear-gradient(135deg, #fff9e6, #fff3cc);
+    border: 2px solid #d4a843;
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+
+.flyer-label {
+    font-size: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8a6d2b;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.flyer-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #2d5a27;
+    background: rgba(45, 90, 39, 0.08);
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.15em;
+}
+
+.flyer-star {
+    font-size: 0.5rem;
+    color: #d4a843;
+    margin-top: 1px;
+}
+
+/* Arrow pointing from flyer to input */
+.flyer-arrow {
+    text-align: center;
+    color: #8a6d2b;
+    font-size: 1.2rem;
+    margin: 0.3rem 0 0;
+    animation: bounce-down 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce-down {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+}
+
+/* Hint text */
+.verify-hint {
+    background: rgba(45, 90, 39, 0.05);
+    border-left: 3px solid #3a7233;
+    border-radius: 0 8px 8px 0;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.88rem;
+    color: #4a5568;
+    line-height: 1.5;
+}
+
+.verify-hint strong {
+    color: #2d5a27;
+}
+
+/* Input styling */
+.verify-page .form-control {
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    text-align: center;
+    border: 2px solid #d4c9b8;
+    font-family: 'Courier New', monospace;
+}
+
+.verify-page .form-control:focus {
+    border-color: #3a7233;
+    box-shadow: 0 0 0 0.2rem rgba(58, 114, 51, 0.15);
+}
+
+.verify-page .btn-primary {
+    background: linear-gradient(135deg, #2d5a27, #3a7233);
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.verify-page .btn-primary:hover {
+    background: linear-gradient(135deg, #245020, #2d5a27);
+}
+
+@media (max-width: 576px) {
+    .verify-page { padding: 1rem 0 2rem; }
+    .verify-card .card-body { padding: 1.25rem !important; }
+    .book-open { transform: scale(0.9); }
+}
+</style>
+{{end}}
+
 {{define "content"}}
+<div class="verify-page">
 <div class="row justify-content-center">
     <div class="col-md-5">
-        <div class="card shadow">
-            <div class="card-body p-5">
-                <h2 class="card-title text-center mb-4">Verify Book Code</h2>
-                <p class="text-center text-muted mb-4">Enter your book verification code to get started reading.</p>
-                
+        <div class="card verify-card">
+            <div class="card-header-green">
+                <h2>Verify Your Book</h2>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- Book with flyer illustration -->
+                <div class="book-flyer-illustration">
+                    <div class="book-open">
+                        <!-- Left page -->
+                        <div class="book-page-left">
+                            <div class="page-line long"></div>
+                            <div class="page-line medium"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line short"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line medium"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line short"></div>
+                        </div>
+                        <!-- Spine -->
+                        <div class="book-spine"></div>
+                        <!-- Right page -->
+                        <div class="book-page-right">
+                            <div class="page-line long"></div>
+                            <div class="page-line short"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line medium"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line short"></div>
+                            <div class="page-line long"></div>
+                            <div class="page-line medium"></div>
+                        </div>
+                        <!-- Flyer on top -->
+                        <div class="book-flyer">
+                            <div class="flyer-label">Your Code</div>
+                            <div class="flyer-code">ALICE...</div>
+                            <div class="flyer-star">&#9733; &#9733; &#9733;</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flyer-arrow">&#9660;</div>
+
+                <div class="verify-hint">
+                    <strong>Look inside your book</strong> for a small flyer or card with your unique code. Each book has its own code — type it below to unlock the app.
+                </div>
+
                 <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
                 <div id="success-message" class="alert alert-success d-none" role="alert"></div>
 
                 <form id="verify-form">
                     <div class="mb-3">
-                        <label for="code" class="form-label">Verification Code</label>
-                        <input type="text" class="form-control" id="code" name="code" placeholder="Enter code" required>
+                        <label for="code" class="form-label fw-semibold">Verification Code</label>
+                        <input type="text" class="form-control" id="code" name="code" placeholder="Type your code here" required>
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Verify</button>
+                        <button type="submit" class="btn btn-primary">Verify my book</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+</div>
 </div>
 {{end}}
 
@@ -32,7 +298,7 @@ document.getElementById('verify-form').addEventListener('submit', function(e) {
     e.preventDefault();
 	const code = document.getElementById('code').value;
 	const token = sessionStorage.getItem('auth_token');
-    
+
     if (!token) {
         window.location.href = '/reader/login';
         return;

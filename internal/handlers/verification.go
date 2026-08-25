@@ -36,7 +36,7 @@ func HandleVerifyBookCode(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Authentication failed", http.StatusUnauthorized)
 		return
 	}
-	if claims.Role != "reader" {
+	if !auth.IsReader(claims.Role) {
 		http.Error(w, "Reader access required", http.StatusForbidden)
 		return
 	}

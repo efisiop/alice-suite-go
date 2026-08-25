@@ -16,6 +16,9 @@
 <style>
 .reader-interaction-main {
     max-width: none;
+    background: #f5f2ed;
+    min-height: calc(100vh - 56px);
+    padding-top: 0.75rem;
 }
 
 .reader-workspace {
@@ -35,11 +38,11 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(31, 41, 55, 0.12);
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(21, 87, 36, 0.15);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(21, 87, 36, 0.12);
 }
 
 .reader-layout-toggle {
@@ -51,6 +54,17 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    background: linear-gradient(135deg, #2d5a27 0%, #3a7233 100%);
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+    padding: 0.65rem 1rem;
+}
+
+.reader-panel-header h5 {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .reader-panel-close {
@@ -58,8 +72,8 @@
     height: 1.6rem;
     border: 0;
     border-radius: 50%;
-    background: transparent;
-    color: #6c757d;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
@@ -67,8 +81,8 @@
 }
 
 .reader-panel-close:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: #212529;
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
 }
 
 .section-page-nav {
@@ -101,7 +115,9 @@
 }
 
 .reader-workspace .card {
-    border-radius: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(21, 87, 36, 0.12);
+    box-shadow: 0 2px 12px rgba(21, 87, 36, 0.06);
 }
 
 .reader-side-panel {
@@ -109,6 +125,7 @@
     top: 1rem;
     max-height: calc(100vh - 120px);
     overflow-y: auto;
+    border-radius: 12px;
 }
 
 #reader-sections-panel .reader-side-panel {
@@ -125,10 +142,26 @@
 
 #reading-card {
     min-height: calc(100vh - 170px);
+    background: linear-gradient(180deg, #fefefe 0%, #faf8f5 100%);
+}
+
+#reading-card > .card-header {
+    background: linear-gradient(135deg, #2d5a27 0%, #3a7233 100%);
+    color: #fff;
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    padding: 0.75rem 1.25rem;
+}
+
+#reading-card > .card-header h5 {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 #reading-container {
     min-height: calc(100vh - 230px);
+    padding: 1.5rem;
 }
 
 .reader-workspace.is-left-hidden .reader-panel-left,
@@ -168,27 +201,28 @@
     min-height: 44px;
     display: flex;
     align-items: center;
-    border-left: 3px solid #155724;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    border-left: 3px solid #4caf50;
+    background-color: #fafaf8;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    -webkit-tap-highlight-color: transparent; /* Prevent tap highlight on mobile */
-    touch-action: manipulation; /* Prevent double-tap zoom and improve touch response */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    font-size: 0.88rem;
 }
 
 .section-snippet:hover {
-    background-color: #d4edda;
-    border-left-color: #1e7e34;
+    background-color: #e8f5e9;
+    border-left-color: #2e7d32;
     transform: translateX(2px);
 }
 
 .section-snippet.active {
-    background-color: #d4edda;
-    border-left-color: #155724;
+    background-color: #e8f5e9;
+    border-left-color: #2d5a27;
     border-left-width: 5px;
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 4px rgba(21, 87, 36, 0.1);
 }
 
 .snippet-text {
@@ -204,7 +238,52 @@
 .reading-content {
     max-width: 42em;
     font-size: 1.375rem;
-    line-height: 1.78;
+    line-height: 1.85;
+    color: #2c3e50;
+    letter-spacing: 0.01em;
+}
+
+.reader-companion-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+    border-left: 3px solid #4caf50;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    color: #2e7d32;
+    opacity: 0.9;
+}
+
+.reader-companion-hint svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.escalation-ask-ai {
+    border-color: #4caf50;
+    color: #2e7d32;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.escalation-ask-ai:hover {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    color: #1b5e20;
+}
+
+.escalation-human {
+    color: #6c757d !important;
+    transition: color 0.2s ease;
+}
+
+.escalation-human:hover {
+    color: #2e7d32 !important;
 }
 
 .jump-to-sections-link {
@@ -2152,14 +2231,80 @@ html {
 
 @media (max-width: 991.98px) {
     .reader-interaction-main {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 0;
+        padding-right: 0;
+        padding-bottom: 56px;
     }
 
-    .reader-side-panel {
+    .reader-workspace {
+        --bs-gutter-x: 0;
+        gap: 0;
+    }
+
+    .reader-panel-left,
+    .reader-panel-right {
+        display: none;
+        position: fixed;
+        bottom: 56px;
+        left: 0;
+        right: 0;
+        z-index: 1040;
+        min-height: 40vh;
+        max-height: 65vh;
+        overflow-y: auto;
+        background: #fff;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+        padding: 0;
+        animation: drawerSlideUp 0.25s ease-out;
+    }
+
+    .reader-panel-left.drawer-open,
+    .reader-panel-right.drawer-open {
+        display: block;
+    }
+
+    @keyframes drawerSlideUp {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .reader-panel-left .reader-side-panel,
+    .reader-panel-right .reader-side-panel {
         position: static;
         max-height: none;
         overflow: visible;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .reader-panel-center {
+        padding: 0 0.75rem;
+    }
+
+    #reading-card {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 0;
+    }
+
+    #reading-card .card-header {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        border-radius: 0;
+    }
+
+    #reading-container {
+        min-height: calc(100vh - 170px);
+        padding: 0.75rem;
+    }
+
+    .reading-content {
+        max-width: 100%;
+        line-height: 1.8;
     }
 
     #section-snippets {
@@ -2167,10 +2312,116 @@ html {
         max-height: none;
     }
 
-    #reading-card,
-    #reading-container {
-        min-height: 0;
+    .reader-layout-toolbar {
+        display: none !important;
     }
+
+    .reader-bottom-bar {
+        display: flex !important;
+    }
+}
+
+.reader-bottom-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding: 0 1rem;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.reader-bottom-bar-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reader-bottom-bar-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.reader-bar-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #555;
+    font-size: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+}
+
+.reader-bar-btn:hover,
+.reader-bar-btn:active {
+    background: rgba(21, 87, 36, 0.08);
+    color: #155724;
+}
+
+.reader-bar-btn.active {
+    background: rgba(21, 87, 36, 0.12);
+    color: #155724;
+}
+
+.reader-bar-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.reader-bar-page-label {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 600;
+    min-width: 32px;
+    text-align: center;
+}
+
+.reader-bar-nav-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 50%;
+    background: transparent;
+    color: #555;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.reader-bar-nav-btn:hover {
+    background: rgba(21, 87, 36, 0.08);
+    color: #155724;
+}
+
+.drawer-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 56px;
+    z-index: 1035;
+    background: rgba(0,0,0,0.3);
+}
+
+.drawer-backdrop.show {
+    display: block;
 }
 </style>
 {{end}}
@@ -2218,6 +2469,10 @@ html {
                             <button type="button" class="consultant-prompt-action" onclick="acceptConsultantPromptAndOpenAIHelp();">Open AI Help</button>
                         </div>
                     </div>
+                </div>
+                <div class="reader-companion-hint" id="reader-companion-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5"/></svg>
+                    <span>Open your book and match the page here with the arrows or <strong style="color:#2d5a27">Navigation tools</strong>. Then tap any <strong style="color:#0056b3">blue word</strong> to look it up.</span>
                 </div>
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
@@ -2325,6 +2580,35 @@ html {
     <div class="reader-layout-toolbar" aria-label="Reader layout controls">
         <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-sections-panel" aria-controls="reader-sections-panel" aria-pressed="false">Hide sections</button>
         <button type="button" class="btn btn-sm btn-outline-secondary reader-layout-toggle" id="toggle-services-panel" aria-controls="reader-services-panel" aria-pressed="false">Hide services</button>
+    </div>
+</div>
+
+<!-- Drawer backdrop (mobile) -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeAllDrawers()"></div>
+
+<!-- Bottom toolbar (mobile) -->
+<div class="reader-bottom-bar" aria-label="Reading tools">
+    <div class="reader-bottom-bar-tools">
+        <button type="button" class="reader-bar-btn" id="bar-btn-sections" onclick="toggleDrawer('left')" aria-label="Sections">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </button>
+        <button type="button" class="reader-bar-btn" onclick="showAIHelp()" aria-label="AI help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v.01"/><path d="M8 11h8"/><path d="M8 14h4"/></svg>
+        </button>
+        <button type="button" class="reader-bar-btn" onclick="showDictionary()" aria-label="Dictionary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </button>
+        <button type="button" class="reader-bar-btn" onclick="openQuizModal()" aria-label="Quiz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+        <button type="button" class="reader-bar-btn" id="bar-btn-services" onclick="toggleDrawer('right')" aria-label="Services">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+    </div>
+    <div class="reader-bottom-bar-nav">
+        <button type="button" class="reader-bar-nav-btn" onclick="event.preventDefault(); previousPage(); return false;" aria-label="Previous page">&larr;</button>
+        <span class="reader-bar-page-label" id="bar-page-label">1</span>
+        <button type="button" class="reader-bar-nav-btn" onclick="event.preventDefault(); nextPage(); return false;" aria-label="Next page">&rarr;</button>
     </div>
 </div>
 
@@ -2704,6 +2988,11 @@ html {
                     <span aria-hidden="true">&rarr;</span>
                 </button>
             </div>
+            <div class="mt-3 text-center">
+                <button type="button" class="btn btn-sm btn-link text-muted escalation-human" onclick="escalateAIToConsultant()" style="font-size: 0.8rem; text-decoration: none;">
+                    🧑‍🏫 Prefer a human? Ask a consultant
+                </button>
+            </div>
         </div>
     </div>
     
@@ -2712,6 +3001,11 @@ html {
     
     <!-- Chat Input Area -->
     <div class="ai-chat-input-area">
+        <div class="text-center mb-1">
+            <button type="button" class="btn btn-link btn-sm text-muted p-0 escalation-human" onclick="escalateAIToConsultant()" style="font-size: 0.75rem; text-decoration: none;">
+                🧑‍🏫 Need more help? Ask a human consultant
+            </button>
+        </div>
         <div class="d-flex gap-2 align-items-end">
             <div class="flex-grow-1">
                 <textarea 
@@ -3575,14 +3869,16 @@ function lookupWordInline(word, popupContent) {
             };
 
             html += `<div class="dictionary-popup-source">${escapeHtml(formatDictionarySourceLabel(data.source))}</div>`;
-            
+            html += `<button type="button" class="btn btn-sm btn-outline-success mt-2 w-100 escalation-ask-ai" onclick="escalateDictionaryToAI('${escapeHtml(wordToLookup).replace(/'/g, "\\'")}')">💬 Ask AI to explain</button>`;
+
             popupContent.innerHTML = html;
-            
+
             // Track dictionary lookup
             trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
         } else {
             console.log('Word not found in dictionary:', wordToLookup, data); // Debug log
-            popupContent.innerHTML = '<div class="dictionary-popup-loading text-muted">Word not found in dictionary.</div>';
+            popupContent.innerHTML = '<div class="dictionary-popup-loading text-muted">Word not found in dictionary.</div>' +
+                '<button type="button" class="btn btn-sm btn-outline-success mt-2 w-100 escalation-ask-ai" onclick="escalateDictionaryToAI(\'' + escapeHtml(wordToLookup).replace(/'/g, "\\'") + '\')">💬 Ask AI about this word</button>';
         }
     })
     .catch(err => {
@@ -4325,6 +4621,7 @@ function lookupWord(word) {
                     exampleHtml = '<button type="button" class="btn btn-sm btn-outline-secondary mt-2 dictionary-popup-see-example" onclick="showExamplesModal(this)">Example</button>';
                     exampleHtml += '<div class="dictionary-popup-examples-container mt-2" style="display: none;">' + examplesContent + '</div>';
                 }
+                var askAILink = '<button type="button" class="btn btn-sm btn-outline-success mt-2 w-100 escalation-ask-ai" onclick="escalateDictionaryToAI(\'' + escapeHtml(data.term || wordToLookup).replace(/'/g, "\\'") + '\')">💬 Ask AI to explain further</button>';
                 resultDiv.innerHTML =
                     '<div class="card"><div class="card-body">' +
                     '<h6 class="mb-1">' + escapeHtml(data.term || wordToLookup) + '</h6>' +
@@ -4332,10 +4629,12 @@ function lookupWord(word) {
                     '<p class="dictionary-popup-definition mb-2">' + escapeHtml(data.definition) + '</p>' +
                     exampleHtml +
                     '<div class="dictionary-popup-source">' + escapeHtml(formatDictionarySourceLabel(data.source)) + '</div>' +
+                    askAILink +
                     '</div></div>';
                 trackActivity('DEFINITION_LOOKUP', { word: wordToLookup });
             } else {
-                resultDiv.innerHTML = '<p class="text-muted">Word not found in dictionary.</p>';
+                var notFoundAILink = '<button type="button" class="btn btn-sm btn-outline-success mt-2 w-100 escalation-ask-ai" onclick="escalateDictionaryToAI(\'' + escapeHtml(wordToLookup).replace(/'/g, "\\'") + '\')">💬 Ask AI about this word</button>';
+                resultDiv.innerHTML = '<p class="text-muted">Word not found in dictionary.</p>' + notFoundAILink;
             }
         }
     })
@@ -4345,6 +4644,30 @@ function lookupWord(word) {
             resultDiv.innerHTML = '<p class="text-danger">Error looking up word. Please try again.</p>';
         }
     });
+}
+
+function escalateDictionaryToAI(word) {
+    var dictionaryModal = document.getElementById('dictionaryModal');
+    if (dictionaryModal) {
+        var modal = bootstrap.Modal.getInstance(dictionaryModal);
+        if (modal) modal.hide();
+    }
+    closeAllDrawers();
+    showAIHelp();
+    setTimeout(function() {
+        var input = document.getElementById('ai-question');
+        if (input) {
+            input.value = 'Can you explain the word "' + word + '" in the context of this story? I looked it up in the dictionary but would like a deeper explanation.';
+            input.focus();
+        }
+    }, 300);
+}
+
+function escalateAIToConsultant() {
+    closeAllDrawers();
+    var chatContainer = document.getElementById('ai-chat-container');
+    if (chatContainer) chatContainer.style.display = 'none';
+    requestHelp();
 }
 
 function trackActivity(eventType, data) {
@@ -8761,6 +9084,60 @@ function hideReaderPanelFromHeader(side) {
     const button = document.getElementById(buttonId);
     if (button) button.click();
 }
+
+function toggleDrawer(side) {
+    var panel = document.getElementById(side === 'left' ? 'reader-sections-panel' : 'reader-services-panel');
+    var backdrop = document.getElementById('drawer-backdrop');
+    var btnSections = document.getElementById('bar-btn-sections');
+    var btnServices = document.getElementById('bar-btn-services');
+    if (!panel) return;
+
+    var isOpen = panel.classList.contains('drawer-open');
+    closeAllDrawers();
+
+    if (!isOpen) {
+        panel.classList.add('drawer-open');
+        if (backdrop) backdrop.classList.add('show');
+        if (side === 'left' && btnSections) btnSections.classList.add('active');
+        if (side === 'right' && btnServices) btnServices.classList.add('active');
+        if (side === 'right') {
+            var helpCenter = document.getElementById('servicesHelpCenter');
+            if (helpCenter && !helpCenter.classList.contains('show')) {
+                try { new bootstrap.Collapse(helpCenter, {toggle: true}); } catch(e) {}
+            }
+        }
+    }
+}
+
+function closeAllDrawers() {
+    var panels = document.querySelectorAll('.reader-panel-left, .reader-panel-right');
+    for (var i = 0; i < panels.length; i++) {
+        panels[i].classList.remove('drawer-open');
+    }
+    var backdrop = document.getElementById('drawer-backdrop');
+    if (backdrop) backdrop.classList.remove('show');
+    var btns = document.querySelectorAll('.reader-bar-btn.active');
+    for (var j = 0; j < btns.length; j++) {
+        btns[j].classList.remove('active');
+    }
+}
+
+function syncBarPageLabel() {
+    var mainDisplay = document.getElementById('current-page-display-main');
+    var barLabel = document.getElementById('bar-page-label');
+    if (mainDisplay && barLabel) {
+        barLabel.textContent = mainDisplay.textContent;
+    }
+}
+
+var _barPageObserver = new MutationObserver(syncBarPageLabel);
+document.addEventListener('DOMContentLoaded', function() {
+    var mainDisplay = document.getElementById('current-page-display-main');
+    if (mainDisplay) {
+        _barPageObserver.observe(mainDisplay, { childList: true, characterData: true, subtree: true });
+        syncBarPageLabel();
+    }
+});
 
 // Load first page on page load
 document.addEventListener('DOMContentLoaded', function() {

@@ -101,12 +101,12 @@ func (s *SessionStore) cleanupExpiredSessions() {
 
 // IsConsultant checks if a user is a consultant
 func IsConsultant(role string) bool {
-	return role == "consultant"
+	return role == "consultant" || role == "administrator"
 }
 
-// IsReader checks if a user is a reader
+// IsReader checks if a user has at least reader-level access
 func IsReader(role string) bool {
-	return role == "reader"
+	return role == "reader" || role == "consultant" || role == "administrator"
 }
 
 // IsAdmin checks if a user is an administrator
