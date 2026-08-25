@@ -112,6 +112,75 @@ Use this header format for every new entry:
 
 - `internal/templates/reader/interaction.html`
 - `scripts/reader_autoresearch_check.sh`
+
+## [2026-06-20] fix | remove Reader localization refresh overload
+
+### what changed
+
+- Replaced the global localization rescan after every DOM mutation with targeted handling of only added or changed nodes.
+- Pause the observer while translations are applied, preventing its own DOM writes from scheduling more work.
+- Avoid a second full-document translation pass when the saved preference matches the cached language.
+- Reused the dynamic translation patterns instead of allocating them for each text node.
+
+### why
+
+- Refreshing the Reader creates many DOM mutations. The previous observer responded by repeatedly walking every text node and every element, causing unnecessary browser CPU and memory pressure.
+
+### files touched
+
+- `internal/static/js/reader-i18n.js`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `node --check internal/static/js/reader-i18n.js`
+- `node --check internal/static/js/app.js`
+- `scripts/reader_autoresearch_check.sh`
+- `go test ./internal/database ./pkg/auth`
+
+## [2026-06-20] feature | restore Consultant dashboard as the home route
+
+### what changed
+
+- Routed `/consultant` to the Consultant dashboard.
+- Kept `/consultant/readers` as the separate reader directory.
+
+### why
+
+- The Consultant home route previously opened the Readers analytics screen, even though a distinct operational dashboard already existed.
+
+### files touched
+
+- `cmd/server/main.go`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Pending Go build and route checks.
+
+## [2026-06-20] feature | add primary consultant ownership foundation
+
+### what changed
+
+- Added an atomic Consultant API for setting a reader's active primary consultant for a book.
+- Added request-share storage for involving another consultant without transferring reader ownership.
+
+### why
+
+- Each reader needs a clear primary consultant, while individual support requests can still be shared for assistance.
+
+### files touched
+
+- `migrations/018_consultant_request_shares.sql`
+- `internal/database/consultant_assignments.go`
+- `internal/handlers/api.go`
+
+### verification
+
+- `gofmt` completed.
+- Go build/test is pending because the sandbox cannot access the shared Go build cache.
 - `docs/READER_FIX_LIST.md`
 - `docs/wiki/index.md`
 - `docs/wiki/log.md`
@@ -120,6 +189,33 @@ Use this header format for every new entry:
 
 - `scripts/reader_autoresearch_check.sh` passed locally.
 - `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-20] feature | complete Italian Reader interface coverage
+
+### what changed
+
+- Replaced the partial one-way translation map with a reusable Reader i18n layer.
+- Added Italian translations for Reader account screens, navigation, dictionary actions, AI controls, consultant requests, scanner, quiz feedback, and asynchronous status messages.
+- Made interface language changes reversible without a page refresh.
+- Kept book passages, reader content, dictionary definitions, and AI responses outside UI translation.
+
+### why
+
+- The prior implementation translated only a subset of static Reader text, leaving dynamic and modal UI strings in English.
+
+### files touched
+
+- `internal/static/js/reader-i18n.js`
+- `internal/static/js/app.js`
+- `internal/templates/base.html`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `node --check internal/static/js/reader-i18n.js`
+- `node --check internal/static/js/app.js`
+- `scripts/reader_autoresearch_check.sh`
 
 ## [2026-06-19] infra | publish dictionary Picture action for Render
 
@@ -1196,3 +1292,260 @@ Use this header format for every new entry:
 
 - `scripts/reader_autoresearch_check.sh` passed locally: Go build and Reader template marker checks.
 - `BASE_URL=http://localhost:8080 scripts/reader_autoresearch_check.sh` passed against the running local app.
+
+## [2026-06-20] review | design Reader AI context seam
+
+### what changed
+
+- Added a Reader-AI context module design defining `ReadingContextController`, `ReaderSelectionAdapter`, `AIChatController`, and `AIRequestAdapter`.
+- Added the Alice Suite domain glossary, including Reading Context, Selected Passage, AI Assistance Request, Help Request, and Consultant Assignment.
+- Recorded the ownership rules, migration sequence, non-goals, and behavior checks for the next implementation slice.
+
+### why
+
+- The active Reader AI flow still has overlapping selection and focus state (R-002). A clear seam is required before further changes to the large Reader interaction template.
+
+### files touched
+
+- `CONTEXT.md`
+- `docs/READER_AI_CONTEXT_MODULE_DESIGN.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Compared the design against the current context/selection functions in `internal/templates/reader/interaction.html` and the `/api/ai/ask` handler/service contract.
+
+### next step
+
+- Implement migration step 1: introduce `ReadingContextController` and route the context bar through it without changing user-visible behavior.
+## [2026-06-20] docs | map agent loops to Alice Suite
+
+### what changed
+
+- Added a prioritized inventory of Reader, Consultant, safety, quality, and operational loops for Alice Suite.
+- Defined each loop's trigger, bounded action, feedback signal, stop/escalation rule, and implementation fit.
+- Recorded a staged implementation order that puts the Reader context seam and the Tier 3 handoff ahead of autonomous optimization.
+- Added the active topic to the wiki index.
+
+### why
+
+- The requested agent-loop library needs to be translated into Alice's physical-book companion model, not adopted as generic autonomous-agent functionality.
+
+### source limitation
+
+- The requested page (`https://signals.forwardfuture.ai/loop-library/agents/`) was not reachable from this environment: it did not appear in browser search and direct HTTPS retrieval timed out. The inventory is therefore a documented Alice-specific synthesis, not a verbatim page extraction.
+
+### files touched
+
+- `docs/AGENT_LOOP_INVENTORY.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Cross-checked scope and sequencing against `docs/wiki/DIRECTION.md`, `docs/UPGRADE_ROADMAP.md`, `docs/AI_ASSISTANT_FLOW_INVENTORY.md`, and `docs/READER_AI_CONTEXT_MODULE_DESIGN.md`.
+## [2026-06-20] docs | add agent-loop design to Alice skill library
+
+### what changed
+
+- Added **Agent-loop design and governance** to the cross-cutting skills in the Hermes handover briefing.
+- Defined its use as a reusable planning capability for Reader, Consultant, and Admin changes that include AI, automation, feedback, or escalation.
+- Linked the skill entry to the detailed Alice loop inventory and marked the inventory topic done in the wiki index.
+
+### why
+
+- Future app improvements need a consistent way to design bounded, observable, human-governed loops instead of treating agent behavior as generic automation.
+
+### files touched
+
+- `docs/HERMES_HANDOVER_BRIEFING.md`
+- `docs/AGENT_LOOP_INVENTORY.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Checked that the skill is listed with the existing cross-cutting Alice capabilities and points to the inventory's implementation order and safety rules.
+## [2026-06-20] feature | enforce Consultant help-request ownership
+
+### what changed
+
+- Added dedicated Consultant-only endpoints to claim a pending help request and resolve an assigned request with a response.
+- Moved the Help Requests page from generic REST mutations to those dedicated actions.
+- Restricted reader help-request reads to the authenticated reader and rejected generic PATCH, PUT, and DELETE operations for this resource.
+- Prevented reassigning a request once it has left the pending state; only its assigned consultant can resolve it.
+
+### why
+
+- Tier 3 needs a closed, reliable handoff. Browser-provided assignment fields and generic mutations could not enforce request ownership or prevent a reader from querying another reader's help requests.
+
+### files touched
+
+- `internal/handlers/api.go`
+- `internal/services/help_service.go`
+- `internal/templates/consultant/help-requests.html`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `go build ./cmd/server` completed.
+- `git diff --check` completed.
+- `go test ./internal/handlers` remains blocked by an existing test setup failure: `TestHandleBooks_Success` uses a closed SQL connection and returns HTTP 500 before the Consultant code runs.
+
+### next step
+
+- Add reader-visible follow-up/reopen behavior after a consultant response, completing the Tier 3 feedback loop.
+
+## [2026-06-25] fix | simplify Reader-to-Consultant activity handoff
+
+### what changed
+
+- Consolidated Reader activity tracking into one backend path: authenticated Reader event -> `TrackActivity` -> `interactions` compatibility row when a book is present -> `activity_logs` dashboard row -> `reader_states` update -> Consultant SSE activity event.
+- Removed the extra client-side `/auth/v1/user` lookup before activity tracking; the backend now uses the JWT identity only.
+- Removed duplicate login/logout `activity_logs` writes, so Consultant stats do not double-count those events.
+- Normalized Reader UI event names for Consultant aggregates (`PAGE_SYNC` -> `PAGE_VIEW`, `DEFINITION_LOOKUP` -> `WORD_LOOKUP`, `AI_HELP`/`AI_QUERY` -> `AI_INTERACTION`) while preserving live-card event names.
+- Added `AI_HELP` labels/icons to Consultant live activity cards.
+- Added regression tests for book-backed activity and bookless login activity.
+
+### why
+
+- Reader activity was traveling through multiple partially overlapping streams (`interactions`, `activity_logs`, `reader_states`, SSE, and polling), which made Consultant dashboards easy to desynchronize. The handoff now has one authoritative backend call that updates the existing stores and live event together.
+
+### files touched
+
+- `internal/handlers/activity.go`
+- `internal/handlers/auth.go`
+- `internal/handlers/activity_test.go`
+- `internal/templates/reader/interaction.html`
+- `internal/templates/consultant/dashboard.html`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `go test ./internal/handlers -run 'TestTrackActivity'` completed.
+- `go build ./cmd/server` completed.
+- `go test ./internal/handlers` remains blocked by the pre-existing `TestHandleBooks_Success` closed SQL connection setup failure.
+
+### next step
+
+- Open Reader and Consultant dashboards together and verify a real `PAGE_SYNC`, `DEFINITION_LOOKUP`, `AI_HELP`, and `HELP_REQUEST` appears on the Consultant live cards within the SSE/polling window.
+
+## [2026-06-26] docs | activate Consultant signal autoresearch
+
+### what changed
+
+- Added a Consultant signal autoresearch map that classifies Reader inputs into audit-only, quiet timeline, live-card, and alert/action levels.
+- Recorded the current live signal path and the first set of untracked Reader inputs: consultant prompt feedback, AI open/abandon/failure, context-selection friction, quiz lifecycle, scan lifecycle, Ah Ah moments, preference changes, and book verification.
+- Added a repeatable static audit script for current `trackActivity()` emitters, Consultant dashboard labels, and untracked candidate flows.
+- Added the active topic to the wiki index.
+
+### why
+
+- The Consultant dashboard needs predictive signals, not every raw Reader click. A signal taxonomy lets future implementation decide what should be shown live, what should be stored quietly, and what should become an action item.
+
+### files touched
+
+- `docs/CONSULTANT_SIGNAL_AUTORESEARCH.md`
+- `scripts/consultant_signal_autoresearch_check.sh`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/consultant_signal_autoresearch_check.sh` completed and reported the current tracked emitters plus untracked candidate flows.
+
+### next step
+
+- Implement the first safe slice: Consultant prompt feedback events (`CONSULTANT_PROMPT_SHOWN`, `CONSULTANT_PROMPT_ACCEPTED`, `CONSULTANT_PROMPT_DISMISSED`) and display them as quiet/live card signals according to the taxonomy.
+
+## [2026-06-27] fix | keep Consultant reader feedback visible after session inactivity
+
+### what changed
+
+- Changed the Consultant dashboard activity feed to load recent reader activity regardless of current active-session status.
+- Stopped removing reader cards when a reader is no longer in the active-session list.
+- Added a card presence label (`Active now` / `Recent activity`) so presence remains visible without hiding historical feedback.
+- Added a regression check to `scripts/consultant_signal_autoresearch_check.sh` to fail if active-session filtering or inactive-card removal returns.
+- Documented the dashboard visibility rule in the Consultant signal autoresearch map.
+
+### why
+
+- Reader activity for a played-with reader was stored in `interactions` and `activity_logs`, but the Consultant dashboard filtered the feed to active reader sessions and removed cards for inactive readers. Once the reader's session aged out of the one-hour active window, the Consultant could not see that reader's feedback on the dashboard.
+
+### files touched
+
+- `internal/templates/consultant/dashboard.html`
+- `scripts/consultant_signal_autoresearch_check.sh`
+- `docs/CONSULTANT_SIGNAL_AUTORESEARCH.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Local SQLite data confirmed recent `giusy@giusy.com` activity existed in both `interactions` and `activity_logs`.
+- Static regression check for active-session filtering passed.
+- `scripts/consultant_signal_autoresearch_check.sh` completed.
+
+### next step
+
+- Refresh the Consultant dashboard and confirm the reader card remains visible as `Recent activity` even when the reader is no longer active.
+
+## [2026-06-27] fix | clarify Consultant dashboard live vs recent reader counts
+
+### what changed
+
+- Renamed the top `Logged In` stat to `Logged In Now` so it clearly means current active sessions.
+- Renamed the top `Active Readers` stat to `Recent Readers` and wired it to the number of reader activity cards currently shown.
+- Renamed the lower `Active Readers` card section to `Recent Reader Activity`.
+- Extended the Consultant signal autoresearch check to fail if the dashboard relabels recent activity as active readers again.
+
+### why
+
+- After historical reader feedback was made visible, the dashboard could show a reader card marked `Recent activity` while the top logged-in count stayed `0`. The data was correct, but the labels made it look contradictory.
+
+### files touched
+
+- `internal/templates/consultant/dashboard.html`
+- `scripts/consultant_signal_autoresearch_check.sh`
+- `docs/CONSULTANT_SIGNAL_AUTORESEARCH.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- `scripts/consultant_signal_autoresearch_check.sh` completed and confirmed the dashboard uses `Logged In Now`, `Recent Readers`, and `Recent Reader Activity`.
+- Extracted Consultant dashboard JavaScript passed `node --check`.
+- `git diff --check` completed.
+- `go build ./cmd/server` completed.
+
+## [2026-06-27] docs | incorporate GBrain as pinned reference
+
+### what changed
+
+- Downloaded `garrytan/gbrain` under `~/Projects/oss/gbrain` for inspection.
+- Added `garrytan/gbrain` as a pinned git submodule at `archive/reference/gbrain`.
+- Added an Alice-specific integration note that records the upstream commit,
+  license, runtime boundary, relevant GBrain files, and candidate future slices.
+- Added the GBrain reference integration topic to the wiki index.
+
+### why
+
+- GBrain is a large Bun/TypeScript knowledge and retrieval system. Alice Suite
+  is a Go app, so the first safe incorporation is a pinned reference plus
+  explicit guidance instead of importing the runtime into the server.
+
+### files touched
+
+- `.gitmodules`
+- `archive/reference/gbrain`
+- `docs/GBRAIN_ALICE_INTEGRATION.md`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Confirmed the submodule points to commit
+  `814258dda67945ffec9457a1e73980e947b7e462`.
+- Confirmed upstream `package.json` declares MIT license and Bun/TypeScript
+  runtime shape.

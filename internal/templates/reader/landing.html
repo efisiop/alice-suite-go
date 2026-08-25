@@ -1,32 +1,109 @@
 {{define "title"}}Alice Suite Reader - Welcome{{end}}
 
+{{define "head"}}
+<style>
+.alice-landing-shell {
+    background: radial-gradient(circle at top, #ffe287 0%, #ffc646 45%, #ffb530 100%);
+    border: 1px solid #d89a1f;
+    border-radius: 14px;
+    padding: 2rem;
+    box-shadow: 0 8px 24px rgba(175, 95, 0, 0.18);
+}
+.alice-cover-wrap {
+    background: #fff8ea;
+    border: 2px solid #1e4d8d;
+    border-radius: 12px;
+    padding: 0.9rem;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+}
+.alice-cover-image {
+    width: 100%;
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+}
+.alice-kicker {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a1f1f;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+.alice-title {
+    color: #102a4f;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.alice-lead {
+    color: #3f2f20;
+    font-size: 1.05rem;
+}
+.alice-note {
+    font-size: 0.85rem;
+    color: #6a4e2d;
+}
+.alice-feature-list li {
+    margin-bottom: 0.45rem;
+    color: #2f2217;
+}
+.alice-landing-shell .btn-primary {
+    background-color: #1452a8;
+    border-color: #1452a8;
+}
+.alice-landing-shell .btn-primary:hover {
+    background-color: #0f468f;
+    border-color: #0f468f;
+}
+.alice-landing-shell .btn-outline-primary {
+    color: #8a1f1f;
+    border-color: #8a1f1f;
+}
+.alice-landing-shell .btn-outline-primary:hover {
+    color: #fff;
+    background-color: #8a1f1f;
+    border-color: #8a1f1f;
+}
+</style>
+{{end}}
+
 {{define "content"}}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="text-center mb-5">
-            <h1 class="display-4">Welcome to Alice Suite Reader</h1>
-            <p class="lead">Your companion for reading a physical copy of Alice in Wonderland</p>
-            <p class="text-muted">Keep your book in your hands. Alice Suite adds definitions, explanations, and human help without replacing the book.</p>
-        </div>
-
-        <div class="card shadow">
-            <div class="card-body p-5">
-                <h2 class="card-title text-center mb-4">Get Started</h2>
-                <p class="text-center mb-4">Create an account, enter the verification code supplied with your physical book, and get help whenever the story feels difficult.</p>
-                
-                <div class="d-grid gap-2 col-md-6 mx-auto">
-                    <a href="/reader/login" class="btn btn-primary btn-lg">Login</a>
-                    <a href="/reader/register" class="btn btn-outline-primary btn-lg">Create Account</a>
+    <div class="col-lg-10">
+        <div class="alice-landing-shell">
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-5">
+                    <div class="alice-cover-wrap">
+                        <img
+                            src="/static/images/alice-cover-1865.jpg"
+                            alt="Colorful Alice in Wonderland cover art"
+                            class="alice-cover-image"
+                        >
+                    </div>
+                    <p class="alice-note mt-2 mb-0">
+                        Cover image selected by the project team.
+                    </p>
                 </div>
+                <div class="col-lg-7">
+                    <p class="alice-kicker">Alice Suite Reader</p>
+                    <h1 class="display-5 alice-title">Step into Wonderland with a guided reading companion</h1>
+                    <p class="alice-lead mb-4">
+                        A companion for your physical copy of Alice in Wonderland.
+                        Check difficult words, ask AI for help, and request support from a human consultant when needed.
+                    </p>
 
-                <div class="mt-5">
-                    <h3>Features</h3>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">✓ Interactive reading experience</li>
-                        <li class="mb-2">✓ Dictionary and glossary lookup</li>
-                        <li class="mb-2">✓ AI assistance for understanding</li>
-                        <li class="mb-2">✓ Reading progress tracking</li>
-                        <li class="mb-2">✓ Help requests to consultants</li>
+                    <div class="d-grid gap-2 d-sm-flex mb-4">
+                        <a href="/reader/login" class="btn btn-primary btn-lg px-4">Log in</a>
+                        <a href="/reader/register" class="btn btn-outline-primary btn-lg px-4">Create account</a>
+                    </div>
+
+                    <h3 class="h5 mb-2">What you can do</h3>
+                    <ul class="list-unstyled alice-feature-list mb-0">
+                        <li>✓ Follow your reading progress page by page</li>
+                        <li>✓ Tap words for instant glossary and definitions</li>
+                        <li>✓ Ask AI for explanations in simple language</li>
+                        <li>✓ Send help requests directly to your consultant</li>
                     </ul>
                 </div>
             </div>

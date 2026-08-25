@@ -61,6 +61,16 @@ Details: `docs/QMD_PROJECT_MEMORY.md`.
 
 ---
 
+## Evolution control (recommended)
+
+| File | Use when |
+|------|----------|
+| `docs/EVOLUTION_CONTROL.md` | You want a simple rulebook for how changes are planned, documented, and verified. |
+| `docs/wiki/index.md` | You want current status by topic (planned/in-progress/done/blocked). |
+| `docs/wiki/log.md` | You want a chronological record of decisions/features/fixes/docs updates. |
+
+---
+
 ## API keys (unlock models / APIs)
 
 Set in your shell profile as needed (see `AGENTIC_SETUP_NOTES.md`): e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `X_AI_API_KEY`. Some CLIs stay idle without keys.

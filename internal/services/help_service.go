@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrHelpRequestNotFound = errors.New("help request not found")
-	ErrUnauthorized       = errors.New("unauthorized")
+	ErrHelpRequestNotFound    = errors.New("help request not found")
+	ErrHelpRequestUnavailable = errors.New("help request is not pending")
+	ErrUnauthorized           = errors.New("unauthorized")
 )
 
 // HelpService handles help request operations
@@ -65,6 +66,9 @@ func (s *HelpService) AssignHelpRequest(requestID, consultantID string) (*models
 	if request == nil {
 		return nil, ErrHelpRequestNotFound
 	}
+	if request.Status != "pending" {
+		return nil, ErrHelpRequestUnavailable
+	}
 
 	// Update request
 	request.Status = "assigned"
@@ -107,4 +111,3 @@ func (s *HelpService) ResolveHelpRequest(requestID, consultantID, response strin
 
 	return request, nil
 }
-

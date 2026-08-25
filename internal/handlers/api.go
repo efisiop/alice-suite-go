@@ -90,6 +90,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/consultant/prompts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantCreatePrompt)))
 	mux.Handle("/api/consultant/prompts/", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantDeletePrompt)))
 	mux.Handle("/api/consultant/reader/prompts", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantReaderPrompts)))
+	mux.Handle("/api/consultant/reader/primary-consultant", middleware.RequireConsultant(http.HandlerFunc(HandlePrimaryConsultant)))
 
 	// Reader: get consultant prompts for current page/section (reader sees their own prompts only)
 	mux.Handle("/api/reader/prompts", middleware.RequireReader(http.HandlerFunc(HandleReaderPrompts)))
@@ -102,7 +103,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 
 	// Help requests API
 	mux.Handle("/rest/v1/help_requests", middleware.RequireAuth(http.HandlerFunc(HandleHelpRequests)))
-	mux.Handle("/api/consultant/help-requests/", middleware.RequireConsultant(http.HandlerFunc(HandleGetHelpRequestByID)))
+	mux.Handle("/api/consultant/help-requests/", middleware.RequireConsultant(http.HandlerFunc(HandleConsultantHelpRequestAction)))
 
 	// Interactions API
 	mux.Handle("/rest/v1/interactions", middleware.RequireAuth(http.HandlerFunc(HandleInteractions)))
@@ -124,6 +125,35 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/ai/generate-image", HandleGenerateImage)
 	mux.HandleFunc("/api/ai/image-status", HandleImageStatus)
 	mux.HandleFunc("/api/help", HandleCreateHelpRequest)
+}
+
+// HandlePrimaryConsultant transfers a reader to a single active primary consultant.
+func HandlePrimaryConsultant(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var request struct {
+		ReaderID     string `json:"reader_id"`
+		BookID       string `json:"book_id"`
+		ConsultantID string `json:"consultant_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.ReaderID == "" || request.BookID == "" || request.ConsultantID == "" {
+		http.Error(w, "reader_id, book_id, and consultant_id are required", http.StatusBadRequest)
+		return
+	}
+	var role string
+	if err := database.DB.QueryRow(database.Rebind(`SELECT role FROM users WHERE id = ?`), request.ConsultantID).Scan(&role); err != nil || role != "consultant" {
+		http.Error(w, "consultant_id must identify a consultant", http.StatusBadRequest)
+		return
+	}
+	if err := database.SetPrimaryConsultant(request.ReaderID, request.BookID, request.ConsultantID); err != nil {
+		log.Printf("set primary consultant: %v", err)
+		http.Error(w, "Could not save primary consultant", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"reader_id": request.ReaderID, "consultant_id": request.ConsultantID})
 }
 
 // HandleBooks handles GET /rest/v1/books
@@ -453,41 +483,25 @@ func HandleGetSectionsForPage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(page)
 }
 
-// HandleHelpRequests handles GET/POST /rest/v1/help_requests
-// PATCH, PUT, DELETE are forwarded to the generic REST handler
+// HandleHelpRequests exposes reader-safe reads and creation only. Consultant
+// assignment and resolution use dedicated, role-protected endpoints below.
 func HandleHelpRequests(w http.ResponseWriter, r *http.Request) {
+	claims, ok := authenticatedHelpRequestClaims(w, r)
+	if !ok {
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
-		// For GET requests, use the generic REST handler to support query parameters
-		// This allows filtering like ?user_id=eq.{id}&order=created_at.desc
+		if claims.Role != "consultant" {
+			query := r.URL.Query()
+			query.Set("user_id", "eq."+claims.UserID)
+			r.URL.RawQuery = query.Encode()
+		}
 		HandleRESTTable(w, r)
 		return
 
 	case http.MethodPost:
-		// Extract and validate token to get user_id (SECURITY: Never trust user_id from request body)
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Authorization header required", http.StatusUnauthorized)
-			return
-		}
-
-		token, err := auth.ExtractTokenFromHeader(authHeader)
-		if err != nil {
-			http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := auth.ValidateJWT(token)
-		if err != nil {
-			if err == auth.ErrInvalidToken || err == auth.ErrExpiredToken {
-				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, "Authentication failed", http.StatusUnauthorized)
-			return
-		}
-
-		// Extract user_id from token (not from request body)
 		userID := claims.UserID
 
 		var req struct {
@@ -514,51 +528,106 @@ func HandleHelpRequests(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(request)
 
-	case http.MethodPatch, http.MethodPut, http.MethodDelete:
-		// Forward PATCH, PUT, DELETE to generic REST handler
-		HandleRESTTable(w, r)
-		return
-
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// HandleGetHelpRequestByID handles GET /api/consultant/help-requests/:id
-// Returns a single help request by ID (consultant-only)
-func HandleGetHelpRequestByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+func authenticatedHelpRequestClaims(w http.ResponseWriter, r *http.Request) (*auth.JWTClaims, bool) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if cookie, err := r.Cookie("auth_token"); err == nil && cookie.Value != "" {
+			authHeader = "Bearer " + cookie.Value
+		}
 	}
+	if authHeader == "" {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return nil, false
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return nil, false
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return nil, false
+	}
+	return claims, true
+}
 
-	// Extract ID from URL path
-	// Path will be /api/consultant/help-requests/:id
+// HandleConsultantHelpRequestAction serves an individual request and its
+// state transitions. RequireConsultant has already checked the caller role.
+func HandleConsultantHelpRequestAction(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
 		http.Error(w, "Invalid request path", http.StatusBadRequest)
 		return
 	}
 	requestID := pathParts[3]
-
 	if requestID == "" {
 		http.Error(w, "Help request ID required", http.StatusBadRequest)
 		return
 	}
 
-	// Get help request from database
-	request, err := helpService.GetHelpRequestByID(requestID)
+	claims, ok := authenticatedHelpRequestClaims(w, r)
+	if !ok {
+		return
+	}
+
+	action := ""
+	if len(pathParts) > 4 {
+		action = pathParts[4]
+	}
+
+	switch {
+	case r.Method == http.MethodGet && action == "":
+		request, err := helpService.GetHelpRequestByID(requestID)
+		if err != nil {
+			log.Printf("fetch help request %s: %v", requestID, err)
+			http.Error(w, "Could not load help request", http.StatusInternalServerError)
+			return
+		}
+		if request == nil {
+			http.Error(w, "Help request not found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(request)
+	case r.Method == http.MethodPost && action == "assign":
+		request, err := helpService.AssignHelpRequest(requestID, claims.UserID)
+		writeHelpRequestActionResult(w, request, err)
+	case r.Method == http.MethodPost && action == "resolve":
+		var body struct {
+			Response string `json:"response"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || strings.TrimSpace(body.Response) == "" {
+			http.Error(w, "A response is required", http.StatusBadRequest)
+			return
+		}
+		request, err := helpService.ResolveHelpRequest(requestID, claims.UserID, strings.TrimSpace(body.Response))
+		writeHelpRequestActionResult(w, request, err)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func writeHelpRequestActionResult(w http.ResponseWriter, request *models.HelpRequest, err error) {
 	if err != nil {
-		log.Printf("Error fetching help request %s: %v", requestID, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, services.ErrHelpRequestNotFound):
+			http.Error(w, "Help request not found", http.StatusNotFound)
+		case errors.Is(err, services.ErrUnauthorized):
+			http.Error(w, "Only the assigned consultant can resolve this request", http.StatusForbidden)
+		case errors.Is(err, services.ErrHelpRequestUnavailable):
+			http.Error(w, "This request is no longer available to assign", http.StatusConflict)
+		default:
+			log.Printf("update help request: %v", err)
+			http.Error(w, "Could not update help request", http.StatusInternalServerError)
+		}
 		return
 	}
-
-	if request == nil {
-		http.Error(w, "Help request not found", http.StatusNotFound)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(request)
 }

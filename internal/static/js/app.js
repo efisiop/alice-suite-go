@@ -248,8 +248,9 @@ function apiRequest(url, options = {}) {
     });
 }
 
-// Reader interface localization. This is intentionally UI-only: it skips the
-// book/page text containers so the physical book source stays unchanged.
+/*
+// Reader localization moved to reader-i18n.js. Kept here only as a historical
+// marker for older deployments while the shared script is cached out.
 const aliceReaderTranslations = {
     it: {
         text: {
@@ -505,6 +506,7 @@ function watchAliceReaderLanguageMutations() {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
+*/
 
 // Dictionary lookup
 function lookupWord(word, bookId, sectionId) {

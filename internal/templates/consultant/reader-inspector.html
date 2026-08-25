@@ -279,6 +279,41 @@
     padding: 3rem;
 }
 
+/* Reader activity concise summary panel */
+.reader-activity-concise {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.85rem;
+    height: 100%;
+}
+.reader-activity-concise-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 0.55rem;
+}
+.reader-activity-concise-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.reader-activity-concise-list li {
+    font-size: 0.84rem;
+    color: #334155;
+    line-height: 1.45;
+    margin-bottom: 0.35rem;
+}
+.reader-activity-concise-list li:last-child {
+    margin-bottom: 0;
+}
+.reader-activity-concise-list strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
 .back-button {
     margin-bottom: 1.5rem;
 }
@@ -350,6 +385,22 @@
     margin-bottom: 0.5rem;
     overflow: hidden;
 }
+.inspector-panel-close {
+    position: absolute;
+    right: 0.75rem;
+    top: 0.55rem;
+    z-index: 3;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+.inspector-panel-close:hover { color: #b42318; }
+.inspector-hidden-panels:empty { display: none; }
 #readerInspectorAccordion .accordion-item:first-of-type { border-radius: var(--accordion-radius) var(--accordion-radius) 0 0 !important; }
 #readerInspectorAccordion .accordion-item:last-of-type { border-radius: 0 0 var(--accordion-radius) var(--accordion-radius) !important; margin-bottom: 0; }
 #readerInspectorAccordion .accordion-item:only-of-type { border-radius: var(--accordion-radius) !important; }
@@ -604,6 +655,7 @@
     <div id="contentArea" style="display: none;">
         <h1 class="mb-2" id="pageTitle">Reader Inspector</h1>
         <p class="text-muted mb-4 inspector-subtitle">Focus on one subject at a time — expand a section below to see details.</p>
+        <div id="inspector-hidden-panels" class="inspector-hidden-panels d-flex gap-2 flex-wrap mb-3"></div>
 
         <!-- Compact reader snapshot (always visible) -->
         <div class="card mb-4 reader-snapshot-card">
@@ -632,12 +684,13 @@
         <!-- Subjects: one open at a time to reduce overwhelm -->
         <div class="accordion mb-4" id="readerInspectorAccordion">
             <!-- 1. Overview (activity over time + summary stats) -->
-            <div class="accordion-item">
+            <div class="accordion-item" data-inspector-panel="overview" data-inspector-label="Overview">
                 <h2 class="accordion-header">
                     <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#subject-overview" aria-expanded="true" aria-controls="subject-overview">
                         📊 Overview — activity &amp; summary
                     </button>
                 </h2>
+                <button type="button" class="inspector-panel-close" aria-label="Hide Overview" title="Hide Overview" onclick="hideInspectorPanel('overview', event)">&times;</button>
                 <div id="subject-overview" class="accordion-collapse collapse show" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="row">
@@ -725,12 +778,13 @@
             </div>
 
             <!-- 2. Activity timeline (detailed list) -->
-            <div class="accordion-item">
+            <div class="accordion-item" data-inspector-panel="activity" data-inspector-label="Activity timeline">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-activity" aria-expanded="false" aria-controls="subject-activity">
                         📋 Activity timeline — recent actions
                     </button>
                 </h2>
+                <button type="button" class="inspector-panel-close" aria-label="Hide Activity timeline" title="Hide Activity timeline" onclick="hideInspectorPanel('activity', event)">&times;</button>
                 <div id="subject-activity" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="d-flex justify-content-end mb-2">
@@ -744,12 +798,13 @@
             </div>
 
             <!-- 3. AI & prompts (insight, suggest prompt, prompts list, AI interactions) -->
-            <div class="accordion-item">
+            <div class="accordion-item" data-inspector-panel="ai" data-inspector-label="AI and prompts">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-ai" aria-expanded="false" aria-controls="subject-ai">
                         🤖 AI &amp; prompts — activity charts, suggestions, chats
                     </button>
                 </h2>
+                <button type="button" class="inspector-panel-close" aria-label="Hide AI and prompts" title="Hide AI and prompts" onclick="hideInspectorPanel('ai', event)">&times;</button>
                 <div id="subject-ai" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="card mb-3">
@@ -771,16 +826,24 @@
                                 <div id="reader-activity-charts-wrap" style="display: none;">
                                     <div class="row g-2 mb-3" id="reader-activity-stat-cards"></div>
                                     <div class="row g-3">
-                                        <div class="col-lg-7">
+                                        <div class="col-lg-8 col-xl-7">
                                             <div class="small text-muted mb-1">Events per day</div>
                                             <div style="position: relative; height: 220px;">
                                                 <canvas id="chart-reader-activity-daily"></canvas>
                                             </div>
                                         </div>
-                                        <div class="col-lg-5">
+                                        <div class="col-lg-4 col-xl-3">
                                             <div class="small text-muted mb-1">What they did (in this period)</div>
                                             <div style="position: relative; height: 220px;">
                                                 <canvas id="chart-reader-activity-types"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-xl-2">
+                                            <div class="reader-activity-concise">
+                                                <div class="reader-activity-concise-title">Concise summary</div>
+                                                <ul class="reader-activity-concise-list" id="reader-activity-concise-summary">
+                                                    <li>Load activity to see summary.</li>
+                                                </ul>
                                             </div>
                                         </div>
                                     </div>
@@ -837,12 +900,13 @@
             </div>
 
             <!-- 4. Help requests -->
-            <div class="accordion-item">
+            <div class="accordion-item" data-inspector-panel="help" data-inspector-label="Help requests">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#subject-help" aria-expanded="false" aria-controls="subject-help">
                         🆘 Help requests — support needed
                     </button>
                 </h2>
+                <button type="button" class="inspector-panel-close" aria-label="Hide Help requests" title="Hide Help requests" onclick="hideInspectorPanel('help', event)">&times;</button>
                 <div id="subject-help" class="accordion-collapse collapse" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="d-flex justify-content-end mb-2">
@@ -862,6 +926,26 @@
 {{define "scripts"}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+function hideInspectorPanel(panelID, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const panel = document.querySelector(`[data-inspector-panel="${panelID}"]`);
+    const restoreArea = document.getElementById('inspector-hidden-panels');
+    if (!panel || !restoreArea) return;
+    panel.style.display = 'none';
+    if (restoreArea.querySelector(`[data-restore-panel="${panelID}"]`)) return;
+    const restore = document.createElement('button');
+    restore.type = 'button';
+    restore.className = 'btn btn-sm btn-outline-secondary';
+    restore.dataset.restorePanel = panelID;
+    restore.textContent = `Show ${panel.dataset.inspectorLabel}`;
+    restore.onclick = () => {
+        panel.style.display = '';
+        restore.remove();
+    };
+    restoreArea.appendChild(restore);
+}
+
 // Consultant logout function
 (function() {
     // Store consultant logout function separately to prevent override
@@ -1003,6 +1087,29 @@ function destroyReaderActivityCharts() {
     }
 }
 
+function renderReaderActivityConciseSummary(summary, helpRequestsTotal) {
+    const listEl = document.getElementById('reader-activity-concise-summary');
+    if (!listEl) return;
+
+    const total = summary.TotalActivities || 0;
+    const activeDays = summary.ActiveDays || 0;
+    const pageViews = summary.PageViews || 0;
+    const wordLookups = summary.WordLookups || 0;
+    const aiRequests = summary.AIIteractions || 0;
+    const helpRequests = helpRequestsTotal || 0;
+    const avgPerActiveDay = activeDays > 0 ? (total / activeDays).toFixed(1) : '0.0';
+    const aiShare = total > 0 ? Math.round((aiRequests / total) * 100) : 0;
+
+    listEl.innerHTML =
+        '<li><strong>' + pageViews + '</strong> pages clicked</li>' +
+        '<li><strong>' + wordLookups + '</strong> words looked up</li>' +
+        '<li><strong>' + aiRequests + '</strong> AI requests</li>' +
+        '<li><strong>' + helpRequests + '</strong> help requests</li>' +
+        '<li><strong>' + activeDays + '</strong> active days</li>' +
+        '<li><strong>' + avgPerActiveDay + '</strong> events/day active</li>' +
+        '<li><strong>' + aiShare + '%</strong> of events were AI</li>';
+}
+
 // Load stats + graphs for this reader (no AI text)
 function loadReaderActivityCharts() {
     const token = getAuthToken();
@@ -1065,6 +1172,8 @@ function loadReaderActivityCharts() {
         if (!ok || data.error) {
             errorEl.textContent = data.error || 'Could not load activity data.';
             errorEl.style.display = 'block';
+            const summaryList = document.getElementById('reader-activity-concise-summary');
+            if (summaryList) summaryList.innerHTML = '<li>Could not load summary.</li>';
             return;
         }
         const s = data.summary || {};
@@ -1081,6 +1190,7 @@ function loadReaderActivityCharts() {
             '<div class="border rounded p-2 bg-light text-center"><div class="small text-muted">AI + pages</div><div class="fs-5 fw-semibold">' + ((s.AIIteractions || 0) + (s.PageViews || 0)) + '</div></div></div>' +
             '<div class="col-12 mt-1"><span class="small text-muted">Help requests (all time): <strong>' + helpN + '</strong></span></div>';
         document.getElementById('reader-activity-stat-cards').innerHTML = statHtml;
+        renderReaderActivityConciseSummary(s, helpN);
 
         destroyReaderActivityCharts();
 
@@ -1146,6 +1256,8 @@ function loadReaderActivityCharts() {
         if (btn) btn.disabled = false;
         errorEl.textContent = (err && err.message) ? ('Request failed: ' + err.message) : 'Request failed. Try again.';
         errorEl.style.display = 'block';
+        const summaryList = document.getElementById('reader-activity-concise-summary');
+        if (summaryList) summaryList.innerHTML = '<li>Request failed. Try again.</li>';
     });
 }
 
@@ -2347,5 +2459,3 @@ function formatAIResponse(text) {
 }
 </script>
 {{end}}
-
-

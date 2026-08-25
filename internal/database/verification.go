@@ -67,7 +67,7 @@ func UpdateUserVerification(userID string, verified bool) error {
 	if verified {
 		verifiedInt = 1
 	}
-	_, err := DB.Exec(Rebind(query), verifiedInt, time.Now(), userID)
+	_, err := DB.Exec(Rebind(query), verifiedInt, FormatSQLDateTime(time.Now()), userID)
 	return err
 }
 

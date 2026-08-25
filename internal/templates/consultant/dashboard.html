@@ -77,7 +77,8 @@
     color: #8B0000; /* Dark red/burgundy */
 }
 
-.reader-activity-item.activity-recent[data-event-type="AI_QUERY"] .activity-type-label {
+.reader-activity-item.activity-recent[data-event-type="AI_QUERY"] .activity-type-label,
+.reader-activity-item.activity-recent[data-event-type="AI_HELP"] .activity-type-label {
     color: #800080; /* Dark purple */
 }
 
@@ -365,7 +366,7 @@ window.isConsultantDashboard = true;
             <div class="col-md-3">
                 <div class="card text-center">
                     <div class="card-body">
-                        <h5 class="card-title">Logged In</h5>
+                        <h5 class="card-title">Logged In Now</h5>
                         <h2 id="logged-in-readers">-</h2>
                     </div>
                 </div>
@@ -373,7 +374,7 @@ window.isConsultantDashboard = true;
             <div class="col-md-3">
                 <div class="card text-center">
                     <div class="card-body">
-                        <h5 class="card-title">Active Readers</h5>
+                        <h5 class="card-title">Recent Readers</h5>
                         <h2 id="active-readers">-</h2>
                     </div>
                 </div>
@@ -410,7 +411,7 @@ window.isConsultantDashboard = true;
         <div class="row">
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h5 class="mb-0">Active Readers</h5>
+                    <h5 class="mb-0">Recent Reader Activity</h5>
                     <div class="d-flex align-items-center gap-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="expandAllReaderCards()">Expand all</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="collapseAllReaderCards()">Collapse all</button>
@@ -419,7 +420,7 @@ window.isConsultantDashboard = true;
                 </div>
                 <!-- Reader windows container - displays readers side-by-side -->
                 <div id="readers-container" class="d-flex flex-wrap gap-3" style="min-height: 200px;">
-                    <p class="text-muted w-100">Loading active readers...</p>
+                    <p class="text-muted w-100">Loading recent reader activity...</p>
                 </div>
             </div>
         </div>
@@ -619,11 +620,12 @@ function initializeDashboard() {
     // Connect to SSE for real-time updates
     connectConsultantSSE(token);
     
-    // Smart polling: Use longer intervals when SSE is connected, shorter when disconnected
+    // Keep polling frequent on Render to avoid missing cross-instance SSE events.
+    // Even if SSE is "connected", this polling acts as a reliable catch-up path.
     function smartPolling() {
         if (sseIsConnected) {
-            // SSE is connected - use longer intervals (60s) as fallback
-            return 60000;
+            // SSE is connected - still poll every 10s for resilience
+            return 10000;
         } else {
             // SSE disconnected - use shorter intervals (5s) to catch up quickly
             return 5000;
@@ -916,118 +918,92 @@ function loadReaderActivityFeed() {
         console.error('No auth token found');
         return;
     }
-    
-    // First, get the list of active readers (logged in or active in last hour)
-    // Then filter activities to only show those from active readers
-    fetch('/api/consultant/logged-in-readers-count', {
-        headers: {'Authorization': 'Bearer ' + token}
+
+    // Load recent reader activity regardless of current session presence.
+    // Presence is shown separately; historical feedback should remain visible.
+    let url;
+    if (!activityFeedLastUpdate) {
+        // First load - get last 50 activities
+        url = '/api/consultant/reader-activities?limit=50';
+    } else {
+        // Subsequent loads - get activities since last update
+        // Convert activityFeedLastUpdate to proper format if needed
+        let sinceTime = activityFeedLastUpdate;
+        // If it's in SQLite format, convert to ISO for the API
+        if (sinceTime.includes(' ')) {
+            sinceTime = sinceTime.replace(' ', 'T') + ':00Z';
+        }
+        url = `/api/consultant/reader-activities/stream?since=${encodeURIComponent(sinceTime)}`;
+    }
+
+    console.log('Loading reader activities from:', url, 'Last update:', activityFeedLastUpdate);
+
+    // Add timeout to fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    fetch(url, {
+        headers: {'Authorization': 'Bearer ' + token},
+        signal: controller.signal
     })
     .then(res => {
+        clearTimeout(timeoutId);
+        console.log('Response status:', res.status);
         if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
+            return res.text().then(text => {
+                console.error('API Error:', res.status, text);
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            });
         }
         return res.json();
     })
-    .then(data => {
-        const activeReaderIds = new Set((data.readers || []).map(r => r.id));
-        
-        // Now load activities
-        // Always load recent activities (last hour) to ensure we catch all updates
-        // On first load, get last 50 activities
-        // On subsequent loads, get activities since last update
-        let url;
-        if (!activityFeedLastUpdate) {
-            // First load - get last 50 activities
-            url = '/api/consultant/reader-activities?limit=50';
-        } else {
-            // Subsequent loads - get activities since last update
-            // Convert activityFeedLastUpdate to proper format if needed
-            let sinceTime = activityFeedLastUpdate;
-            // If it's in SQLite format, convert to ISO for the API
-            if (sinceTime.includes(' ')) {
-                sinceTime = sinceTime.replace(' ', 'T') + ':00Z';
+    .then(activities => {
+        console.log('Loaded activities from API:', activities ? activities.length : 0);
+        if (activities && Array.isArray(activities) && activities.length > 0) {
+            // Sort activities by timestamp (newest first) before processing
+            activities.sort((a, b) => {
+                const timeA = new Date(a.created_at).getTime();
+                const timeB = new Date(b.created_at).getTime();
+                return timeB - timeA; // Newest first
+            });
+
+            // Group activities by reader and add to their respective cards
+            let newActivitiesCount = 0;
+            activities.forEach(activity => {
+                // Verify each activity has user_id
+                if (!activity.user_id) {
+                    console.warn('Activity missing user_id:', activity);
+                    return;
+                }
+                // Check if this is a new activity (not already displayed)
+                const existingItem = document.querySelector(`[data-activity-id="${activity.id}"]`);
+                if (!existingItem) {
+                    addActivityToReaderCard(activity);
+                    newActivitiesCount++;
+                }
+            });
+
+            // Re-sort all reader cards to ensure activities are in correct order (newest first)
+            readerCards.forEach((readerCard, userId) => {
+                sortReaderActivities(readerCard);
+                // Reset visibleCount to 12 and apply pagination (show 12 initially)
+                readerCard.visibleCount = 12;
+                updateActivityVisibility(readerCard);
+            });
+
+            // Update last update time to most recent activity (first in sorted array)
+            activityFeedLastUpdate = activities[0].created_at;
+            console.log(`Added ${newActivitiesCount} new activities. Last update time: ${activityFeedLastUpdate}`);
+        } else if (!activityFeedLastUpdate) {
+            // Show message if no activities on first load
+            const container = document.getElementById('readers-container');
+            if (container) {
+                const loadingMsg = container.querySelector('.text-muted');
+                if (loadingMsg && loadingMsg.textContent.includes('Loading')) {
+                    loadingMsg.textContent = 'No reader activity yet. Recent feedback will appear here after readers use the app.';
+                }
             }
-            url = `/api/consultant/reader-activities/stream?since=${encodeURIComponent(sinceTime)}`;
         }
-        
-        console.log('Loading reader activities from:', url, 'Last update:', activityFeedLastUpdate);
-        
-        // Add timeout to fetch request
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        return fetch(url, {
-            headers: {'Authorization': 'Bearer ' + token},
-            signal: controller.signal
-        })
-        .then(res => {
-            clearTimeout(timeoutId);
-            console.log('Response status:', res.status);
-            if (!res.ok) {
-                return res.text().then(text => {
-                    console.error('API Error:', res.status, text);
-                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                });
-            }
-            return res.json();
-        })
-        .then(activities => {
-            console.log('Loaded activities from API:', activities ? activities.length : 0);
-            if (activities && Array.isArray(activities) && activities.length > 0) {
-                // Filter activities to only include those from active readers
-                const filteredActivities = activities.filter(activity => {
-                    return activity.user_id && activeReaderIds.has(activity.user_id);
-                });
-                
-                console.log('Filtered activities (active readers only):', filteredActivities.length);
-                
-                // Sort activities by timestamp (newest first) before processing
-                filteredActivities.sort((a, b) => {
-                    const timeA = new Date(a.created_at).getTime();
-                    const timeB = new Date(b.created_at).getTime();
-                    return timeB - timeA; // Newest first
-                });
-                
-                // Group activities by reader and add to their respective cards
-                let newActivitiesCount = 0;
-                filteredActivities.forEach(activity => {
-                    // Verify each activity has user_id
-                    if (!activity.user_id) {
-                        console.warn('Activity missing user_id:', activity);
-                        return;
-                    }
-                    // Check if this is a new activity (not already displayed)
-                    const existingItem = document.querySelector(`[data-activity-id="${activity.id}"]`);
-                    if (!existingItem) {
-                        addActivityToReaderCard(activity);
-                        newActivitiesCount++;
-                    }
-                });
-                
-                // Re-sort all reader cards to ensure activities are in correct order (newest first)
-                readerCards.forEach((readerCard, userId) => {
-                    sortReaderActivities(readerCard);
-                    // Reset visibleCount to 12 and apply pagination (show 12 initially)
-                    readerCard.visibleCount = 12;
-                    updateActivityVisibility(readerCard);
-                });
-                
-                // Update last update time to most recent activity (first in sorted array)
-                if (filteredActivities.length > 0) {
-                    activityFeedLastUpdate = filteredActivities[0].created_at;
-                    console.log(`Added ${newActivitiesCount} new activities. Last update time: ${activityFeedLastUpdate}`);
-                }
-            } else if (!activityFeedLastUpdate) {
-                // Show message if no activities on first load
-                const container = document.getElementById('readers-container');
-                if (container) {
-                    const loadingMsg = container.querySelector('.text-muted');
-                    if (loadingMsg && loadingMsg.textContent.includes('Loading')) {
-                        loadingMsg.textContent = 'No reader activities yet. Reader windows will appear here as readers become active.';
-                    }
-                }
-            }
-        });
     })
     .catch(err => {
         console.error('Error loading reader activities:', err);
@@ -1224,6 +1200,7 @@ function getOrCreateReaderCard(activity) {
             showMoreLink: null // Reference to the "more" link element
         };
         readerCards.set(userId, readerCard);
+        updateRecentReaderCount();
     }
     
     return readerCard;
@@ -1569,6 +1546,7 @@ function formatEventType(eventType) {
         'SECTION_SYNC': 'Section Navigation',
         'DEFINITION_LOOKUP': 'Dictionary Lookup',
         'AI_QUERY': 'AI Question',
+        'AI_HELP': 'AI Help',
         'HELP_REQUEST': 'Help Request',
         'FEEDBACK_SUBMISSION': 'Feedback'
     };
@@ -1583,6 +1561,7 @@ function getEventIcon(eventType) {
         'SECTION_SYNC': '📑',
         'DEFINITION_LOOKUP': '📖',
         'AI_QUERY': '🤖',
+        'AI_HELP': '🤖',
         'HELP_REQUEST': '🆘',
         'FEEDBACK_SUBMISSION': '💬'
     };
@@ -1647,6 +1626,13 @@ function loadDashboardData() {
     loadLoggedInReaders();
 }
 
+function updateRecentReaderCount() {
+    const recentReadersEl = document.getElementById('active-readers');
+    if (recentReadersEl) {
+        recentReadersEl.textContent = readerCards.size.toString();
+    }
+}
+
 function loadLoggedInReaders() {
     const token = getAuthToken();
     if (!token) {
@@ -1675,8 +1661,8 @@ function loadLoggedInReaders() {
         // Update count display
         document.getElementById('logged-in-readers').textContent = count;
         
-        // Filter reader cards to only show active readers (active in last hour)
-        filterReaderCardsToActiveOnly(activeReaderIds);
+        // Mark presence without hiding historical activity cards.
+        updateReaderCardPresence(activeReaderIds);
     })
     .catch(err => {
         clearTimeout(timeoutId);
@@ -1732,25 +1718,33 @@ function loadAIProviderStatus() {
     });
 }
 
-// Filter reader cards to only show active readers (active in last hour)
-// Remove cards for readers who are not in the active list
-// Note: This function only manages cards, NOT the logged-in count (that comes from the API)
-function filterReaderCardsToActiveOnly(activeReaderIds) {
+// Mark reader cards as online/offline without hiding their historical activity.
+// The logged-in count still comes from the API; this only annotates visible cards.
+function updateReaderCardPresence(activeReaderIds) {
     const activeIdsSet = new Set(activeReaderIds);
-    const container = document.getElementById('readers-container');
-    
-    // Remove cards for inactive readers
+
     readerCards.forEach((readerCard, userId) => {
-        if (!activeIdsSet.has(userId)) {
-            // Reader is not active, remove their card
-            console.log('Removing inactive reader card:', userId);
-            readerCard.cardElement.remove();
-            readerCards.delete(userId);
+        const header = readerCard.cardElement.querySelector('.reader-card-header');
+        if (!header) return;
+
+        let status = header.querySelector('.reader-presence-status');
+        if (!status) {
+            status = document.createElement('small');
+            status.className = 'reader-presence-status d-block mt-1';
+            const nameBlock = header.querySelector('.flex-grow-1');
+            if (nameBlock) nameBlock.appendChild(status);
+        }
+
+        if (activeIdsSet.has(userId)) {
+            status.textContent = 'Active now';
+            status.className = 'reader-presence-status d-block mt-1 text-success';
+        } else {
+            status.textContent = 'Recent activity';
+            status.className = 'reader-presence-status d-block mt-1 text-muted';
         }
     });
-    
-    // Don't update logged-in count here - that should come from the API
-    // The count reflects all logged-in readers, not just those with activity cards
+
+    updateRecentReaderCount();
     console.log('Active reader IDs from API:', activeReaderIds.length, 'Cards displayed:', readerCards.size);
 }
 
@@ -2114,4 +2108,3 @@ document.addEventListener('keydown', function(event) {
 });
 </script>
 {{end}}
-

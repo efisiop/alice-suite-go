@@ -10,7 +10,7 @@ import (
 
 // SetupReaderRoutes sets up routes for the Reader app
 func SetupReaderRoutes(mux *http.ServeMux) {
-	// Reader app pages
+	// Reader app pages (auth + verification required)
 	mux.Handle("/reader", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderDashboard)))
 	mux.Handle("/reader/interaction", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderInteraction)))
 	mux.Handle("/reader/my-page", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderMyPage)))

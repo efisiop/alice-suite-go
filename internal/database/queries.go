@@ -208,14 +208,14 @@ func GetChapterByID(id string) (*models.Chapter, error) {
 func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	// Get page
 	page := &models.Page{}
-	var chapterID, chapterTitle sql.NullString
+	var chapterID, chapterTitle, pageContent sql.NullString
 	var createdAtStr string
 	query := `SELECT id, book_id, page_number, chapter_id, chapter_title, content, word_count, created_at
 	          FROM pages WHERE book_id = ? AND page_number = ?`
 
 	err := DB.QueryRow(Rebind(query), bookID, pageNumber).Scan(
 		&page.ID, &page.BookID, &page.PageNumber, &chapterID, &chapterTitle,
-		&page.Content, &page.WordCount, &createdAtStr,
+		&pageContent, &page.WordCount, &createdAtStr,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -237,6 +237,9 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	if chapterTitle.Valid {
 		page.ChapterTitle = &chapterTitle.String
 	}
+	if pageContent.Valid {
+		page.Content = pageContent.String
+	}
 
 	// Get sections for this page
 	sectionsQuery := `SELECT id, page_id, page_number, section_number, content, word_count, created_at
@@ -250,13 +253,17 @@ func GetPageByNumber(bookID string, pageNumber int) (*models.Page, error) {
 	page.Sections = []models.Section{}
 	for rows.Next() {
 		var section models.Section
+		var sectionContent sql.NullString
 		var sectionCreatedAtStr string
 		err := rows.Scan(
 			&section.ID, &section.PageID, &section.PageNumber, &section.SectionNumber,
-			&section.Content, &section.WordCount, &sectionCreatedAtStr,
+			&sectionContent, &section.WordCount, &sectionCreatedAtStr,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if sectionContent.Valid {
+			section.Content = sectionContent.String
 		}
 		// Parse section created_at
 		if sectionCreatedAtStr != "" {
@@ -359,7 +366,7 @@ func CreateAhAhMoment(m *models.AhAhMoment) error {
 	}
 	query := `INSERT INTO ah_ah_moments (id, user_id, book_id, content, page_number, section_number, shared, created_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := DB.Exec(Rebind(query), m.ID, m.UserID, m.BookID, m.Content, pageNum, sectionNum, shared, time.Now())
+	_, err := DB.Exec(Rebind(query), m.ID, m.UserID, m.BookID, m.Content, pageNum, sectionNum, shared, FormatSQLDateTime(time.Now()))
 	return err
 }
 
@@ -830,8 +837,9 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 		}
 		query := `INSERT INTO reading_progress (id, user_id, book_id, chapter_id, section_id, last_page, last_read_at, purchase_date, created_at, updated_at)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		now := FormatSQLDateTime(time.Now())
 		_, err := DB.Exec(Rebind(query), progress.ID, progress.UserID, progress.BookID, progress.ChapterID, progress.SectionID,
-			progress.LastPage, time.Now(), purchaseDate, time.Now(), time.Now())
+			progress.LastPage, now, purchaseDate, now, now)
 		return err
 	}
 
@@ -863,8 +871,8 @@ func UpdateReadingProgress(progress *models.ReadingProgress) error {
 
 	query := `UPDATE reading_progress SET chapter_id = ?, section_id = ?, last_page = ?, last_read_at = ?, purchase_date = ?, updated_at = ?
 	          WHERE id = ?`
-	resolvedAt := time.Now()
-	_, err = DB.Exec(Rebind(query), progress.ChapterID, progress.SectionID, progress.LastPage, resolvedAt, purchaseDate, resolvedAt, progress.ID)
+	nowStr := FormatSQLDateTime(time.Now())
+	_, err = DB.Exec(Rebind(query), progress.ChapterID, progress.SectionID, progress.LastPage, nowStr, purchaseDate, nowStr, progress.ID)
 	return err
 }
 
@@ -887,7 +895,7 @@ func UpdateBookPurchaseDate(userID, bookID, purchaseDate string) error {
 		progressID := uuid.New().String()
 		query := `INSERT INTO reading_progress (id, user_id, book_id, purchase_date, created_at, updated_at)
 		          VALUES (?, ?, ?, ?, ?, ?)`
-		now := time.Now()
+		now := FormatSQLDateTime(time.Now())
 		_, err = DB.Exec(Rebind(query), progressID, userID, bookID, purchaseDateValue, now, now)
 		if err != nil {
 			// Check if error is due to missing column
@@ -905,7 +913,7 @@ func UpdateBookPurchaseDate(userID, bookID, purchaseDate string) error {
 	// Update existing record
 	query := `UPDATE reading_progress SET purchase_date = ?, updated_at = ?
 	          WHERE user_id = ? AND book_id = ?`
-	_, err = DB.Exec(Rebind(query), purchaseDateValue, time.Now(), userID, bookID)
+	_, err = DB.Exec(Rebind(query), purchaseDateValue, FormatSQLDateTime(time.Now()), userID, bookID)
 	if err != nil {
 		// Check if error is due to missing column
 		if strings.Contains(err.Error(), "no such column: purchase_date") {
@@ -924,7 +932,7 @@ func CreateVocabularyLookup(lookup *models.VocabularyLookup) error {
 	query := `INSERT INTO vocabulary_lookups (id, user_id, book_id, word, definition, chapter_id, section_id, context, created_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := DB.Exec(Rebind(query), lookup.ID, lookup.UserID, lookup.BookID, lookup.Word, lookup.Definition,
-		lookup.ChapterID, lookup.SectionID, lookup.Context, time.Now())
+		lookup.ChapterID, lookup.SectionID, lookup.Context, FormatSQLDateTime(time.Now()))
 	return err
 }
 
@@ -970,14 +978,14 @@ func CreateAIInteraction(interaction *models.AIInteraction) error {
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := DB.Exec(Rebind(query), interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
 		interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
-		interaction.Context, interaction.Provider, time.Now())
+		interaction.Context, interaction.Provider, FormatSQLDateTime(time.Now()))
 	if err != nil {
 		// Fallback to old schema without provider field
 		queryOld := `INSERT INTO ai_interactions (id, user_id, book_id, section_id, interaction_type, question, prompt, response, context, created_at)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		_, err = DB.Exec(Rebind(queryOld), interaction.ID, interaction.UserID, interaction.BookID, interaction.SectionID,
 			interaction.InteractionType, interaction.Question, interaction.Prompt, interaction.Response,
-			interaction.Context, time.Now())
+			interaction.Context, FormatSQLDateTime(time.Now()))
 	}
 	return err
 }
@@ -1051,7 +1059,7 @@ func CreateHelpRequest(request *models.HelpRequest) error {
 	query := `INSERT INTO help_requests (id, user_id, book_id, section_id, status, content, context, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := DB.Exec(Rebind(query), request.ID, request.UserID, request.BookID, request.SectionID,
-		request.Status, request.Content, request.Context, time.Now(), time.Now())
+		request.Status, request.Content, request.Context, FormatSQLDateTime(time.Now()), FormatSQLDateTime(time.Now()))
 	return err
 }
 
@@ -1244,9 +1252,9 @@ func UpdateHelpRequest(request *models.HelpRequest) error {
 	          WHERE id = ?`
 	var resolvedAt interface{}
 	if request.ResolvedAt != nil {
-		resolvedAt = request.ResolvedAt
+		resolvedAt = FormatSQLDateTime(*request.ResolvedAt)
 	}
-	_, err := DB.Exec(Rebind(query), request.Status, request.AssignedTo, request.Response, resolvedAt, time.Now(), request.ID)
+	_, err := DB.Exec(Rebind(query), request.Status, request.AssignedTo, request.Response, resolvedAt, FormatSQLDateTime(time.Now()), request.ID)
 	return err
 }
 

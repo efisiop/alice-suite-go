@@ -139,6 +139,25 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="resolveRequestModal" tabindex="-1" aria-labelledby="resolveRequestModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resolveRequestModalTitle">Reply and resolve request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="resolve-request-response" class="form-label">Response to the reader</label>
+                <textarea id="resolve-request-response" class="form-control" rows="6" placeholder="Write a clear, helpful response..."></textarea>
+                <div id="resolve-request-error" class="text-danger small mt-2" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="resolve-request-submit">Send and resolve</button>
+            </div>
+        </div>
+    </div>
+</div>
 {{end}}
 
 {{define "scripts"}}
@@ -177,7 +196,7 @@
         // Always redirect to consultant login
         window.location.href = '/consultant/login';
     };
-    
+
     // Override window.logout for consultant pages
     window.logout = window.consultantLogout;
 })();
@@ -547,7 +566,6 @@ function assignRequest(requestId) {
         button.disabled = true;
         button.textContent = 'Assigning...';
     }
-    
     const token = getAuthToken();
     if (!token) {
         alert('No authentication token found. Please log in again.');
@@ -558,72 +576,26 @@ function assignRequest(requestId) {
         return;
     }
     
-    // Get current consultant ID
-    fetch('/auth/v1/user', {
-        headers: {'Authorization': 'Bearer ' + token}
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error(`Failed to get user info: HTTP ${res.status}`);
-        }
-        return res.json();
-    })
-    .then(user => {
-        if (!user || !user.id) {
-            throw new Error('Invalid user data received');
-        }
-        
-        console.log('Assigning request', requestId, 'to consultant', user.id);
-        
-        // Update help request status and assign
-        return fetch(`/rest/v1/help_requests?id=eq.${requestId}`, {
-            method: 'PATCH',
+    fetch(`/api/consultant/help-requests/${encodeURIComponent(requestId)}/assign`, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({
-                status: 'assigned',
-                assigned_to: user.id
-            })
-        });
-    })
+            }
+        })
     .then(res => {
         return res.text().then(text => {
-            console.log('Response status:', res.status);
-            console.log('Response text:', text);
-            
             if (res.ok) {
-                try {
-                    const data = JSON.parse(text);
-                    console.log('Assignment successful:', data);
-                    loadHelpRequests(); // Reload
-                } catch (e) {
-                    // Even if JSON parse fails, if status is OK, it's probably successful
-                    console.log('Assignment successful (non-JSON response)');
-                    loadHelpRequests(); // Reload
-                }
-            } else {
-                let errorMsg = `Failed to assign help request (HTTP ${res.status})`;
-                try {
-                    const errorData = JSON.parse(text);
-                    if (errorData.error || errorData.message) {
-                        errorMsg += ': ' + (errorData.error || errorData.message);
-                    }
-                } catch (e) {
-                    errorMsg += ': ' + text.substring(0, 100);
-                }
-                console.error('Assignment failed:', errorMsg);
-                alert(errorMsg);
+                loadHelpRequests();
+                return;
             }
+            throw new Error(text || `HTTP ${res.status}`);
         });
     })
     .catch(err => {
         console.error('Error assigning request:', err);
-        alert('Error assigning help request: ' + err.message);
+        alert('Could not assign this request: ' + err.message);
     })
     .finally(() => {
-        // Re-enable button
         if (button) {
             button.disabled = false;
             button.textContent = originalText;
@@ -633,41 +605,41 @@ function assignRequest(requestId) {
 
 // Resolve help request
 function resolveRequest(requestId) {
-    const response = prompt('Enter your response to the reader:');
-    if (!response) return;
-    
-    const button = document.getElementById(`resolve-btn-${requestId}`);
-    const originalText = button ? button.textContent : 'Resolve';
-    
-    // Disable button and show loading
-    if (button) {
-        button.disabled = true;
-        button.textContent = 'Resolving...';
-    }
-    
-    const token = getAuthToken();
-    if (!token) {
-        alert('No authentication token found. Please log in again.');
-        if (button) {
-            button.disabled = false;
-            button.textContent = originalText;
-        }
+    const modalEl = document.getElementById('resolveRequestModal');
+    const responseInput = document.getElementById('resolve-request-response');
+    const errorEl = document.getElementById('resolve-request-error');
+    const submitButton = document.getElementById('resolve-request-submit');
+    responseInput.value = '';
+    errorEl.textContent = '';
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+    modalEl.addEventListener('shown.bs.modal', () => responseInput.focus(), {once: true});
+    submitButton.onclick = () => submitResolvedRequest(requestId, responseInput.value, modal, errorEl, submitButton);
+}
+
+function submitResolvedRequest(requestId, response, modal, errorEl, submitButton) {
+    response = response.trim();
+    if (!response) {
+        errorEl.textContent = 'Write a response before resolving this request.';
         return;
     }
-    
-    console.log('Resolving request', requestId);
-    
-    fetch(`/rest/v1/help_requests?id=eq.${requestId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({
-            status: 'resolved',
-            response: response,
-            resolved_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
-        })
+    const originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.textContent = 'Sending...';
+    const token = getAuthToken();
+    if (!token) {
+        errorEl.textContent = 'Your session has ended. Please log in again.';
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+        return;
+    }
+    fetch(`/api/consultant/help-requests/${encodeURIComponent(requestId)}/resolve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+        body: JSON.stringify({response: response})
     })
     .then(res => {
         return res.text().then(text => {
@@ -675,7 +647,7 @@ function resolveRequest(requestId) {
             console.log('Response text:', text);
             
             if (res.ok) {
-                console.log('Resolution successful');
+                modal.hide();
                 loadHelpRequests(); // Reload
             } else {
                 let errorMsg = `Failed to resolve help request (HTTP ${res.status})`;
@@ -688,22 +660,18 @@ function resolveRequest(requestId) {
                     errorMsg += ': ' + text.substring(0, 100);
                 }
                 console.error('Resolution failed:', errorMsg);
-                alert(errorMsg);
+                errorEl.textContent = errorMsg;
             }
         });
     })
     .catch(err => {
         console.error('Error resolving request:', err);
-        alert('Error resolving help request: ' + err.message);
+        errorEl.textContent = 'Could not resolve request: ' + err.message;
     })
     .finally(() => {
-        // Re-enable button
-        if (button) {
-            button.disabled = false;
-            button.textContent = originalText;
-        }
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
     });
 }
 </script>
 {{end}}
-

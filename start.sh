@@ -15,16 +15,25 @@ if [ "${ENV:-}" = "production" ] && [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-# Run migrations before server starts
-echo "Running database migrations..."
+# Run migrations before server starts.
+# In production with PostgreSQL, default is to skip migrations on boot to avoid
+# long startup delays on every restart. Enable when needed with:
+#   RUN_MIGRATIONS_ON_START=true
 if [ -n "$DATABASE_URL" ]; then
   echo "Using PostgreSQL (persistent storage)"
+  if [ "${RUN_MIGRATIONS_ON_START:-false}" = "true" ]; then
+    echo "Running database migrations (RUN_MIGRATIONS_ON_START=true)..."
+    ./bin/migrate
+  else
+    echo "Skipping migrations on startup (set RUN_MIGRATIONS_ON_START=true to enable)"
+  fi
 else
   export DB_PATH="${DB_PATH:-data/alice-suite.db}"
   mkdir -p "$(dirname "$DB_PATH")"
   echo "Using SQLite at $DB_PATH"
+  echo "Running database migrations..."
+  ./bin/migrate
 fi
-./bin/migrate
 
 # Always run init-users to ensure all users exist (it checks and only creates if missing)
 echo "Ensuring users are initialized..."

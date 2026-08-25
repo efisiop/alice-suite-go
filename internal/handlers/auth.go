@@ -94,21 +94,14 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Track login event and broadcast for consultants
 	if user.Role == "reader" {
-		// Track login activity in database (both old and new tables for compatibility)
-		TrackActivity(user.ID, "LOGIN", "", nil)
-
-		// Also log to new activity_logs table
-		go func() {
-			activity := &database.ActivityLog{
-				UserID:       user.ID,
-				ActivityType: "LOGIN",
-				Metadata: map[string]interface{}{
-					"ip_address": ipAddress,
-					"user_agent": userAgent,
-				},
-			}
-			database.LogActivity(activity)
-		}()
+		// Track login activity once; TrackActivity writes the consultant dashboard
+		// tables and emits the real-time activity event.
+		if err := TrackActivity(user.ID, "LOGIN", "", map[string]interface{}{
+			"ip_address": ipAddress,
+			"user_agent": userAgent,
+		}); err != nil {
+			log.Printf("failed to track LOGIN activity for user %s: %v", user.ID, err)
+		}
 
 		// Broadcast login event with user info
 		BroadcastLogin(user.ID, user.Email, user.FirstName, user.LastName)
@@ -159,7 +152,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"id":    user.ID,
 			"email": user.Email,
 			"aud":   "authenticated",
-			"role":  "authenticated",
+			"role":  user.Role,
 			"user_metadata": map[string]string{
 				"first_name":              user.FirstName,
 				"last_name":               user.LastName,
@@ -276,7 +269,7 @@ func HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		"id":    user.ID,
 		"email": user.Email,
 		"aud":   "authenticated",
-		"role":  "authenticated",
+		"role":  user.Role,
 		"user_metadata": map[string]string{
 			"first_name":              user.FirstName,
 			"last_name":               user.LastName,
@@ -327,18 +320,12 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 			log.Printf("🔓 Logging out user: %s %s (ID: %s, Role: %s)", user.FirstName, user.LastName, user.ID, user.Role)
 
 			if user.Role == "reader" {
-				// Track logout activity in database (both old and new tables for compatibility)
-				TrackActivity(user.ID, "LOGOUT", "", nil)
-
-				// Log to activity_logs table (synchronous to ensure it's recorded)
-				activity := &database.ActivityLog{
-					UserID:       user.ID,
-					ActivityType: "LOGOUT",
-				}
-				if err := database.LogActivity(activity); err != nil {
-					log.Printf("❌ Failed to log LOGOUT activity for user %s: %v", user.ID, err)
+				// Track logout activity once; TrackActivity writes the consultant dashboard
+				// tables and emits the real-time activity event.
+				if err := TrackActivity(user.ID, "LOGOUT", "", nil); err != nil {
+					log.Printf("❌ Failed to track LOGOUT activity for user %s: %v", user.ID, err)
 				} else {
-					log.Printf("✅ Logged LOGOUT activity for user %s", user.ID)
+					log.Printf("✅ Tracked LOGOUT activity for user %s", user.ID)
 				}
 
 				// Broadcast logout event for consultants
