@@ -677,9 +677,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const payload = JSON.parse(atob(token.split('.')[1]));
             console.log('JWT payload role:', payload.role);
             if (payload.role !== 'consultant') {
-                console.log('User is not a consultant, redirecting to reader dashboard');
-                // Not a consultant, redirect to reader dashboard
-                window.location.href = '/reader';
+                console.log('User is not a consultant, redirecting to reading page');
+                // Not a consultant, redirect to reading page
+                window.location.href = '/reader/interaction';
                 return;
             }
             console.log('User is consultant, initializing dashboard');
