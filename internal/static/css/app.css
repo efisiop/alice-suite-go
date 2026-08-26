@@ -15,10 +15,10 @@
     --reader-primary-light: #1e7e34;
     --reader-primary-dark: #0d4e1a;
     
-    /* Consultant app colors - Burgundy */
-    --consultant-primary: #800020;
-    --consultant-primary-light: #a00030;
-    --consultant-primary-dark: #600015;
+    /* Consultant app colors — overridden on body.consultant-app via consultant-theme.css */
+    --consultant-primary: #2d5a27;
+    --consultant-primary-light: #3a7233;
+    --consultant-primary-dark: #4a8a43;
 
     /* Administrator app colors - Dark blue */
     --admin-primary: #1a365d;

@@ -9,9 +9,9 @@
 }
 
 .readers-table th {
-    background-color: #f8f9fa;
+    background-color: #f5f2ed;
     font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid rgba(21, 87, 36, 0.15);
     padding: 0.5rem;
     position: sticky;
     top: 0;
@@ -188,7 +188,7 @@
 .legend-item {
     display: inline-flex;
     align-items: center;
-    margin-right: 8px;
+    margin-right: 4px;
 }
 
 .legend-dot {
@@ -250,57 +250,53 @@
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
+<li class="nav-item d-flex align-items-center ms-2">
+    <button class="theme-toggle-btn" onclick="toggleConsultantTheme()" id="theme-toggle-btn" title="Switch colour theme"></button>
+</li>
 {{end}}
 
 {{define "content"}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Readers</li>
-    </ol>
-</nav>
 <div class="row">
     <div class="col-12">
-        <h1 class="mb-1">Readers</h1>
-        <p class="text-muted mb-4">Readers and their activity. Load charts below to see engagement across all readers.</p>
+        <h1 class="mb-4" style="font-size: 1.6rem; font-weight: 700; color: var(--c-text-heading, #2c3e50);">Readers</h1>
         
         <!-- All-readers activity stats & charts -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 class="mb-0">All readers — activity stats &amp; charts</h5>
+        <div class="card mb-4" style="border-radius: 10px; border: 1px solid rgba(21,87,36,0.1); box-shadow: 0 2px 8px rgba(21,87,36,0.06); overflow: hidden;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--c-section-header-bg, linear-gradient(135deg, #2d5a27, #3a7233)); color: #fff; padding: 0.75rem 1.25rem;">
+                <h5 class="mb-0" style="font-size: 1rem; font-weight: 600; color: #fff !important;">Activity</h5>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <select id="ai-summary-hours" class="form-select form-select-sm" style="width: auto; max-width: 180px;">
                         <option value="24">Last 24 hours</option>
                         <option value="72">Last 3 days</option>
                         <option value="168">Last 7 days</option>
                     </select>
-                    <button type="button" class="btn btn-primary btn-sm" id="ai-summary-btn" onclick="loadDashboardActivityCharts()">Show activity</button>
+                    <button type="button" class="btn btn-sm btn-outline-light" id="ai-summary-btn" onclick="loadDashboardActivityCharts()">Show activity</button>
                 </div>
             </div>
             <div class="card-body">
                 <div id="ai-summary-loading" class="text-muted small" style="display: none;">Loading activity…</div>
                 <div id="ai-summary-error" class="text-danger small" style="display: none;"></div>
-                <div id="ai-summary-placeholder" class="text-muted small">Choose a time range and click &quot;Show activity&quot; for graphs of all readers&apos; usage and help requests.</div>
+                <div id="ai-summary-placeholder" class="text-muted small">Select a period and press Show activity.</div>
                 <div id="dashboard-activity-charts-wrap" style="display: none;">
                     <div class="row g-2 mb-3" id="dashboard-activity-stat-cards"></div>
                     <div class="row g-3 mb-3">
                         <div class="col-xl-7">
-                            <div class="small text-muted mb-1">All readers — events per day</div>
+                            <div class="small text-muted mb-1">Events per day</div>
                             <div style="position: relative; height: 240px;">
                                 <canvas id="chart-dashboard-activity-daily"></canvas>
                             </div>
                         </div>
                         <div class="col-xl-3">
-                            <div class="small text-muted mb-1">Event mix (in this period)</div>
+                            <div class="small text-muted mb-1">Event mix</div>
                             <div style="position: relative; height: 240px;">
                                 <canvas id="chart-dashboard-activity-types"></canvas>
                             </div>
                         </div>
                         <div class="col-12 col-xl-2">
                             <div class="dashboard-activity-concise">
-                                <div class="dashboard-activity-concise-title">Cumulative summary</div>
+                                <div class="dashboard-activity-concise-title">Summary</div>
                                 <ul class="dashboard-activity-concise-list" id="dashboard-activity-concise-summary">
-                                    <li>Load activity to see summary.</li>
+                                    <li>—</li>
                                 </ul>
                             </div>
                         </div>
@@ -317,20 +313,18 @@
             </div>
         </div>
         
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-0">All Readers</h5>
-                </div>
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <input type="text" class="form-control form-control-sm" id="readers-search" placeholder="Search by name or email..." style="max-width: 220px;" aria-label="Search readers">
-                    <div class="activity-legend">
+        <div class="card" style="border-radius: 10px; border: 1px solid rgba(21,87,36,0.1); box-shadow: 0 2px 8px rgba(21,87,36,0.06); overflow: hidden;">
+            <div class="d-flex justify-content-between align-items-center gap-2" style="background: var(--c-section-header-bg, linear-gradient(135deg, #2d5a27, #3a7233)); color: #fff; padding: 0.55rem 1.25rem;">
+                <h5 class="mb-0" style="font-size: 1rem; font-weight: 600; color: #fff !important; white-space: nowrap;">Readers</h5>
+                <div class="d-flex align-items-center gap-2" style="flex-wrap: nowrap;">
+                    <input type="text" class="form-control form-control-sm" id="readers-search" placeholder="Search..." style="width: 140px; font-size: 0.78rem;" aria-label="Search readers">
+                    <div class="activity-legend d-flex align-items-center gap-1" style="white-space: nowrap; font-size: 0.68rem;">
                         <span class="legend-item"><span class="legend-dot" style="background-color: #28a745;"></span>High</span>
                         <span class="legend-item"><span class="legend-dot" style="background-color: #17a2b8;"></span>Med</span>
                         <span class="legend-item"><span class="legend-dot" style="background-color: #6c757d;"></span>Low</span>
                         <span class="legend-item"><span class="legend-dot" style="background-color: #e9ecef;"></span>None</span>
                     </div>
-                    <button class="btn btn-sm btn-primary" onclick="loadReaders()">Refresh</button>
+                    <button class="btn btn-sm btn-outline-light" style="font-size: 0.78rem; white-space: nowrap;" onclick="loadReaders()">Refresh</button>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -357,7 +351,7 @@
                                 <th class="col-lastname">Last Name</th>
                                 <th class="col-purchased">Purchased</th>
                                 <th class="col-activated">Activated</th>
-                                <th class="col-calendar">Activity Calendar (use arrows to scroll through time)</th>
+                                <th class="col-calendar">Activity</th>
                             </tr>
                         </thead>
                         <tbody id="readers-table-body">
@@ -374,6 +368,21 @@
 {{define "scripts"}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+function toggleConsultantTheme() {
+    var body = document.body;
+    var isBurgundy = body.classList.toggle('theme-burgundy');
+    localStorage.setItem('consultant-theme', isBurgundy ? 'burgundy' : 'green');
+    updateThemeToggleLabel();
+}
+function updateThemeToggleLabel() {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        var isBurgundy = document.body.classList.contains('theme-burgundy');
+        btn.textContent = isBurgundy ? 'Green' : 'Burgundy';
+    }
+}
+updateThemeToggleLabel();
+
 // Consultant logout function
 (function() {
     // Store consultant logout function separately to prevent override

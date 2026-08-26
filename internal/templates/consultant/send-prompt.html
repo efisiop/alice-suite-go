@@ -15,25 +15,39 @@
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
+<li class="nav-item d-flex align-items-center ms-2">
+    <button class="theme-toggle-btn" onclick="toggleConsultantTheme()" id="theme-toggle-btn" title="Switch colour theme"></button>
+</li>
 {{end}}
 
 {{define "content"}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Send Prompt</li>
-    </ol>
-</nav>
 <div class="row">
     <div class="col-12">
-        <h1 class="mb-4">Send Prompt</h1>
-        <p class="text-muted">Send prompts to readers. This section is coming soon.</p>
+        <h1 class="mb-4" style="font-size: 1.6rem; font-weight: 700; color: var(--c-text-heading, #2c3e50);">Send Prompt</h1>
+        <div style="background: var(--c-card-bg, linear-gradient(180deg, #fefefe, #faf8f5)); border: 1px solid var(--c-card-border, rgba(21,87,36,0.1)); border-radius: 12px; padding: 3rem; text-align: center; box-shadow: 0 2px 8px var(--c-card-shadow, rgba(21,87,36,0.06));">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128172;</div>
+            <p style="color: #6c757d; font-size: 1rem; margin: 0;">Send reading prompts and encouragements to readers. Coming soon.</p>
+        </div>
     </div>
 </div>
 {{end}}
 
 {{define "scripts"}}
 <script>
+function toggleConsultantTheme() {
+    var body = document.body;
+    var isBurgundy = body.classList.toggle('theme-burgundy');
+    localStorage.setItem('consultant-theme', isBurgundy ? 'burgundy' : 'green');
+    updateThemeToggleLabel();
+}
+function updateThemeToggleLabel() {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        var isBurgundy = document.body.classList.contains('theme-burgundy');
+        btn.textContent = isBurgundy ? 'Green' : 'Burgundy';
+    }
+}
+updateThemeToggleLabel();
 (function() {
     window.consultantLogout = function() {
         var u = document.getElementById('user-info-nav'); if (u) u.style.display = 'none';

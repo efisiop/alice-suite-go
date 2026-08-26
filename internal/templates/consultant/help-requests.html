@@ -3,36 +3,39 @@
 {{define "head"}}
 <style>
 .help-request-card {
-    border-left: 4px solid #007bff;
+    border-left: 4px solid var(--c-activity-border);
     margin-bottom: 1.5rem;
     transition: box-shadow 0.2s;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(21, 87, 36, 0.06);
 }
 
 .help-request-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 16px rgba(21, 87, 36, 0.1);
 }
 
 .help-request-card.pending {
-    border-left-color: #ffc107;
+    border-left-color: var(--c-filter-pending);
 }
 
 .help-request-card.assigned {
-    border-left-color: #17a2b8;
+    border-left-color: var(--c-filter-assigned);
 }
 
 .help-request-card.resolved {
-    border-left-color: #28a745;
+    border-left-color: var(--c-filter-resolved);
     opacity: 0.8;
 }
 
 .help-request-message {
-    background-color: #f8f9fa;
+    background-color: #faf8f5;
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
     white-space: pre-wrap;
     word-wrap: break-word;
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
+    border: 1px solid var(--c-card-border);
 }
 
 .help-request-meta {
@@ -52,16 +55,33 @@
 .filter-buttons .btn {
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
 }
+
+.filter-buttons .btn-outline-primary { border-color: var(--c-primary-light); color: var(--c-primary-light); }
+.filter-buttons .btn-outline-primary:hover,
+.filter-buttons .btn-outline-primary.active { background: var(--c-primary-light); border-color: var(--c-primary-light); color: #fff; }
+.filter-buttons .btn-outline-warning { border-color: var(--c-filter-pending); color: var(--c-filter-pending-text); }
+.filter-buttons .btn-outline-warning:hover,
+.filter-buttons .btn-outline-warning.active { background: var(--c-filter-pending); border-color: var(--c-filter-pending); color: #fff; }
+.filter-buttons .btn-outline-info { border-color: var(--c-primary); color: var(--c-primary); }
+.filter-buttons .btn-outline-info:hover,
+.filter-buttons .btn-outline-info.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.filter-buttons .btn-outline-success { border-color: var(--c-filter-resolved); color: var(--c-filter-resolved); }
+.filter-buttons .btn-outline-success:hover,
+.filter-buttons .btn-outline-success.active { background: var(--c-filter-resolved); border-color: var(--c-filter-resolved); color: #fff; }
 
 .user-info {
     font-weight: 600;
-    color: #495057;
+    color: #2c3e50;
 }
 
 .status-badge {
     font-size: 0.875rem;
     padding: 0.35rem 0.65rem;
+    border-radius: 12px;
 }
 
 .empty-state {
@@ -90,18 +110,15 @@
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
+<li class="nav-item d-flex align-items-center ms-2">
+    <button class="theme-toggle-btn" onclick="toggleConsultantTheme()" id="theme-toggle-btn" title="Switch colour theme"></button>
+</li>
 {{end}}
 
 {{define "content"}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Help Requests</li>
-    </ol>
-</nav>
 <div class="row">
     <div class="col-12">
-        <h1 class="mb-4">Help Requests Administration</h1>
+        <h1 class="mb-4" style="font-size: 1.6rem; font-weight: 700; color: var(--c-text-heading, #2c3e50);">Help Requests</h1>
         
         <!-- Filter Buttons -->
         <div class="filter-buttons">
@@ -129,8 +146,8 @@
         
         <!-- Empty State -->
         <div id="empty-state" class="empty-state" style="display: none;">
-            <h5 id="empty-state-title">No help requests found</h5>
-            <p id="empty-state-text">Help requests from readers will appear here.</p>
+            <h5 id="empty-state-title">No requests yet</h5>
+            <p id="empty-state-text"></p>
         </div>
         
         <!-- Timeline Container -->
@@ -162,6 +179,22 @@
 
 {{define "scripts"}}
 <script>
+// Theme toggle
+function toggleConsultantTheme() {
+    var body = document.body;
+    var isBurgundy = body.classList.toggle('theme-burgundy');
+    localStorage.setItem('consultant-theme', isBurgundy ? 'burgundy' : 'green');
+    updateThemeToggleLabel();
+}
+function updateThemeToggleLabel() {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        var isBurgundy = document.body.classList.contains('theme-burgundy');
+        btn.textContent = isBurgundy ? 'Green' : 'Burgundy';
+    }
+}
+updateThemeToggleLabel();
+
 // Consultant logout function
 (function() {
     // Store consultant logout function separately to prevent override
@@ -391,8 +424,8 @@ function displayRequests(requests) {
         const titleEl = document.getElementById('empty-state-title');
         const textEl = document.getElementById('empty-state-text');
         emptyEl.style.display = 'block';
-        if (titleEl) titleEl.textContent = currentFilter === 'all' ? 'No help requests found' : `No ${currentFilter} requests`;
-        if (textEl) textEl.textContent = currentFilter === 'all' ? 'Help requests from readers will appear here.' : 'Try another filter or check back later.';
+        if (titleEl) titleEl.textContent = currentFilter === 'all' ? 'No requests yet' : `No ${currentFilter} requests`;
+        if (textEl) textEl.textContent = '';
         return;
     }
     
@@ -493,16 +526,13 @@ function createHelpRequestCard(request) {
                 ${statusBadge}
             </div>
             
-            <div class="help-request-meta mb-2">
-                <strong>Requested:</strong> ${createdStr}
-            </div>
-            
+            <div class="help-request-meta mb-2">${createdStr}</div>
+
             ${bookSectionInfo}
             ${assignedInfo}
             ${resolvedInfo}
-            
+
             <div class="mt-2">
-                <strong>Message:</strong>
                 <div class="help-request-message">${escapeHtml(request.content || 'No message provided')}</div>
             </div>
             

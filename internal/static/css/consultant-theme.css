@@ -1,0 +1,218 @@
+/* Consultant theme — CSS custom properties
+   Two palettes: green (default) and burgundy.
+   Toggle by adding class "theme-burgundy" to <body>. */
+
+/* === Green palette (default) === */
+body.consultant-app {
+    --c-primary: #2d5a27;
+    --c-primary-light: #3a7233;
+    --c-primary-end: #4a8a43;
+    --c-primary-rgb: 45, 90, 39;
+    --c-accent: #6c9a5e;
+    --c-bg: linear-gradient(180deg, #f5f2ed 0%, #ede8e0 100%);
+    --c-card-bg: linear-gradient(180deg, #fefefe, #faf8f5);
+    --c-card-border: rgba(21, 87, 36, 0.1);
+    --c-card-shadow: rgba(21, 87, 36, 0.06);
+    --c-card-shadow-hover: rgba(21, 87, 36, 0.1);
+    --c-text-heading: #2c3e50;
+    --c-stat-value: #2d5a27;
+    --c-link: #3a7233;
+    --c-link-hover: #2d5a27;
+    --c-filter-pending: #d4a843;
+    --c-filter-pending-text: #8a6d2b;
+    --c-filter-assigned: #2d5a27;
+    --c-filter-resolved: #6c9a5e;
+    --c-table-header-bg: #f5f2ed;
+    --c-table-border: rgba(21, 87, 36, 0.15);
+    --c-activity-border: #3a7233;
+    --c-section-header-bg: linear-gradient(135deg, #2d5a27, #3a7233);
+}
+
+/* === Burgundy palette === */
+body.consultant-app.theme-burgundy {
+    --c-primary: #6b2737;
+    --c-primary-light: #8b3a4a;
+    --c-primary-end: #a04d5e;
+    --c-primary-rgb: 107, 39, 55;
+    --c-accent: #a0707e;
+    --c-bg: linear-gradient(180deg, #f5f0f1 0%, #ede4e6 100%);
+    --c-card-bg: linear-gradient(180deg, #fefefe, #faf5f6);
+    --c-card-border: rgba(107, 39, 55, 0.1);
+    --c-card-shadow: rgba(107, 39, 55, 0.06);
+    --c-card-shadow-hover: rgba(107, 39, 55, 0.1);
+    --c-text-heading: #2c3e50;
+    --c-stat-value: #6b2737;
+    --c-link: #8b3a4a;
+    --c-link-hover: #6b2737;
+    --c-filter-pending: #d4a843;
+    --c-filter-pending-text: #8a6d2b;
+    --c-filter-assigned: #6b2737;
+    --c-filter-resolved: #a0707e;
+    --c-table-header-bg: #f5f0f1;
+    --c-table-border: rgba(107, 39, 55, 0.15);
+    --c-activity-border: #8b3a4a;
+    --c-section-header-bg: linear-gradient(135deg, #6b2737, #8b3a4a);
+}
+
+/* === Redirect legacy app.css variables to current palette === */
+body.consultant-app {
+    --consultant-primary: var(--c-primary);
+    --consultant-primary-light: var(--c-primary-light);
+    --consultant-primary-dark: var(--c-primary-end);
+}
+
+/* === Apply variables to components === */
+
+body.consultant-app {
+    background: var(--c-bg) !important;
+}
+
+/* Navbar */
+body.consultant-app .navbar {
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-light)) !important;
+}
+
+body.consultant-app .navbar .navbar-brand,
+body.consultant-app .navbar .nav-link,
+body.consultant-app .navbar .navbar-text,
+body.consultant-app .navbar #user-name-display {
+    color: #fff !important;
+}
+
+body.consultant-app .navbar .nav-link:hover {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+body.consultant-app .navbar .nav-link.active {
+    color: #fff !important;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255,255,255,0.7);
+}
+
+/* Footer */
+body.consultant-app footer {
+    background: transparent !important;
+    border-top: 1px solid var(--c-card-border);
+}
+
+/* Theme toggle button in navbar */
+.theme-toggle-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.theme-toggle-btn:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+/* All text on coloured backgrounds must be white —
+   except form controls, buttons, and reader cards (light bg) */
+body.consultant-app .card-header:not(.reader-card-header),
+body.consultant-app .card-header:not(.reader-card-header) *:not(select):not(option):not(.btn-light):not(.btn-outline-primary):not(.btn-outline-secondary):not(.form-select):not(.form-control),
+body.consultant-app .theme-card-header,
+body.consultant-app .theme-card-header *:not(select):not(option):not(.btn-light):not(.btn-outline-primary):not(.btn-outline-secondary):not(.form-select):not(.form-control),
+body.consultant-app .section-header-themed,
+body.consultant-app .section-header-themed * {
+    color: #fff !important;
+}
+
+/* Reader cards (dashboard): dark text on light pastel bg */
+body.consultant-app .reader-card-header {
+    color: #334155 !important;
+}
+body.consultant-app .reader-card-header strong {
+    color: #1e293b !important;
+}
+body.consultant-app .reader-card-header small,
+body.consultant-app .reader-card-header .text-muted {
+    color: #64748b !important;
+}
+body.consultant-app .reader-card-header a {
+    color: var(--c-link, #3a7233) !important;
+}
+body.consultant-app .reader-card-header .expand-icon {
+    color: #94a3b8 !important;
+}
+
+/* Section headers (dashboard etc): white headings */
+body.consultant-app .section-header,
+body.consultant-app .section-header h1,
+body.consultant-app .section-header h2,
+body.consultant-app .section-header h3,
+body.consultant-app .section-header h4,
+body.consultant-app .section-header h5,
+body.consultant-app .section-header h6 {
+    color: #fff !important;
+}
+
+/* Controls inside card-headers: dark text on their own light bg */
+body.consultant-app .card-header select,
+body.consultant-app .card-header .form-select,
+body.consultant-app .card-header .form-control {
+    color: #334155 !important;
+    background-color: #fff;
+}
+body.consultant-app .card-header .btn-light {
+    color: #334155 !important;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+body.consultant-app .card-header .btn-outline-primary {
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.12);
+}
+body.consultant-app .card-header .btn-outline-primary:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.7);
+}
+
+/* Override Bootstrap .btn-primary to use theme colour */
+body.consultant-app .btn-primary {
+    background-color: var(--c-primary, #2d5a27);
+    border-color: var(--c-primary, #2d5a27);
+}
+body.consultant-app .btn-primary:hover {
+    background-color: var(--c-primary-light, #3a7233);
+    border-color: var(--c-primary-light, #3a7233);
+}
+
+/* Override Bootstrap .btn-outline-primary to use theme colour */
+body.consultant-app .btn-outline-primary {
+    color: var(--c-primary, #2d5a27);
+    border-color: var(--c-primary, #2d5a27);
+}
+body.consultant-app .btn-outline-primary:hover {
+    background-color: var(--c-primary, #2d5a27);
+    border-color: var(--c-primary, #2d5a27);
+    color: #fff;
+}
+
+/* Override Bootstrap .btn-info to use theme accent */
+body.consultant-app .btn-info {
+    background-color: var(--c-accent, #6c9a5e);
+    border-color: var(--c-accent, #6c9a5e);
+    color: #fff;
+}
+body.consultant-app .btn-info:hover {
+    background-color: var(--c-primary, #2d5a27);
+    border-color: var(--c-primary, #2d5a27);
+    color: #fff;
+}
+
+/* Bootstrap .text-primary override */
+body.consultant-app .text-primary {
+    color: var(--c-primary, #2d5a27) !important;
+}
+
+/* Spinner */
+body.consultant-app .spinner-border.text-primary {
+    color: var(--c-primary, #2d5a27) !important;
+}

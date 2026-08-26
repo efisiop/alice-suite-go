@@ -2,22 +2,129 @@
 
 {{define "head"}}
 <style>
+/* Dashboard page */
+.consultant-dashboard-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--c-text-heading, #2c3e50);
+    margin-bottom: 1.5rem;
+}
+
+/* Stat cards */
+.stat-card {
+    border-radius: 12px;
+    border: 1px solid var(--c-card-border);
+    box-shadow: 0 2px 8px var(--c-card-shadow);
+    background: var(--c-card-bg);
+    transition: box-shadow 0.2s;
+    text-align: center;
+    padding: 1.25rem 1rem;
+    height: 100%;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 16px var(--c-card-shadow-hover);
+}
+
+.stat-card .stat-icon {
+    font-size: 1.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--c-stat-value);
+    line-height: 1.1;
+}
+
+.stat-card .stat-link {
+    font-size: 0.78rem;
+    color: var(--c-link);
+    text-decoration: none;
+    margin-top: 0.35rem;
+    display: inline-block;
+}
+
+.stat-card .stat-link:hover {
+    text-decoration: underline;
+}
+
+.stat-card.stat-alert .stat-value {
+    color: #dc3545;
+}
+
+/* Section header bar */
+.section-header {
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-light));
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.section-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.section-header .btn {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.65rem;
+    border-color: rgba(255,255,255,0.4);
+    color: #fff;
+}
+
+.section-header .btn:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.6);
+}
+
+.section-header .badge {
+    font-size: 0.7rem;
+}
+
+.section-body {
+    background: #fff;
+    border: 1px solid var(--c-card-border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 1.25rem;
+    min-height: 150px;
+}
+
 /* Reader window cards styling */
 .reader-card {
     min-width: 300px;
     max-width: 400px;
     flex: 0 0 auto;
     margin-bottom: 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--c-card-border);
+    box-shadow: 0 2px 8px var(--c-card-shadow);
+    overflow: hidden;
 }
 
 .reader-card-header {
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--c-card-border);
 }
-
-/* Hover color is handled via JavaScript for each individual card */
 
 .reader-card-header strong {
     color: #000000 !important;
@@ -40,7 +147,7 @@
 }
 
 .reader-activity-item {
-    border-left: 3px solid #007bff;
+    border-left: 3px solid var(--c-activity-border);
     padding-left: 0.75rem;
     margin-bottom: 0.75rem;
     padding-bottom: 0.75rem;
@@ -51,54 +158,52 @@
     border-bottom: none;
 }
 
-/* Recent activities (within last 1 hour) - colored text, normal weight, same size as timestamp */
 .reader-activity-item.activity-recent .activity-type-label {
     font-weight: normal;
-    font-size: 0.875rem; /* Match small tag size (Bootstrap's small is 0.875rem) */
+    font-size: 0.875rem;
 }
 
 .reader-activity-item.activity-recent[data-event-type="LOGIN"] .activity-type-label {
-    color: #8B0000; /* Dark red/burgundy */
+    color: var(--c-primary);
 }
 
 .reader-activity-item.activity-recent[data-event-type="LOGOUT"] .activity-type-label {
-    color: #6B4423; /* Dark brown */
+    color: #6B4423;
 }
 
 .reader-activity-item.activity-recent[data-event-type="PAGE_SYNC"] .activity-type-label {
-    color: #4B0082; /* Dark indigo */
+    color: #4B0082;
 }
 
 .reader-activity-item.activity-recent[data-event-type="SECTION_SYNC"] .activity-type-label {
-    color: #4B0082; /* Dark indigo */
+    color: #4B0082;
 }
 
 .reader-activity-item.activity-recent[data-event-type="DEFINITION_LOOKUP"] .activity-type-label {
-    color: #8B0000; /* Dark red/burgundy */
+    color: #8B6914;
 }
 
 .reader-activity-item.activity-recent[data-event-type="AI_QUERY"] .activity-type-label,
 .reader-activity-item.activity-recent[data-event-type="AI_HELP"] .activity-type-label {
-    color: #800080; /* Dark purple */
+    color: #800080;
 }
 
 .reader-activity-item.activity-recent[data-event-type="HELP_REQUEST"] .activity-type-label {
-    color: #8B0000; /* Dark red/burgundy */
+    color: #dc3545;
 }
 
 .reader-activity-item.activity-recent[data-event-type="FEEDBACK_SUBMISSION"] .activity-type-label {
-    color: #654321; /* Dark brown */
+    color: #654321;
 }
 
 .reader-activity-item.activity-recent .activity-time {
     font-weight: 600;
-    color: #495057; /* Dark gray */
+    color: #495057;
 }
 
 .reader-activity-item.activity-recent .activity-what {
     font-weight: bold;
-    font-size: 0.875rem; /* Match activity-type-label size */
-    /* Inherit color from parent or use dark gray - will be styled per event type if needed */
+    font-size: 0.875rem;
     color: #495057;
 }
 
@@ -115,7 +220,6 @@
     opacity: 0.7;
 }
 
-/* Older activities (beyond 1 hour) - light gray */
 .reader-activity-item.activity-history {
     opacity: 0.5;
     color: #6c757d;
@@ -124,7 +228,7 @@
 .reader-activity-item.activity-history .activity-type-label {
     color: #adb5bd !important;
     font-weight: normal;
-    font-size: 0.875rem; /* Match small tag size */
+    font-size: 0.875rem;
 }
 
 .reader-activity-item.activity-history .activity-time {
@@ -135,7 +239,7 @@
 .reader-activity-item.activity-history .activity-what {
     color: #adb5bd !important;
     font-weight: normal;
-    font-size: 0.875rem; /* Match activity-type-label size */
+    font-size: 0.875rem;
 }
 
 .reader-activity-item.activity-history .activity-icon {
@@ -149,9 +253,8 @@
     align-items: flex-start;
 }
 
-/* Badge for unread activities (like WhatsApp) */
 .activity-badge {
-    background-color: #dc3545; /* Red like WhatsApp */
+    background-color: #dc3545;
     color: white;
     border-radius: 10px;
     padding: 2px 6px;
@@ -164,9 +267,8 @@
     line-height: 1.2;
 }
 
-/* "More" link styling */
 .more-activities-link {
-    color: #007bff;
+    color: var(--c-link);
     cursor: pointer;
     text-decoration: underline;
     padding: 0.5rem;
@@ -177,16 +279,14 @@
 }
 
 .more-activities-link:hover {
-    color: #0056b3;
+    color: var(--c-link-hover);
     text-decoration: none;
 }
 
-/* Hidden activities */
 .reader-activity-item.hidden-activity {
     display: none;
 }
 
-/* Help request clickable styling */
 .reader-activity-item[data-event-type="HELP_REQUEST"] {
     cursor: pointer;
     transition: background-color 0.2s;
@@ -196,7 +296,6 @@
     background-color: #f8f9fa;
 }
 
-/* Help request placeholder styling */
 .help-request-placeholder {
     font-size: 0.85rem;
     color: #6c757d;
@@ -224,12 +323,12 @@
 .help-request-modal-content {
     background-color: #fff;
     padding: 2rem;
-    border-radius: 8px;
+    border-radius: 12px;
     max-width: 600px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
 }
 
 .help-request-modal-header {
@@ -238,7 +337,7 @@
     align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--c-card-border);
 }
 
 .help-request-modal-close {
@@ -265,12 +364,13 @@
 }
 
 .help-request-message {
-    background-color: #f8f9fa;
+    background-color: #faf8f5;
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
     white-space: pre-wrap;
     word-wrap: break-word;
     margin-bottom: 1rem;
+    border: 1px solid var(--c-card-border);
 }
 
 .help-request-meta {
@@ -349,103 +449,93 @@ window.isConsultantDashboard = true;
 <li class="nav-item">
     <a class="nav-link" href="#" id="logout-link" onclick="if(window.consultantLogout){window.consultantLogout();}else if(window.logout){window.logout();}else{window.location.href='/consultant/login';} return false;">Logout</a>
 </li>
+<li class="nav-item d-flex align-items-center ms-2">
+    <button class="theme-toggle-btn" onclick="toggleConsultantTheme()" id="theme-toggle-btn" title="Switch colour theme"></button>
+</li>
 {{end}}
 
 {{define "content"}}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/consultant">Consultant</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-    </ol>
-</nav>
-<div class="row">
-    <div class="col-md-12">
-        <h1 class="mb-4">Consultant Dashboard</h1>
+<h1 class="consultant-dashboard-title">Dashboard</h1>
 
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Logged In Now</h5>
-                        <h2 id="logged-in-readers">-</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Recent Readers</h5>
-                        <h2 id="active-readers">-</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Today's Activity</h5>
-                        <h2 id="today-activity">-</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">AI Provider</h5>
-                        <div id="ai-provider-status">
-                            <small class="text-muted">Loading...</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Open Help Requests</h5>
-                        <h2 id="open-help-requests">-</h2>
-                        <small><a href="/consultant/help-requests">View all</a></small>
-                    </div>
-                </div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon">&#128994;</div>
+            <div class="stat-label">Online Now</div>
+            <div class="stat-value" id="logged-in-readers">-</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon">&#128214;</div>
+            <div class="stat-label">Recent Readers</div>
+            <div class="stat-value" id="active-readers">-</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon">&#128200;</div>
+            <div class="stat-label">Today's Activity</div>
+            <div class="stat-value" id="today-activity">-</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-alert">
+            <div class="stat-icon">&#9888;&#65039;</div>
+            <div class="stat-label">Open Help Requests</div>
+            <div class="stat-value" id="open-help-requests">-</div>
+            <a href="/consultant/help-requests" class="stat-link">View all &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <div class="section-header">
+        <h5>Reader Activity</h5>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="expandAllReaderCards()">Expand all</button>
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="collapseAllReaderCards()">Collapse all</button>
+            <span class="badge bg-light text-success" id="feed-status">Live</span>
+        </div>
+    </div>
+    <div class="section-body">
+        <div id="readers-container" class="d-flex flex-wrap gap-3">
+            <p class="text-muted w-100">Loading recent reader activity...</p>
+        </div>
+    </div>
+</div>
+
+<!-- AI Provider (small, below main content) -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="stat-card" style="padding: 0.75rem;">
+            <div class="stat-label" style="margin-bottom: 0.15rem;">AI Provider</div>
+            <div id="ai-provider-status">
+                <small class="text-muted">Loading...</small>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-md-12">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h5 class="mb-0">Recent Reader Activity</h5>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="expandAllReaderCards()">Expand all</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="collapseAllReaderCards()">Collapse all</button>
-                        <span class="badge bg-success" id="feed-status">Live</span>
-                    </div>
-                </div>
-                <!-- Reader windows container - displays readers side-by-side -->
-                <div id="readers-container" class="d-flex flex-wrap gap-3" style="min-height: 200px;">
-                    <p class="text-muted w-100">Loading recent reader activity...</p>
-                </div>
-            </div>
-        </div>
-                    </div>
-                        </div>
+    </div>
+</div>
 
 <!-- Help Request Modal -->
 <div id="help-request-modal" class="help-request-modal">
     <div class="help-request-modal-content">
         <div class="help-request-modal-header">
-            <h5>Help Request Message</h5>
+            <h5>Help Request</h5>
             <button class="help-request-modal-close" onclick="closeHelpRequestModal()">&times;</button>
-                    </div>
+        </div>
         <div class="help-request-modal-body">
             <div id="help-request-loading" style="text-align: center; padding: 2rem;">
                 <p>Loading message...</p>
-                </div>
+            </div>
             <div id="help-request-content" style="display: none;">
                 <div class="help-request-message" id="help-request-message"></div>
                 <div class="help-request-meta">
                     <div><strong>From:</strong> <span id="help-request-user"></span></div>
                     <div><strong>Time:</strong> <span id="help-request-time"></span></div>
                     <div id="help-request-status-info" style="margin-top: 0.5rem;"></div>
+                </div>
             </div>
-                    </div>
             <div id="help-request-error" style="display: none; color: #dc3545; padding: 1rem;">
                 <p>Error loading help request message.</p>
             </div>
@@ -456,6 +546,22 @@ window.isConsultantDashboard = true;
 
 {{define "scripts"}}
 <script>
+// Theme toggle
+function toggleConsultantTheme() {
+    var body = document.body;
+    var isBurgundy = body.classList.toggle('theme-burgundy');
+    localStorage.setItem('consultant-theme', isBurgundy ? 'burgundy' : 'green');
+    updateThemeToggleLabel();
+}
+function updateThemeToggleLabel() {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        var isBurgundy = document.body.classList.contains('theme-burgundy');
+        btn.textContent = isBurgundy ? 'Green' : 'Burgundy';
+    }
+}
+updateThemeToggleLabel();
+
 // Ensure getAuthToken is available (fallback if app.js hasn't loaded yet)
 // Using sessionStorage instead of localStorage to ensure each browser tab/window
 // has its own isolated token storage, preventing session mixing when multiple
