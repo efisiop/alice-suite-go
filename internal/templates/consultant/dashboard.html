@@ -829,6 +829,12 @@ function connectConsultantSSE(token) {
             const activity = eventData.data || eventData;
             
             if (activity.id && activity.event_type) {
+                // Skip LOGOUT activities — they are handled by the dedicated 'logout' SSE event
+                if (activity.event_type === 'LOGOUT') {
+                    console.log('Skipping LOGOUT activity event (handled by logout SSE event):', activity.user_id);
+                    return;
+                }
+
                 // Check if user info is present
                 if (!activity.first_name || !activity.last_name) {
                     console.warn('Activity missing first_name or last_name:', {
@@ -839,7 +845,7 @@ function connectConsultantSSE(token) {
                         email: activity.email
                     });
                 }
-                
+
                 // Immediately add to reader's card (no delay)
                 addActivityToReaderCard(activity);
                 
@@ -980,13 +986,12 @@ function connectConsultantSSE(token) {
                 console.warn('⚠️ No reader card found to remove for user:', userId);
                 console.log('Available card IDs in DOM:', Array.from(document.querySelectorAll('[data-user-id]')).map(el => el.getAttribute('data-user-id')));
             }
-            
-            // Refresh dashboard stats to verify (with slight delay to allow server to process)
-            // The count and card removal already happened immediately above
+
+            // Prevent polling from overwriting count for 15 seconds
+            recentlyLoggedOut.add(userId);
             setTimeout(function() {
-                loadDashboardData();
-                loadLoggedInReaders();
-            }, 300);
+                recentlyLoggedOut.delete(userId);
+            }, 15000);
         } catch (err) {
             console.error('Error parsing logout event:', err, e.data);
         }
@@ -1132,6 +1137,8 @@ function loadReaderActivityFeed() {
 
 // Store reader cards data
 const readerCards = new Map(); // Map<user_id, {cardElement, activities: []}>
+// Track recently logged-out users so polling doesn't overwrite SSE-driven count
+const recentlyLoggedOut = new Set();
 
 // Generate a consistent light background color for a reader based on their user_id
 function getReaderBackgroundColor(userId) {
@@ -1763,11 +1770,14 @@ function loadLoggedInReaders() {
     .then(data => {
         const count = data.count || 0;
         const activeReaderIds = (data.readers || []).map(r => r.id);
-        
-        // Update count display
-        document.getElementById('logged-in-readers').textContent = count;
-        
-        // Mark presence without hiding historical activity cards.
+
+        // If there are recent SSE-driven logouts, don't let polling overwrite the count
+        if (recentlyLoggedOut.size > 0) {
+            console.log('Skipping count overwrite — recent SSE logouts pending:', Array.from(recentlyLoggedOut));
+        } else {
+            document.getElementById('logged-in-readers').textContent = count;
+        }
+
         updateReaderCardPresence(activeReaderIds);
     })
     .catch(err => {
@@ -1830,6 +1840,14 @@ function updateReaderCardPresence(activeReaderIds) {
     const activeIdsSet = new Set(activeReaderIds);
 
     readerCards.forEach((readerCard, userId) => {
+        // Remove cards for users who recently logged out via SSE
+        if (recentlyLoggedOut.has(userId)) {
+            console.log('Removing card for recently logged-out user:', userId);
+            readerCard.cardElement.remove();
+            readerCards.delete(userId);
+            return;
+        }
+
         const header = readerCard.cardElement.querySelector('.reader-card-header');
         if (!header) return;
 
