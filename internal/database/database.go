@@ -41,12 +41,12 @@ func InitDB(dbPath, databaseURL string) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
-		DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL")
+		DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=10000")
 		if err != nil {
 			return err
 		}
-		DB.SetMaxOpenConns(25)
-		DB.SetMaxIdleConns(5)
+		DB.SetMaxOpenConns(1)
+		DB.SetMaxIdleConns(1)
 		DB.SetConnMaxLifetime(0)
 
 		// SQLite-only PRAGMAs
