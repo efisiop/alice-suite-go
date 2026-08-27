@@ -324,7 +324,7 @@ document.getElementById('verify-form').addEventListener('submit', function(e) {
             document.getElementById('success-message').textContent = 'Book verified successfully!';
             document.getElementById('success-message').classList.remove('d-none');
             setTimeout(() => {
-                window.location.href = '/reader/interaction';
+                window.location.href = '/reader/tutorial';
             }, 1500);
         } else {
             document.getElementById('error-message').textContent = 'Invalid verification code';

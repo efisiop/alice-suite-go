@@ -1,0 +1,552 @@
+{{define "title"}}Tutorial - Alice Suite{{end}}
+
+{{define "nav"}}
+<li class="nav-item">
+    <a class="nav-link" href="/reader/interaction">Reading</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/reader/my-page">My Page</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="#" id="logout-link-reader">Logout</a>
+</li>
+{{end}}
+
+{{define "head"}}
+<style>
+.tutorial-page {
+    background: linear-gradient(180deg, #f5f2ed 0%, #ede8e0 100%);
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+}
+
+.tutorial-container {
+    width: 100%;
+    max-width: 700px;
+    position: relative;
+}
+
+.tutorial-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(21, 87, 36, 0.12);
+    box-shadow: 0 6px 32px rgba(21, 87, 36, 0.08);
+    overflow: hidden;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tutorial-header {
+    background: linear-gradient(135deg, #2d5a27 0%, #3a7233 100%);
+    color: #fff;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tutorial-header-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.tutorial-header-skip {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.tutorial-header-skip:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.tutorial-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 2.5rem;
+}
+
+.tutorial-slide {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    animation: tutorialFadeIn 0.35s ease;
+}
+
+.tutorial-slide.active {
+    display: flex;
+}
+
+@keyframes tutorialFadeIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-heading {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #2d5a27;
+    margin: 0 0 1rem;
+    line-height: 1.3;
+}
+
+.slide-visual {
+    flex: 1;
+    background: #faf8f5;
+    border: 1px solid rgba(21, 87, 36, 0.08);
+    border-radius: 14px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+    min-height: 240px;
+}
+
+.slide-description {
+    font-size: 1.15rem;
+    color: #5a5550;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.slide-description .skip-note {
+    color: #8a8580;
+    font-style: italic;
+}
+
+/* Visual components */
+.v-row { display: flex; align-items: center; gap: 0.65rem; }
+.v-center { align-items: center; justify-content: center; text-align: center; }
+.v-icon { font-size: 2rem; color: #5a5550; }
+.v-plus { font-size: 1.3rem; color: #aaa; }
+.v-logo { font-family: 'Lora', Georgia, serif; font-size: 2.1rem; color: #2d5a27; font-weight: 600; font-style: italic; }
+.v-logo-sub { font-size: 0.8rem; color: #999; letter-spacing: 0.12em; }
+
+.v-panel { display: flex; gap: 6px; }
+.v-col { flex: 1; background: #fff; border-radius: 8px; padding: 0.65rem; border: 1px solid rgba(0,0,0,0.06); }
+.v-col-label { font-size: 0.85rem; color: #999; font-weight: 600; margin-bottom: 5px; }
+.v-col-text { font-size: 0.95rem; color: #5a5550; line-height: 1.5; }
+.v-col.faded { opacity: 0.5; }
+.v-col.main { border-color: rgba(21, 87, 36, 0.15); flex: 1.8; }
+.v-blue-word { color: #378ADD; text-decoration: underline; text-decoration-color: rgba(55, 138, 221, 0.3); cursor: default; }
+
+.v-popup { background: #fff; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 0.65rem 1rem; }
+.v-popup-word { font-weight: 600; color: #333; font-size: 1.1rem; }
+.v-popup-def { color: #666; font-size: 0.95rem; margin-top: 3px; }
+.v-popup-btns { display: flex; gap: 6px; margin-top: 8px; }
+.v-tag { font-size: 0.85rem; color: #666; border: 1px solid rgba(0,0,0,0.1); border-radius: 5px; padding: 3px 10px; background: #fff; }
+
+.v-chat { display: flex; gap: 0.65rem; align-items: flex-start; margin-bottom: 6px; }
+.v-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #fff; font-weight: 600; flex-shrink: 0; }
+.v-bubble { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; padding: 8px 14px; font-size: 0.95rem; color: #5a5550; max-width: 85%; }
+.v-hint { font-size: 0.9rem; color: #999; text-align: center; margin-top: 6px; }
+
+.v-quiz-q { font-size: 1.05rem; color: #5a5550; margin-bottom: 0.65rem; }
+.v-quiz-opt { border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 7px 14px; font-size: 1rem; color: #666; background: #fff; margin-bottom: 5px; }
+.v-quiz-opt.correct { border-color: #2d5a27; color: #2d5a27; }
+
+.v-feature { display: flex; align-items: center; gap: 0.65rem; padding: 8px 14px; background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; }
+.v-feature-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(45, 90, 39, 0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #2d5a27; font-size: 1.1rem; }
+.v-feature-label { font-size: 1.05rem; font-weight: 500; color: #333; }
+.v-feature-text { font-size: 0.9rem; color: #888; }
+
+.v-nav-arrows { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.v-arrow-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; color: #666; background: #fff; }
+.v-page-num { font-size: 1.05rem; color: #666; }
+.v-or { font-size: 0.95rem; color: #aaa; text-align: center; }
+
+.v-consultant-circle { width: 56px; height: 56px; border-radius: 50%; background: #C4A265; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.65rem; font-size: 1.5rem; color: #fff; }
+.v-consultant-title { font-size: 1.15rem; font-weight: 500; color: #333; }
+.v-consultant-sub { font-size: 0.95rem; color: #888; margin-top: 3px; }
+.v-btn-green { display: inline-block; padding: 6px 18px; border-radius: 8px; font-size: 1rem; border: 1px solid #2d5a27; color: #2d5a27; background: #fff; margin-top: 0.65rem; }
+
+.v-profile { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; }
+.v-profile-avatar { width: 42px; height: 42px; border-radius: 50%; background: #2d5a27; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #fff; font-weight: 600; }
+.v-profile-name { font-size: 1.1rem; font-weight: 500; color: #333; }
+.v-stat-row { display: flex; gap: 1rem; }
+.v-stat { flex: 1; }
+.v-stat-label { font-size: 0.85rem; color: #999; }
+.v-stat-value { font-size: 1.05rem; color: #5a5550; }
+.v-progress { height: 6px; background: rgba(45, 90, 39, 0.15); border-radius: 3px; margin-top: 0.65rem; }
+.v-progress-bar { height: 100%; width: 15%; background: #2d5a27; border-radius: 3px; }
+
+.v-ready-icon { font-size: 3.2rem; color: #2d5a27; margin-bottom: 0.35rem; }
+.v-ready-text { font-size: 1.25rem; font-weight: 500; color: #333; }
+.v-ready-sub { font-size: 1rem; color: #999; margin-top: 6px; line-height: 1.55; }
+.v-start-btn { display: inline-block; padding: 10px 32px; border-radius: 10px; font-size: 1.15rem; font-weight: 600; border: none; background: linear-gradient(135deg, #2d5a27, #3a7233); color: #fff; cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
+.v-start-btn:hover { background: linear-gradient(135deg, #245020, #2d5a27); }
+
+/* Navigation dots and buttons */
+.tutorial-footer {
+    padding: 1.25rem 2.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.tutorial-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.tutorial-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #d4c9b8;
+    transition: background 0.3s, transform 0.3s;
+}
+
+.tutorial-dot.active {
+    background: #2d5a27;
+    transform: scale(1.25);
+}
+
+.tutorial-nav-btn {
+    border: 1px solid rgba(21, 87, 36, 0.2);
+    background: #fff;
+    color: #2d5a27;
+    border-radius: 10px;
+    padding: 0.55rem 1.3rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.tutorial-nav-btn:hover {
+    background: rgba(45, 90, 39, 0.05);
+    border-color: #2d5a27;
+}
+
+.tutorial-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.tutorial-nav-btn.primary {
+    background: linear-gradient(135deg, #2d5a27, #3a7233);
+    color: #fff;
+    border: none;
+}
+
+.tutorial-nav-btn.primary:hover {
+    background: linear-gradient(135deg, #245020, #2d5a27);
+}
+
+@media (max-width: 576px) {
+    .tutorial-page { padding: 0.75rem; }
+    .tutorial-body { padding: 1.5rem 1.5rem; }
+    .tutorial-footer { padding: 1rem 1.5rem 1.25rem; }
+    .slide-heading { font-size: 1.45rem; }
+    .tutorial-card { min-height: 480px; }
+}
+</style>
+{{end}}
+
+{{define "main_class"}}tutorial-page{{end}}
+
+{{define "content"}}
+<div class="tutorial-container">
+    <div class="tutorial-card">
+        <div class="tutorial-header">
+            <span class="tutorial-header-title">Tutorial <span id="tutorial-counter">1 / 9</span></span>
+            <button class="tutorial-header-skip" onclick="skipTutorial()">Skip</button>
+        </div>
+
+        <!-- Slide 1: Welcome -->
+        <div class="tutorial-body">
+            <div class="tutorial-slide active" data-slide="1">
+                <h2 class="slide-heading">Welcome to your reading helper</h2>
+                <div class="slide-visual v-center" style="flex-direction: column;">
+                    <div class="v-row" style="gap: 1rem; justify-content: center;">
+                        <span class="v-icon">&#128214;</span>
+                        <span class="v-plus">+</span>
+                        <span class="v-icon">&#128241;</span>
+                    </div>
+                    <div class="v-logo" style="margin-top: 0.75rem;">Alice</div>
+                    <div class="v-logo-sub">SUITE</div>
+                </div>
+                <p class="slide-description">This app works together with your physical book. Let us show you how. <span class="skip-note">You can skip this anytime.</span></p>
+            </div>
+
+            <!-- Slide 2: Find your page -->
+            <div class="tutorial-slide" data-slide="2">
+                <h2 class="slide-heading">Find your page</h2>
+                <div class="slide-visual">
+                    <div class="v-feature">
+                        <div class="v-feature-icon">&#8596;</div>
+                        <div>
+                            <div class="v-feature-label">Go to any page</div>
+                            <div class="v-feature-text">Use the arrows to move between pages</div>
+                        </div>
+                    </div>
+                    <div class="v-nav-arrows" style="margin: 0.25rem 0;">
+                        <div class="v-arrow-btn">&larr;</div>
+                        <span class="v-page-num">Page 1</span>
+                        <div class="v-arrow-btn">&rarr;</div>
+                    </div>
+                    <div class="v-or">or</div>
+                    <div class="v-feature">
+                        <div class="v-feature-icon">&#9634;</div>
+                        <div>
+                            <div class="v-feature-label">Scan your book</div>
+                            <div class="v-feature-text">Use your camera on the page &mdash; the app will find it for you</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="slide-description">Two ways to match the app to your book: use the arrows, or scan a page with your camera.</p>
+            </div>
+
+            <!-- Slide 3: The reading page -->
+            <div class="tutorial-slide" data-slide="3">
+                <h2 class="slide-heading">The reading page</h2>
+                <div class="slide-visual">
+                    <div class="v-panel">
+                        <div class="v-col faded" style="flex: 0.6;">
+                            <div class="v-col-label">Sections</div>
+                            <div class="v-col-text" style="font-size: 0.65rem;">Chapter 1<br>Chapter 2</div>
+                        </div>
+                        <div class="v-col main">
+                            <div class="v-col-label">Your text</div>
+                            <div class="v-col-text">Alice was beginning to get very <span class="v-blue-word">tired</span> of sitting by her sister on the bank...</div>
+                        </div>
+                        <div class="v-col faded" style="flex: 0.6;">
+                            <div class="v-col-label">Tools</div>
+                            <div class="v-col-text" style="font-size: 0.65rem;">Dict<br>Help</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="slide-description">The book text is in the middle. On the left you find sections, on the right your tools.</p>
+            </div>
+
+            <!-- Slide 4: Dictionary -->
+            <div class="tutorial-slide" data-slide="4">
+                <h2 class="slide-heading">Tap any blue word</h2>
+                <div class="slide-visual">
+                    <div class="v-col-text" style="font-size: 0.85rem;">Alice was beginning to get very <span class="v-blue-word" style="background: rgba(55,138,221,0.08); padding: 2px 4px; border-radius: 3px;">tired</span> of sitting</div>
+                    <div class="v-popup" style="margin-top: 0.5rem;">
+                        <div class="v-popup-word">tired</div>
+                        <div class="v-popup-def">in need of sleep or rest; weary</div>
+                        <div class="v-popup-btns">
+                            <span class="v-tag">Etymology</span>
+                            <span class="v-tag">Example</span>
+                            <span class="v-tag">Image</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="slide-description">You get the meaning right away. You can also see where the word comes from, an example, or a picture.</p>
+            </div>
+
+            <!-- Slide 5: AI help -->
+            <div class="tutorial-slide" data-slide="5">
+                <h2 class="slide-heading">Ask the AI</h2>
+                <div class="slide-visual">
+                    <div class="v-chat">
+                        <div class="v-avatar" style="background: #378ADD;">U</div>
+                        <div class="v-bubble">Why is the Mock Turtle crying?</div>
+                    </div>
+                    <div class="v-chat">
+                        <div class="v-avatar" style="background: #2d5a27;">AI</div>
+                        <div class="v-bubble">The Mock Turtle is always sad because he used to be a real turtle. Carroll is playing with the dish "mock turtle soup"...</div>
+                    </div>
+                    <div class="v-hint">You can ask any question about the story</div>
+                </div>
+                <p class="slide-description">If something is not clear, ask the AI. It knows the book very well.</p>
+            </div>
+
+            <!-- Slide 6: Quiz -->
+            <div class="tutorial-slide" data-slide="6">
+                <h2 class="slide-heading">Test what you remember</h2>
+                <div class="slide-visual v-center" style="text-align: left;">
+                    <div style="font-size: 0.85rem; font-weight: 500; color: #2d5a27; margin-bottom: 0.5rem;">&#9745; Quick check</div>
+                    <div class="v-quiz-q">What was Alice tired of doing?</div>
+                    <div class="v-quiz-opt">A. Running through the garden</div>
+                    <div class="v-quiz-opt correct">B. Sitting by her sister</div>
+                    <div class="v-quiz-opt">C. Reading a book</div>
+                    <div class="v-hint" style="margin-top: 0.5rem;">You find quizzes in the right panel</div>
+                </div>
+                <p class="slide-description">Short questions to see if you understood the story. No score, no pressure &mdash; they are just for you.</p>
+            </div>
+
+            <!-- Slide 7: Help / Consultant -->
+            <div class="tutorial-slide" data-slide="7">
+                <h2 class="slide-heading">Need help? Ask a person</h2>
+                <div class="slide-visual v-center" style="flex-direction: column;">
+                    <div class="v-consultant-circle">&#9993;</div>
+                    <div class="v-consultant-title">A reading consultant is available</div>
+                    <div class="v-consultant-sub">If you need extra help, a real person can answer</div>
+                    <div class="v-btn-green">Ask for help</div>
+                </div>
+                <p class="slide-description">Not a bot &mdash; a real person you can contact if you need support.</p>
+            </div>
+
+            <!-- Slide 8: Your page -->
+            <div class="tutorial-slide" data-slide="8">
+                <h2 class="slide-heading">Your personal page</h2>
+                <div class="slide-visual">
+                    <div class="v-profile">
+                        <div class="v-profile-avatar">R</div>
+                        <div class="v-profile-name">Reader</div>
+                    </div>
+                    <div class="v-stat-row">
+                        <div class="v-stat">
+                            <div class="v-stat-label">Language</div>
+                            <div class="v-stat-value">Your choice</div>
+                        </div>
+                        <div class="v-stat">
+                            <div class="v-stat-label">Progress</div>
+                            <div class="v-stat-value">Page 1</div>
+                        </div>
+                    </div>
+                    <div class="v-progress"><div class="v-progress-bar"></div></div>
+                </div>
+                <p class="slide-description">Open "My page" from the menu to see your progress and change your language.</p>
+            </div>
+
+            <!-- Slide 9: Ready -->
+            <div class="tutorial-slide" data-slide="9">
+                <h2 class="slide-heading">You are ready</h2>
+                <div class="slide-visual v-center" style="flex-direction: column;">
+                    <div class="v-ready-icon">&#128214;</div>
+                    <div class="v-ready-text">Open your book and start reading.</div>
+                    <div class="v-ready-sub">Go to page 1, tap a word, and try it.<br>You can see this tutorial again from the menu.</div>
+                    <button class="v-start-btn" onclick="skipTutorial()">Start reading</button>
+                </div>
+                <p class="slide-description">The book stays in your hands. The app is here when you need it. If you feel lost, tap "Help" on any page.</p>
+            </div>
+        </div>
+
+        <div class="tutorial-footer">
+            <button class="tutorial-nav-btn" id="tutorial-prev" onclick="tutorialPrev()" disabled>&larr; Back</button>
+            <div class="tutorial-dots" id="tutorial-dots"></div>
+            <button class="tutorial-nav-btn primary" id="tutorial-next" onclick="tutorialNext()">Next &rarr;</button>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+(function() {
+    var currentSlide = 1;
+    var totalSlides = 9;
+    var slides = document.querySelectorAll('.tutorial-slide');
+    var dotsContainer = document.getElementById('tutorial-dots');
+    var prevBtn = document.getElementById('tutorial-prev');
+    var nextBtn = document.getElementById('tutorial-next');
+    var counter = document.getElementById('tutorial-counter');
+
+    // Create dots
+    for (var i = 0; i < totalSlides; i++) {
+        var dot = document.createElement('div');
+        dot.className = 'tutorial-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('data-dot', i + 1);
+        dotsContainer.appendChild(dot);
+    }
+
+    function showSlide(n) {
+        currentSlide = n;
+
+        for (var i = 0; i < slides.length; i++) {
+            slides[i].classList.remove('active');
+        }
+        slides[currentSlide - 1].classList.add('active');
+
+        // Update dots
+        var dots = dotsContainer.querySelectorAll('.tutorial-dot');
+        for (var i = 0; i < dots.length; i++) {
+            dots[i].classList.toggle('active', i === currentSlide - 1);
+        }
+
+        // Update counter
+        counter.textContent = currentSlide + ' / ' + totalSlides;
+
+        // Update buttons
+        prevBtn.disabled = (currentSlide === 1);
+
+        if (currentSlide === totalSlides) {
+            nextBtn.textContent = 'Start reading';
+            nextBtn.classList.add('primary');
+        } else {
+            nextBtn.innerHTML = 'Next &rarr;';
+            nextBtn.classList.add('primary');
+        }
+    }
+
+    window.tutorialNext = function() {
+        if (currentSlide < totalSlides) {
+            showSlide(currentSlide + 1);
+        } else {
+            skipTutorial();
+        }
+    };
+
+    window.tutorialPrev = function() {
+        if (currentSlide > 1) {
+            showSlide(currentSlide - 1);
+        }
+    };
+
+    window.skipTutorial = function() {
+        // Mark tutorial as seen
+        try {
+            localStorage.setItem('alice_tutorial_seen', 'true');
+        } catch(e) {}
+        window.location.href = '/reader/interaction';
+    };
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+            e.preventDefault();
+            tutorialNext();
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            tutorialPrev();
+        } else if (e.key === 'Escape') {
+            skipTutorial();
+        }
+    });
+
+    // Touch/swipe support
+    var touchStartX = 0;
+    var touchEndX = 0;
+    var tutorialCard = document.querySelector('.tutorial-card');
+
+    tutorialCard.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    tutorialCard.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        var diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) {
+                tutorialNext();
+            } else {
+                tutorialPrev();
+            }
+        }
+    }, { passive: true });
+
+    showSlide(1);
+})();
+</script>
+{{end}}

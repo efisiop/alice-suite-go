@@ -18,6 +18,7 @@ func SetupReaderRoutes(mux *http.ServeMux) {
 	mux.Handle("/reader/my-page", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderMyPage)))
 	mux.Handle("/reader/book/", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderBook)))
 	mux.Handle("/reader/statistics", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderStatistics)))
+	mux.Handle("/reader/tutorial", middleware.RequireReaderPage(http.HandlerFunc(HandleReaderTutorial)))
 
 	// Reader authentication pages
 	mux.HandleFunc("/reader/login", HandleReaderLogin)
@@ -234,6 +235,26 @@ func HandleReaderStatistics(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("internal", "templates", "base.html"),
 		filepath.Join("internal", "templates", "reader", "statistics.html"),
+	)
+	if err != nil {
+		http.Error(w, "Template not found", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl.Execute(w, nil)
+}
+
+// HandleReaderTutorial handles GET /reader/tutorial
+func HandleReaderTutorial(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tmpl, err := template.ParseFiles(
+		filepath.Join("internal", "templates", "base.html"),
+		filepath.Join("internal", "templates", "reader", "tutorial.html"),
 	)
 	if err != nil {
 		http.Error(w, "Template not found", http.StatusInternalServerError)
