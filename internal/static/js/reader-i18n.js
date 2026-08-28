@@ -250,7 +250,6 @@
         'Skip': 'Salta',
         'Welcome to your reading helper': 'Benvenuto nel tuo aiuto alla lettura',
         'This app works together with your physical book. Let us show you how.': 'Questa app funziona insieme al tuo libro. Ti mostriamo come.',
-        'You can skip this anytime.': 'Puoi saltare in qualsiasi momento.',
         'Find your page': 'Trova la tua pagina',
         'Go to any page': 'Vai a qualsiasi pagina',
         'Use the arrows to move between pages': 'Usa le frecce per spostarti tra le pagine',
@@ -285,7 +284,7 @@
         'C. Reading a book': 'C. Leggere un libro',
         'You find quizzes in the right panel': 'Trovi i quiz nel pannello a destra',
         'Short questions to see if you understood the story. No score, no pressure — they are just for you.': 'Brevi domande per vedere se hai capito la storia. Nessun punteggio, nessuna pressione: sono solo per te.',
-        'Need help? Ask a person': 'Hai bisogno di aiuto? Chiedi a una persona',
+        'Need help? Ask a person': 'Hai bisogno di più aiuto? Chiedi a una persona',
         'A reading consultant is available': 'Un consulente di lettura è disponibile',
         'If you need extra help, a real person can answer': 'Se hai bisogno di aiuto extra, una persona vera può rispondere',
         'Ask for help': 'Chiedi aiuto',
@@ -301,7 +300,7 @@
         'Go to page 1, tap a word, and try it.': 'Vai a pagina 1, tocca una parola e provalo.',
         'You can see this tutorial again from the menu.': 'Puoi rivedere questo tutorial dal menu.',
         'Start reading': 'Inizia a leggere',
-        'The book stays in your hands. The app is here when you need it. If you feel lost, tap "Help" on any page.': 'Il libro resta nelle tue mani. L\'app è qui quando ne hai bisogno. Se ti senti perso, tocca "Aiuto" su qualsiasi pagina.',
+        'The book stays in your hands. The app is here when you need it. If you feel lost, tap "Help" on any page.': 'Il libro resta nelle tue mani. L\'app è qui quando ne hai bisogno. Se ti senti perso, clicca "Aiuto" su qualsiasi pagina.',
 
         // Landing page
         'Your Reading Companion': 'Il tuo compagno di lettura',
