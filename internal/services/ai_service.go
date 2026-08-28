@@ -79,7 +79,7 @@ func NewAIService() *AIService {
 	openRouterKey := os.Getenv("OPENROUTER_API_KEY")
 	openRouterModel := os.Getenv("OPENROUTER_MODEL")
 	if openRouterModel == "" {
-		openRouterModel = "thinkingmachines/inkling-small:free"
+		openRouterModel = "google/gemma-3-12b-it"
 	}
 
 	// Create HTTP client with custom TLS config for Moonshot (handles certificate issues)
