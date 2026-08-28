@@ -430,7 +430,7 @@ func HandleConsultantAIInsight(w http.ResponseWriter, r *http.Request) {
 	summary, err := aiService.ConsultantAnalyst(scope, context.String())
 	if err != nil {
 		log.Printf("ConsultantAnalyst error: %v", err)
-		respondAIInsightError(w, "AI summary unavailable. Check that GEMINI_API_KEY or MOONSHOT_API_KEY is set.", http.StatusInternalServerError)
+		respondAIInsightError(w, "AI summary unavailable. Check that GEMINI_API_KEY, OPENROUTER_API_KEY, or MOONSHOT_API_KEY is set.", http.StatusInternalServerError)
 		return
 	}
 

@@ -26,18 +26,21 @@ var (
 type AIProvider string
 
 const (
-	ProviderGemini   AIProvider = "gemini"
-	ProviderMoonshot AIProvider = "moonshot"
-	ProviderAuto     AIProvider = "auto" // Try Gemini first, fallback to Moonshot
+	ProviderGemini     AIProvider = "gemini"
+	ProviderMoonshot   AIProvider = "moonshot"
+	ProviderOpenRouter AIProvider = "openrouter"
+	ProviderAuto       AIProvider = "auto" // Try available providers in order
 )
 
 // AIService handles AI interactions
 type AIService struct {
-	provider    AIProvider
-	geminiKey   string
-	moonshotKey string
-	moonshotURL string
-	client      *http.Client
+	provider       AIProvider
+	geminiKey      string
+	moonshotKey    string
+	moonshotURL    string
+	openRouterKey  string
+	openRouterModel string
+	client         *http.Client
 }
 
 // NewAIService creates a new AI service with support for multiple providers
@@ -72,6 +75,13 @@ func NewAIService() *AIService {
 		moonshotURL = "https://api.moonshot.cn/v1" // Default Moonshot API (correct URL)
 	}
 
+	// OpenRouter configuration
+	openRouterKey := os.Getenv("OPENROUTER_API_KEY")
+	openRouterModel := os.Getenv("OPENROUTER_MODEL")
+	if openRouterModel == "" {
+		openRouterModel = "nvidia/nemotron-3.5-lightning:free"
+	}
+
 	// Create HTTP client with custom TLS config for Moonshot (handles certificate issues)
 	// Note: In production, you might want to verify certificates properly
 	client := &http.Client{
@@ -92,11 +102,13 @@ func NewAIService() *AIService {
 	}
 
 	return &AIService{
-		provider:    provider,
-		geminiKey:   geminiKey,
-		moonshotKey: moonshotKey,
-		moonshotURL: moonshotURL,
-		client:      client,
+		provider:        provider,
+		geminiKey:       geminiKey,
+		moonshotKey:     moonshotKey,
+		moonshotURL:     moonshotURL,
+		openRouterKey:   openRouterKey,
+		openRouterModel: openRouterModel,
+		client:          client,
 	}
 }
 
@@ -283,28 +295,37 @@ func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 		} else {
 			return "", "", errors.New("MOONSHOT_API_KEY not set but provider is set to 'moonshot'")
 		}
+	case ProviderOpenRouter:
+		if s.openRouterKey != "" {
+			providers = []AIProvider{ProviderOpenRouter}
+		} else {
+			return "", "", errors.New("OPENROUTER_API_KEY not set but provider is set to 'openrouter'")
+		}
 	case ProviderAuto:
-		// Try Gemini first if key is available, then Moonshot if key is available
 		if s.geminiKey != "" {
 			providers = append(providers, ProviderGemini)
+		}
+		if s.openRouterKey != "" {
+			providers = append(providers, ProviderOpenRouter)
 		}
 		if s.moonshotKey != "" {
 			providers = append(providers, ProviderMoonshot)
 		}
-		// If neither key is set, return error
 		if len(providers) == 0 {
-			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY, OPENROUTER_API_KEY, or MOONSHOT_API_KEY environment variable")
 		}
 	default:
-		// Default to auto behavior
 		if s.geminiKey != "" {
 			providers = append(providers, ProviderGemini)
+		}
+		if s.openRouterKey != "" {
+			providers = append(providers, ProviderOpenRouter)
 		}
 		if s.moonshotKey != "" {
 			providers = append(providers, ProviderMoonshot)
 		}
 		if len(providers) == 0 {
-			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY or MOONSHOT_API_KEY environment variable")
+			return "", "", fmt.Errorf("no AI provider configured. Please set GEMINI_API_KEY, OPENROUTER_API_KEY, or MOONSHOT_API_KEY environment variable")
 		}
 	}
 
@@ -320,6 +341,12 @@ func (s *AIService) callAI(prompt string) (string, AIProvider, error) {
 			response, err = s.callGemini(prompt)
 			if err != nil {
 				log.Printf("Gemini API failed: %v", err)
+			}
+		case ProviderOpenRouter:
+			log.Printf("Trying OpenRouter API (model: %s)...", s.openRouterModel)
+			response, err = s.callOpenRouter(prompt)
+			if err != nil {
+				log.Printf("OpenRouter API failed: %v", err)
 			}
 		case ProviderMoonshot:
 			log.Printf("Trying Moonshot API...")
@@ -654,6 +681,90 @@ func (s *AIService) callMoonshot(prompt string) (string, error) {
 	return responseText, nil
 }
 
+// callOpenRouter calls the OpenRouter API (OpenAI-compatible format)
+func (s *AIService) callOpenRouter(prompt string) (string, error) {
+	if s.openRouterKey == "" {
+		return "", errors.New("OPENROUTER_API_KEY not set")
+	}
+
+	url := "https://openrouter.ai/api/v1/chat/completions"
+
+	payload := map[string]interface{}{
+		"model": s.openRouterModel,
+		"messages": []map[string]string{
+			{
+				"role":    "user",
+				"content": prompt,
+			},
+		},
+		"temperature": 0.7,
+		"max_tokens":  4096,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal OpenRouter request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create OpenRouter request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.openRouterKey)
+	req.Header.Set("HTTP-Referer", "https://alice-suite.app")
+	req.Header.Set("X-Title", "Alice Suite Reader")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("OpenRouter API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read OpenRouter response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("OpenRouter API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var orResponse struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
+		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+
+	err = json.Unmarshal(body, &orResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse OpenRouter response: %w", err)
+	}
+
+	if orResponse.Error != nil {
+		return "", fmt.Errorf("OpenRouter API error: %s", orResponse.Error.Message)
+	}
+
+	if len(orResponse.Choices) == 0 {
+		return "", errors.New("no response from OpenRouter API")
+	}
+
+	responseText := orResponse.Choices[0].Message.Content
+
+	if orResponse.Choices[0].FinishReason == "length" {
+		log.Printf("Warning: OpenRouter response may be incomplete (length finish reason)")
+	}
+
+	return responseText, nil
+}
+
 // QuizQuestion represents one multiple-choice question for the "Test your knowledge" quiz
 type QuizQuestion struct {
 	Question     string   `json:"question"`
@@ -727,15 +838,19 @@ func (s *AIService) GetUserInteractions(userID, bookID string) ([]*models.AIInte
 // GetProviderStatus returns information about the current AI provider configuration
 func (s *AIService) GetProviderStatus() map[string]interface{} {
 	status := map[string]interface{}{
-		"configured_provider": string(s.provider),
-		"gemini_configured":   s.geminiKey != "",
-		"moonshot_configured": s.moonshotKey != "",
+		"configured_provider":    string(s.provider),
+		"gemini_configured":      s.geminiKey != "",
+		"moonshot_configured":    s.moonshotKey != "",
+		"openrouter_configured":  s.openRouterKey != "",
 	}
 
 	// Determine which providers are available
 	var availableProviders []string
 	if s.geminiKey != "" {
 		availableProviders = append(availableProviders, "gemini")
+	}
+	if s.openRouterKey != "" {
+		availableProviders = append(availableProviders, "openrouter ("+s.openRouterModel+")")
 	}
 	if s.moonshotKey != "" {
 		availableProviders = append(availableProviders, "moonshot")
@@ -751,6 +866,12 @@ func (s *AIService) GetProviderStatus() map[string]interface{} {
 		} else {
 			activeProvider = "none (gemini key not set)"
 		}
+	case ProviderOpenRouter:
+		if s.openRouterKey != "" {
+			activeProvider = "openrouter (" + s.openRouterModel + ")"
+		} else {
+			activeProvider = "none (openrouter key not set)"
+		}
 	case ProviderMoonshot:
 		if s.moonshotKey != "" {
 			activeProvider = "moonshot"
@@ -759,18 +880,21 @@ func (s *AIService) GetProviderStatus() map[string]interface{} {
 		}
 	case ProviderAuto:
 		if s.geminiKey != "" {
-			activeProvider = "gemini (auto mode - will try moonshot if gemini fails)"
+			activeProvider = "gemini (auto mode)"
+		} else if s.openRouterKey != "" {
+			activeProvider = "openrouter (auto mode, model: " + s.openRouterModel + ")"
 		} else if s.moonshotKey != "" {
-			activeProvider = "moonshot (auto mode - gemini not configured)"
+			activeProvider = "moonshot (auto mode)"
 		} else {
 			activeProvider = "none (no API keys configured)"
 		}
 	default:
-		// Default to auto behavior
 		if s.geminiKey != "" {
-			activeProvider = "gemini (auto mode - will try moonshot if gemini fails)"
+			activeProvider = "gemini (auto mode)"
+		} else if s.openRouterKey != "" {
+			activeProvider = "openrouter (auto mode, model: " + s.openRouterModel + ")"
 		} else if s.moonshotKey != "" {
-			activeProvider = "moonshot (auto mode - gemini not configured)"
+			activeProvider = "moonshot (auto mode)"
 		} else {
 			activeProvider = "none (no API keys configured)"
 		}
