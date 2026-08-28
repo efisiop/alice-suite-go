@@ -79,25 +79,23 @@ func NewAIService() *AIService {
 	openRouterKey := os.Getenv("OPENROUTER_API_KEY")
 	openRouterModel := os.Getenv("OPENROUTER_MODEL")
 	if openRouterModel == "" {
-		openRouterModel = "nvidia/nemotron-3.5-lightning:free"
+		openRouterModel = "thinkingmachines/inkling-small:free"
 	}
 
 	// Create HTTP client with custom TLS config for Moonshot (handles certificate issues)
 	// Note: In production, you might want to verify certificates properly
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 
 	// For Moonshot TLS certificate issues, we can skip verification if needed
-	// This is a workaround for the "x509: negative serial number" error
-	// Only use this if Moonshot's certificate has issues
 	if os.Getenv("MOONSHOT_SKIP_TLS_VERIFY") == "true" {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		client = &http.Client{
 			Transport: tr,
-			Timeout:   30 * time.Second,
+			Timeout:   60 * time.Second,
 		}
 	}
 
