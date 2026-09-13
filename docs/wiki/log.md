@@ -1549,3 +1549,22 @@ Use this header format for every new entry:
   `814258dda67945ffec9457a1e73980e947b7e462`.
 - Confirmed upstream `package.json` declares MIT license and Bun/TypeScript
   runtime shape.
+
+## [2026-09-09] feature | Printed-paper reader text area
+
+- What changed: ivory paper, brown serif text, centered 34em column, responsive margins, subtle CSS edge shading, and pencil-coloured dotted lookup marks. Updated the lookup hint; existing word handlers remain unchanged. No new assets or dependencies.
+- Why: user requested a lightweight resemblance to a physical printed page. Sources: [App upgrades](../APP_UPGRADES.md), [Reader workflow](../READER_AUTORESEARCH.md), and [evolution control](../EVOLUTION_CONTROL.md).
+- Files touched: `internal/templates/reader/interaction.html`, `scripts/reader_autoresearch_check.sh`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: server build, `go vet ./...`, and `git diff --check` passed. Corrected the evaluator's stale 1.78 line-height expectation to the existing 1.85. The evaluator then stops at an unrelated service-modal count check. `go test ./...` fails in `TestReaderPagesRequireReaderRole` with a nil database; other reported packages pass. Browser visual verification was blocked by the browser URL policy for the local preview file. Live app verification remains outstanding.
+
+## [2026-09-09] fix | Remove reader instructions above the page
+
+- Removed the table-of-contents jump link and companion instruction box, plus their unused CSS, as requested. The printed page now begins directly with book text.
+- File: `internal/templates/reader/interaction.html`. Source: [printed-paper design](../APP_UPGRADES.md).
+- Verification: `git diff --check`; local browser refresh to check the rendered page.
+
+## [2026-09-12] feature | Shared paper theme with stronger framing
+
+- Styled Reader and Consultant with a lightweight shared paper-and-ink stylesheet. Deepened the top bar, Reader side panels, and toolbar to distinguish them from the pale book page, as requested.
+- Source: [App upgrades](../APP_UPGRADES.md). Files: `internal/static/css/paper-theme.css`, `internal/templates/base.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: local Reader/dictionary and Consultant dashboard visual checks; updated parchment framing inspected in the local Reader; `git diff --check`. No new assets or dependencies.

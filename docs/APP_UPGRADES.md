@@ -4,6 +4,16 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 
 ---
 
+## Reader printed-paper text area (2026-09-09)
+
+- Warm ivory paper (`#faf5e9`) and dark brown ink (`#352e26`), with a subtle CSS edge shade.
+- Reuses the existing Lora font, with Georgia/Times fallbacks; adds no images, fonts, or dependencies.
+- Centers a narrower text column with generous desktop margins; retains mobile font size and compact margins.
+- Clickable words retain their existing handlers and dotted underlines, now in quiet pencil tones. Hover and text selection use warm highlights. The companion hint describes the new lookup cue.
+- Scope: `internal/templates/reader/interaction.html`. Guided by the physical-book companion direction and [Reader workflow](READER_AUTORESEARCH.md).
+
+---
+
 ## Reader onboarding and book verification (2026-08-22)
 
 - **Physical-book purpose:** The landing page now says clearly that Alice Suite accompanies a physical copy and does not replace it.
@@ -47,3 +57,9 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 ---
 
 *Last updated: 2026-08-22. Re-index with `qmd update` and `qmd embed` if using qmd.*
+
+## Reader and Consultant paper theme (2026-09-12)
+
+- Shared CSS-only theme: cream surfaces, brown ink, literary headings, muted olive accents, warm forms and popups. Consultant burgundy accents remain available.
+- Stronger parchment top bars and Reader side panels frame the lighter book page, following user feedback asking for more contrast.
+- Source: `internal/static/css/paper-theme.css`, loaded after page styles in `internal/templates/base.html`; scoped to Reader and Consultant body classes.

@@ -21,9 +21,18 @@ var (
 	bookService       = services.NewBookService()
 	dictionaryService = services.NewDictionaryService()
 	helpService       = services.NewHelpService()
-	aiService         = services.NewAIService()
+	aiService         *services.AIService
 	imageService      *services.ImageService
 )
+
+// getAIService returns the AI service instance, initializing it lazily
+// This allows the .env file to be loaded before the service is created
+func getAIService() *services.AIService {
+	if aiService == nil {
+		aiService = services.NewAIService()
+	}
+	return aiService
+}
 
 // getImageService returns the image service instance, initializing it lazily
 // This allows the .env file to be loaded before the service is created
@@ -880,7 +889,7 @@ func HandleReaderQuiz(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	questions, err := aiService.GenerateQuizFromPassage(passage)
+	questions, err := getAIService().GenerateQuizFromPassage(passage)
 	if err != nil {
 		log.Printf("HandleReaderQuiz GenerateQuizFromPassage error: %v", err)
 		if errors.Is(err, services.ErrAIServiceUnavailable) {
@@ -1174,7 +1183,7 @@ func HandleAskAI(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Warning: failed to load reader preference for %s: %v", userID, err)
 	}
 
-	interaction, err := aiService.AskAI(userID, req.BookID, interactionType, req.Question, req.SectionID, req.Context, preferredLanguageCode)
+	interaction, err := getAIService().AskAI(userID, req.BookID, interactionType, req.Question, req.SectionID, req.Context, preferredLanguageCode)
 	if err != nil {
 		// Log the actual error for debugging
 		log.Printf("Error in HandleAskAI: %v", err)

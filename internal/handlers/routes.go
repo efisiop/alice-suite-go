@@ -10,7 +10,7 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Get AI provider status
-	aiStatus := aiService.GetProviderStatus()
+	aiStatus := getAIService().GetProviderStatus()
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "ok",
@@ -29,7 +29,7 @@ func HandleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Get detailed AI provider status
-	aiStatus := aiService.GetProviderStatus()
+	aiStatus := getAIService().GetProviderStatus()
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",

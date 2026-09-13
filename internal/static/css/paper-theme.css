@@ -1,0 +1,256 @@
+/* Shared paper-and-ink theme. Scoped to Reader and Consultant; no new assets. */
+body:is(.reader-app, .consultant-app) {
+    --paper-desk: #e5ddcf;
+    --paper-frame: #ded1b8;
+    --paper-sidebar: #eee4d1;
+    --paper-surface: #faf5e9;
+    --paper-panel: #f5efdf;
+    --paper-ink: #352e26;
+    --paper-muted: #6d6253;
+    --paper-rule: #c6b797;
+    --paper-accent: #555e40;
+    --paper-accent-dark: #414a30;
+    --reader-primary: var(--paper-accent);
+    --reader-primary-light: #687350;
+    --reader-primary-dark: var(--paper-accent-dark);
+    --narrative-paper: var(--paper-desk);
+    --narrative-paper-card: var(--paper-surface);
+    --narrative-ink: var(--paper-ink);
+    --narrative-ink-muted: var(--paper-muted);
+    --narrative-border: var(--paper-rule);
+    --bs-body-color: var(--paper-ink);
+    --bs-body-bg: var(--paper-surface);
+    --bs-border-color: var(--paper-rule);
+    background: var(--paper-desk) !important;
+    color: var(--paper-ink);
+}
+
+/* Retain the Consultant's optional burgundy accent on the same warm paper. */
+body.consultant-app {
+    --c-primary: #555e40;
+    --c-primary-light: #626d49;
+    --c-primary-end: #626d49;
+    --c-primary-rgb: 85, 94, 64;
+    --c-accent: #7b805f;
+    --c-bg: var(--paper-desk);
+    --c-card-bg: var(--paper-surface);
+    --c-card-border: var(--paper-rule);
+    --c-card-shadow: rgba(68, 49, 25, 0.06);
+    --c-card-shadow-hover: rgba(68, 49, 25, 0.1);
+    --c-text-heading: var(--paper-ink);
+    --c-stat-value: var(--c-primary);
+    --c-link: var(--c-primary);
+    --c-link-hover: var(--paper-ink);
+    --c-table-header-bg: var(--paper-panel);
+    --c-table-border: var(--paper-rule);
+    --c-section-header-bg: var(--c-primary);
+}
+
+body.consultant-app.theme-burgundy {
+    --c-primary: #703e47;
+    --c-primary-light: #81505a;
+    --c-primary-end: #81505a;
+    --c-primary-rgb: 112, 62, 71;
+    --c-accent: #946e70;
+    --paper-accent: #703e47;
+    --paper-accent-dark: #59303a;
+}
+
+body:is(.reader-app, .consultant-app) :is(h1, h2, h3, h4, h5, h6, .navbar-brand) {
+    font-family: 'Lora', Georgia, 'Times New Roman', serif;
+    letter-spacing: normal;
+}
+
+body:is(.reader-app, .consultant-app) .navbar.navbar-light {
+    background: var(--paper-frame) !important;
+    border-bottom: 1px solid #b9a783;
+    box-shadow: 0 2px 8px rgba(68, 49, 25, 0.08);
+}
+
+body:is(.reader-app, .consultant-app) .navbar :is(.navbar-brand, .nav-link, .navbar-text, #user-name-display) {
+    color: var(--paper-ink) !important;
+}
+
+body:is(.reader-app, .consultant-app) .navbar .navbar-brand {
+    white-space: normal;
+    max-width: calc(100% - 4rem);
+    font-size: clamp(1.05rem, 2vw, 1.4rem);
+}
+
+body:is(.reader-app, .consultant-app) .navbar .nav-link.active {
+    color: var(--paper-accent) !important;
+    border-bottom: 2px solid var(--paper-accent);
+}
+
+body:is(.reader-app, .consultant-app) :is(.card, .modal-content, .dropdown-menu, .list-group-item) {
+    background: var(--paper-surface);
+    border-color: var(--paper-rule);
+    color: var(--paper-ink);
+    border-radius: 6px;
+}
+
+body:is(.reader-app, .consultant-app) .card {
+    box-shadow: 0 2px 8px rgba(68, 49, 25, 0.05);
+}
+
+body:is(.reader-app, .consultant-app) :is(.bg-white, .bg-light) {
+    background-color: var(--paper-surface) !important;
+}
+
+body:is(.reader-app, .consultant-app) :is(.text-muted, .form-text) {
+    color: var(--paper-muted) !important;
+}
+
+body:is(.reader-app, .consultant-app) :is(.form-control, .form-select) {
+    background-color: #fffcf4;
+    color: var(--paper-ink);
+    border-color: var(--paper-rule);
+    border-radius: 4px;
+}
+
+body:is(.reader-app, .consultant-app) :is(.form-control, .form-select):focus {
+    border-color: var(--paper-accent);
+    box-shadow: 0 0 0 3px rgba(125, 113, 77, 0.18);
+}
+
+body:is(.reader-app, .consultant-app) :is(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--paper-accent);
+    outline-offset: 3px;
+}
+
+body:is(.reader-app, .consultant-app) .btn-primary {
+    background: var(--paper-accent);
+    border-color: var(--paper-accent);
+    color: #fffdf5;
+}
+
+body:is(.reader-app, .consultant-app) .btn-primary:hover {
+    background: var(--paper-accent-dark);
+    border-color: var(--paper-accent-dark);
+}
+
+body:is(.reader-app, .consultant-app) .accordion-button {
+    background: var(--paper-panel) !important;
+    color: var(--paper-ink);
+}
+
+body:is(.reader-app, .consultant-app) .accordion-button:not(.collapsed) {
+    color: var(--paper-accent);
+    box-shadow: inset 0 -1px var(--paper-rule);
+}
+
+body:is(.reader-app, .consultant-app) footer {
+    background: var(--paper-desk) !important;
+    color: var(--paper-muted);
+    border-top: 1px solid var(--paper-rule);
+}
+
+body.consultant-app .theme-toggle-btn {
+    background: var(--paper-surface);
+    border-color: var(--paper-rule);
+    color: var(--paper-ink);
+}
+
+/* Reader workspace: margin notes and tools surround the brighter book page. */
+body.reader-app .reader-interaction-main { background: var(--paper-desk); }
+body.reader-app .reader-workspace .card { border-color: var(--paper-rule); }
+body.reader-app #reading-card { background: var(--paper-surface); }
+
+body.reader-app :is(.reader-panel-header, #reading-card > .card-header) {
+    background: var(--paper-panel);
+    color: var(--paper-ink);
+    border-bottom: 1px solid var(--paper-rule);
+    border-radius: 6px 6px 0 0;
+}
+
+body.reader-app :is(.reader-panel-header, #reading-card > .card-header) h5 {
+    color: var(--paper-ink);
+    font-weight: 500;
+}
+
+body.reader-app .reader-panel-close {
+    color: var(--paper-muted);
+    background: transparent;
+}
+
+body.reader-app .section-snippet {
+    background: var(--paper-surface);
+    border-left-color: var(--paper-rule);
+    border-radius: 2px;
+}
+
+body.reader-app .section-snippet:is(:hover, .active) {
+    background: #e9e2ce;
+    border-left-color: var(--paper-accent);
+    transform: none;
+}
+
+body.reader-app .snippet-text { color: var(--paper-ink); }
+
+body.reader-app :is(.reader-layout-toolbar, .reader-bottom-bar) {
+    background: var(--paper-panel);
+    border-color: var(--paper-rule);
+    box-shadow: 0 -2px 12px rgba(68, 49, 25, 0.05);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+body.reader-app :is(.reader-bar-btn, .reader-bar-nav-btn, .reader-bar-page-label) {
+    color: var(--paper-muted);
+    border-color: var(--paper-rule);
+}
+
+body.reader-app .reader-bar-btn:is(:hover, :active, .active) {
+    background: #e4dcc6;
+    color: var(--paper-accent-dark);
+}
+
+body.reader-app :is(.dictionary-popup, .reader-service-popup, .ai-chat-container) {
+    background: var(--paper-surface);
+    border-color: var(--paper-rule);
+    box-shadow: 0 12px 36px rgba(68, 49, 25, 0.18);
+}
+
+body.reader-app :is(.dictionary-popup-drag-handle, .dictionary-popup-header, .ai-chat-header, .reader-service-popup .modal-header) {
+    background: var(--paper-panel);
+    color: var(--paper-ink);
+    border-color: var(--paper-rule);
+}
+
+body.reader-app :is(.reader-service-popup .modal-body, .reader-service-popup .modal-footer) {
+    background: var(--paper-surface);
+    border-color: var(--paper-rule);
+}
+
+body.reader-app :is(.ai-chat-title, .ai-chat-subtitle, .ai-chat-header-btn) {
+    color: var(--paper-ink);
+}
+
+body.consultant-app :is(.section-body, .help-request-modal-content) {
+    background: var(--paper-surface);
+    border-color: var(--paper-rule);
+}
+
+/* Slightly deeper framing makes the light book page the visual centre. */
+body.reader-app .reader-side-panel,
+body.reader-app .reader-side-panel .accordion-item {
+    background: var(--paper-sidebar);
+}
+
+body.reader-app .reader-side-panel .accordion-button {
+    background: var(--paper-sidebar) !important;
+}
+
+body.reader-app :is(.reader-panel-header, #reading-card > .card-header, .reader-layout-toolbar, .reader-bottom-bar) {
+    background: var(--paper-frame);
+    border-color: #b9a783;
+}
+
+body.reader-app .reader-side-panel .section-snippet {
+    background: #f5eddd;
+}
+
+body.reader-app .reader-side-panel .section-snippet:is(:hover, .active) {
+    background: #dcd0b5;
+    border-left-color: var(--paper-accent);
+}

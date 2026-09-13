@@ -145,7 +145,10 @@
 
 #reading-card {
     min-height: calc(100vh - 170px);
-    background: linear-gradient(180deg, #fefefe 0%, #faf8f5 100%);
+    --reader-paper: #faf5e9;
+    --reader-ink: #352e26;
+    --reader-pencil: #96866d;
+    background: var(--reader-paper);
 }
 
 #reading-card > .card-header {
@@ -164,7 +167,9 @@
 
 #reading-container {
     min-height: calc(100vh - 230px);
-    padding: 1.5rem;
+    padding: clamp(1.5rem, 3vw, 3.5rem);
+    background: linear-gradient(90deg, rgba(111, 84, 43, 0.045), transparent 8%, transparent 94%, rgba(111, 84, 43, 0.025));
+    border-radius: 0 0 12px 12px;
 }
 
 .reader-workspace.is-left-hidden .reader-panel-left,
@@ -237,34 +242,43 @@
     transition: background-color 0.3s ease;
 }
 
-/* Reading content area: comfortable width and line height */
+/* Printed-page treatment: existing font, CSS-only paper, no new assets. */
 .reading-content {
-    max-width: 42em;
+    max-width: 34em;
+    margin-inline: auto;
+    padding-block: 0.75rem 2rem;
+    font-family: 'Lora', Georgia, 'Times New Roman', serif;
     font-size: 1.375rem;
+    font-weight: 400;
     line-height: 1.85;
-    color: #2c3e50;
-    letter-spacing: 0.01em;
+    color: var(--reader-ink);
+    letter-spacing: normal;
+    text-align: left;
+    overflow-wrap: break-word;
 }
 
-.reader-companion-hint {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.85rem;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
-    border-left: 3px solid #4caf50;
-    border-radius: 0 8px 8px 0;
-    font-size: 0.82rem;
-    color: #2e7d32;
-    opacity: 0.9;
+#page-content ::selection {
+    background: #e5d5ac;
+    color: #352e26;
 }
 
-.reader-companion-hint svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
+/* Quiet pencil-like lookup marks keep the passage looking like printed ink. */
+#page-content .word-highlight,
+#page-content .word-highlight.glossary-term {
+    color: var(--reader-ink) !important;
+    font-weight: inherit;
+    text-decoration-color: var(--reader-pencil) !important;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
 }
+
+#page-content .word-highlight:hover,
+#page-content .word-highlight.glossary-term:hover {
+    background-color: #eadfc5 !important;
+    color: var(--reader-ink) !important;
+    text-decoration-color: currentColor !important;
+}
+
 
 .escalation-ask-ai {
     border-color: #4caf50;
@@ -287,18 +301,6 @@
 
 .escalation-human:hover {
     color: #2e7d32 !important;
-}
-
-.jump-to-sections-link {
-    font-size: 0.875rem;
-    color: #0d6efd;
-    margin-bottom: 0.5rem;
-    display: inline-block;
-}
-
-.jump-to-sections-link:hover {
-    color: #0a58ca;
-    text-decoration: underline;
 }
 
 .section-content.section-highlight {
@@ -723,19 +725,19 @@ html {
     position: fixed;
     right: 20px;
     bottom: 80px;
-    width: min(540px, calc(100vw - 32px));
+    width: min(420px, calc(100vw - 32px));
     max-width: calc(100vw - 40px);
-    height: min(640px, calc(100vh - 100px));
+    height: min(580px, calc(100vh - 100px));
     max-height: calc(100vh - 100px);
-    background: white;
-    border: 1px solid rgba(31, 41, 55, 0.16);
-    border-radius: 8px;
-    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.28);
+    background: #ffffff;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
     display: flex;
     flex-direction: column;
     z-index: 1050;
     transition: transform 0.3s ease, opacity 0.3s ease;
-    overflow: hidden; /* Ensure resize handle stays in corner */
+    overflow: hidden;
 }
 
 .ai-chat-container.dragging {
@@ -749,11 +751,11 @@ html {
 }
 
 .ai-chat-header {
-    background: #fafafa;
-    color: #1f2933;
-    padding: 0.7rem 0.85rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px 8px 0 0;
+    background: #3a6b35;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
     flex-shrink: 0;
     cursor: move;
     user-select: none;
@@ -761,7 +763,7 @@ html {
 
 .ai-chat-header.dragging {
     cursor: grabbing;
-    background-color: #e9ecef;
+    background-color: #2d5429;
 }
 
 .ai-chat-avatar {
@@ -790,14 +792,14 @@ html {
 }
 
 .ai-chat-title {
-    font-weight: 700;
-    font-size: 0.98rem;
-    color: #1f2933;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: white;
 }
 
 .ai-chat-subtitle {
-    font-size: 0.74rem;
-    color: #6c757d;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.75);
     opacity: 1;
 }
 
@@ -847,11 +849,12 @@ html {
 
 .ai-chat-context-bar {
     flex-shrink: 0;
-    margin: 0.85rem 0.95rem 0.65rem;
-    padding: 0.85rem;
-    background: #f6f8fb;
-    border: 1px solid rgba(31, 41, 55, 0.1);
-    border-radius: 8px;
+    margin: 0 0;
+    padding: 0.6rem 0.85rem;
+    background: #f0f2f5;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0;
 }
 
 .ai-chat-context-top {
@@ -893,19 +896,21 @@ html {
 
 .ai-chat-context-chip,
 .ai-chat-context-action {
-    border: 1px solid rgba(31, 41, 55, 0.14);
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    background: white;
     color: #374151;
-    font-size: 0.82rem;
-    padding: 0.42rem 0.62rem;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.6rem;
     line-height: 1.2;
+    transition: all 0.15s ease;
 }
 
 .ai-chat-context-chip {
     flex: 1;
     min-width: 0;
-    font-weight: 650;
+    font-weight: 500;
+    text-align: center;
 }
 
 .ai-chat-context-chip:hover,
@@ -915,24 +920,25 @@ html {
 }
 
 .ai-chat-context-chip.active {
-    background: #1f2933;
+    background: #3a6b35;
     color: white;
-    border-color: #1f2933;
+    border-color: #3a6b35;
 }
 
 .ai-chat-context-action {
     margin-left: auto;
-    font-weight: 650;
-    background: #1f2933;
-    border-color: #1f2933;
+    font-weight: 600;
+    background: #3a6b35;
+    border-color: #3a6b35;
     color: white;
     padding-inline: 0.8rem;
     white-space: nowrap;
+    border-radius: 16px;
 }
 
 .ai-chat-context-action:hover {
-    background: #111827;
-    border-color: #111827;
+    background: #2d5429;
+    border-color: #2d5429;
     color: white;
 }
 
@@ -943,7 +949,7 @@ html {
 .ai-chat-header-btn {
     background: none;
     border: none;
-    color: #6c757d;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 1rem;
     cursor: pointer;
     padding: 0.25rem;
@@ -958,8 +964,8 @@ html {
 }
 
 .ai-chat-header-btn:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: #212529;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
 }
 
 .ai-chat-close-btn {
@@ -983,13 +989,13 @@ html {
 
 /* Resize states */
 .ai-chat-container.resized-small {
-    width: 360px !important;
-    height: 430px !important;
+    width: 320px !important;
+    height: 400px !important;
 }
 
 .ai-chat-container.resized-large {
-    width: 620px !important;
-    height: 700px !important;
+    width: 540px !important;
+    height: 680px !important;
 }
 
 /* Resize Handle */
@@ -1018,16 +1024,16 @@ html {
 .ai-chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 0.75rem 1rem 0.95rem;
-    background: white;
+    padding: 0.75rem 0.85rem 0.95rem;
+    background: #fafafa;
 }
 
 .ai-chat-input-area {
-    padding: 0.8rem 0.95rem 0.95rem;
-    background: white;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.6rem 0.85rem 0.75rem;
+    background: #ffffff;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     flex-shrink: 0;
-    pointer-events: auto; /* ensure typing area is always interactive */
+    pointer-events: auto;
 }
 
 .ai-chat-input {
@@ -1069,19 +1075,20 @@ html {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.7rem 0.75rem;
-    background: #f6f8fb;
-    border: 1px solid rgba(31, 41, 55, 0.1);
-    border-radius: 8px;
-    color: #1f2933;
-    font-size: 0.9rem;
-    font-weight: 650;
+    padding: 0.6rem 0.85rem;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+    font-weight: 500;
     text-align: left;
+    transition: all 0.15s ease;
 }
 
 .ai-chat-starter-btn:hover {
-    background: white;
-    border-color: rgba(31, 41, 55, 0.22);
+    background: #f0f2f5;
+    border-color: rgba(0, 0, 0, 0.12);
 }
 
 .ai-chat-starter-btn span:last-child {
@@ -1114,14 +1121,14 @@ html {
 }
 
 .ai-chat-send-btn {
-    background: #1f2933 !important;
+    background: #3a6b35 !important;
     color: white;
-    border-radius: 8px !important;
+    border-radius: 50% !important;
     font-size: 1rem;
 }
 
 .ai-chat-send-btn:hover {
-    background: #111827 !important;
+    background: #2d5429 !important;
 }
 
 .ai-quick-action-btn {
@@ -1140,21 +1147,23 @@ html {
     border-color: rgba(0, 123, 255, 0.35);
 }
 
-/* Dictionary-style Chat Bubbles */
+/* Chat Bubbles — clean modern style */
 .chat-bubble.user {
-    background-color: #f6f8fb;
-    color: #202124;
-    border: 1px solid rgba(31, 41, 55, 0.08);
-    border-radius: 8px;
+    background-color: #3a6b35;
+    color: white;
+    border: none;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
     margin-left: auto;
 }
 
 .chat-bubble.ai {
-    background-color: white;
-    color: #202124;
-    border: 1px solid rgba(31, 41, 55, 0.12);
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    background-color: #f0f2f5;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    box-shadow: none;
 }
 
 /* Minimized Chat Bar at Bottom - Right Side */
@@ -1162,20 +1171,21 @@ html {
     position: fixed;
     bottom: 0;
     right: 20px;
-    width: 380px;
+    width: 320px;
     max-width: calc(100vw - 40px);
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: #3a6b35;
+    color: white;
+    border: none;
     border-bottom: none;
     border-radius: 12px 12px 0 0;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.12);
     z-index: 1049;
     cursor: pointer;
     transition: transform 0.3s ease;
 }
 
 .ai-chat-minimized:hover {
-    background: #f8f9fa;
+    background: #2d5429;
 }
 
 .ai-chat-avatar-small {
@@ -1556,22 +1566,22 @@ html {
 
 /* AI Response block - readable and distinct from book text */
 .ai-response-content {
-    line-height: 1.6;
+    line-height: 1.55;
     max-width: 100%;
-    padding: 0.75rem;
-    background-color: rgba(248, 249, 250, 0.9);
-    border-radius: 6px;
-    margin-top: 0.25rem;
+    padding: 0;
+    background-color: transparent;
+    border-radius: 0;
+    margin-top: 0;
 }
 
 /* AI Response Formatting */
 .ai-response-formatted {
-    line-height: 1.7;
-    font-size: 0.95rem;
+    line-height: 1.55;
+    font-size: 0.9rem;
 }
 
 .ai-response-formatted p {
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
 }
 
 .ai-response-formatted p:last-child {
@@ -1580,29 +1590,30 @@ html {
 
 .ai-response-formatted strong {
     font-weight: 600;
-    color: #0056b3;
+    color: inherit;
 }
 
 .ai-response-formatted em {
     font-style: italic;
-    color: #6c757d;
+    color: inherit;
+    opacity: 0.8;
 }
 
 .ai-response-formatted br {
-    line-height: 1.8;
+    line-height: 1.5;
 }
 
 /* Chat Interface Styles */
 .chat-message {
     display: flex;
-    margin-bottom: 1.5rem;
-    animation: fadeIn 0.3s ease-in;
+    margin-bottom: 0.5rem;
+    animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(6px);
     }
     to {
         opacity: 1;
@@ -1619,9 +1630,9 @@ html {
 }
 
 .chat-bubble {
-    max-width: 85%;
-    min-width: 120px;
-    padding: 0.75rem 1rem;
+    max-width: 82%;
+    min-width: 60px;
+    padding: 0.55rem 0.85rem;
     border-radius: 18px;
     word-wrap: break-word;
     line-height: 1.5;
@@ -1629,40 +1640,29 @@ html {
     width: auto;
     white-space: normal;
     overflow-wrap: break-word;
+    font-size: 0.9rem;
 }
 
 .chat-bubble.user {
-    background-color: #007bff;
+    background-color: #3a6b35;
     color: white;
     border-bottom-right-radius: 4px;
 }
 
 .chat-bubble.ai {
-    background-color: transparent;
-    color: #333;
+    background-color: #f0f2f5;
+    color: #1a1a1a;
     border: none;
     border-bottom-left-radius: 4px;
     box-shadow: none;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .chat-message-header {
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
-    opacity: 0.8;
-}
-
-.chat-bubble.user .chat-message-header {
-    color: rgba(255,255,255,0.9);
-}
-
-.chat-bubble.ai .chat-message-header {
-    color: #6c757d;
+    display: none;
 }
 
 .chat-message-content {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
 }
 
 .chat-bubble.user .chat-message-content {
@@ -1670,9 +1670,14 @@ html {
 }
 
 .chat-message-time {
-    font-size: 0.7rem;
-    margin-top: 0.25rem;
-    opacity: 0.6;
+    font-size: 0.65rem;
+    margin-top: 0.2rem;
+    opacity: 0.5;
+    text-align: right;
+}
+
+.chat-bubble.ai .chat-message-time {
+    text-align: left;
 }
 
 .chat-typing-indicator {
@@ -2461,7 +2466,6 @@ html {
                 <h5 class="mb-0">Page <span id="current-page-display-main">1</span> - Section <span id="current-section">1</span></h5>
             </div>
             <div class="card-body" id="reading-container">
-                <a href="#section-snippets-heading" class="jump-to-sections-link" id="jump-to-sections-link" onclick="event.preventDefault(); jumpToSections(); return false;">Jump to table of contents</a>
                 <!-- Consultant suggestion: light bubble, easily dismissed -->
                 <div id="consultant-prompt-banner" class="consultant-prompt-bubble" style="display: none;" role="complementary" aria-label="AI suggestion for this passage">
                     <button type="button" class="consultant-prompt-close" onclick="dismissConsultantPromptBubble()" aria-label="Dismiss">×</button>
@@ -2472,10 +2476,6 @@ html {
                             <button type="button" class="consultant-prompt-action" onclick="acceptConsultantPromptAndOpenAIHelp();">Open AI Help</button>
                         </div>
                     </div>
-                </div>
-                <div class="reader-companion-hint" id="reader-companion-hint">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 0 1 9 9 9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9z"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5"/></svg>
-                    <span>Open your book and match the page here with the arrows or <strong style="color:#2d5a27">Navigation tools</strong>. Then tap any <strong style="color:#0056b3">blue word</strong> to look it up.</span>
                 </div>
                 <div id="page-content" class="reading-content">
                     <p class="text-muted">Loading page content...</p>
@@ -2747,45 +2747,178 @@ html {
     </div>
 </div>
 
-<!-- Ah Ah Moments Modal (z-index above selection toolbar so the textarea is typeable) -->
-<style>#ahAhMomentsModal.modal { z-index: 1070 !important; }</style>
+<!-- Ah Ah Moments Modal -->
+<style>
+#ahAhMomentsModal.modal { z-index: 1070 !important; }
+.ahah-modal-container {
+    border-radius: 16px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+}
+.ahah-modal-header {
+    background: #3a6b35;
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+}
+.ahah-modal-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+}
+.ahah-modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+.ahah-modal-header .btn-close:hover {
+    opacity: 1;
+}
+.ahah-modal-body {
+    padding: 0;
+    background: #fafafa;
+}
+.ahah-compose {
+    padding: 0.75rem 1rem;
+    background: white;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.ahah-compose textarea {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.88rem;
+    resize: none;
+    width: 100%;
+    background: #f8f9fa;
+    transition: border-color 0.2s;
+}
+.ahah-compose textarea:focus {
+    outline: none;
+    border-color: #3a6b35;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(58,107,53,0.12);
+}
+.ahah-compose-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.ahah-compose-meta {
+    display: flex;
+    gap: 0.35rem;
+    flex: 1;
+}
+.ahah-compose-meta input {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.78rem;
+    width: 70px;
+    background: #f8f9fa;
+}
+.ahah-compose-meta input:focus {
+    outline: none;
+    border-color: #3a6b35;
+    background: white;
+}
+.ahah-share-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+}
+.ahah-share-toggle input {
+    accent-color: #3a6b35;
+}
+.ahah-send-btn {
+    background: #3a6b35;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    font-size: 0.85rem;
+}
+.ahah-send-btn:hover {
+    background: #2d5429;
+}
+.ahah-feed-section {
+    padding: 0.5rem 1rem 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.ahah-feed-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #999;
+    margin-bottom: 0.5rem;
+    padding: 0 0.15rem;
+}
+.ahah-moment-card {
+    background: white;
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.4rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.ahah-moment-text {
+    font-size: 0.88rem;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+}
+.ahah-moment-meta {
+    font-size: 0.72rem;
+    color: #999;
+    display: flex;
+    gap: 0.5rem;
+}
+</style>
 <div class="modal fade" id="ahAhMomentsModal" tabindex="-1" aria-labelledby="ahAhMomentsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content reader-service-popup">
-            <div class="modal-header">
-                <h5 class="modal-title" id="ahAhMomentsModalLabel">✨ Ah Ah Moments</h5>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 440px;">
+        <div class="modal-content ahah-modal-container">
+            <div class="ahah-modal-header">
+                <h5 id="ahAhMomentsModalLabel">Ah Ah Moments</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted small">Share your successes and realizations with other readers. Others can see moments you mark as shared.</p>
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h6 class="card-title">Add your moment</h6>
-                        <div class="mb-2">
-                            <label for="ahah-content" class="form-label">What was your ah ah moment?</label>
-                            <textarea class="form-control" id="ahah-content" rows="3" placeholder="e.g. I finally understood why Alice followed the rabbit..."></textarea>
+            <div class="ahah-modal-body">
+                <div class="ahah-compose">
+                    <textarea id="ahah-content" rows="2" placeholder="I finally understood why Alice followed the rabbit..."></textarea>
+                    <div class="ahah-compose-row">
+                        <div class="ahah-compose-meta">
+                            <input type="number" id="ahah-page" min="1" placeholder="Pg" title="Page number">
+                            <input type="number" id="ahah-section" min="1" placeholder="Sec" title="Section number">
                         </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-6">
-                                <label for="ahah-page" class="form-label small">Page (optional)</label>
-                                <input type="number" class="form-control form-control-sm" id="ahah-page" min="1" placeholder="Page">
-                            </div>
-                            <div class="col-6">
-                                <label for="ahah-section" class="form-label small">Section (optional)</label>
-                                <input type="number" class="form-control form-control-sm" id="ahah-section" min="1" placeholder="Section">
-                            </div>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="ahah-shared" checked>
-                            <label class="form-check-label" for="ahah-shared">Share with other readers</label>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="submitAhAhMoment()">Share moment</button>
+                        <label class="ahah-share-toggle">
+                            <input type="checkbox" id="ahah-shared" checked>
+                            Shared
+                        </label>
+                        <button type="button" class="ahah-send-btn" onclick="submitAhAhMoment()" title="Share moment">&#9650;</button>
                     </div>
                 </div>
-                <h6 class="mb-2">Moments from you and other readers</h6>
-                <div id="ahah-feed-loading" class="text-muted small">Loading...</div>
-                <div id="ahah-feed" class="d-none"></div>
-                <div id="ahah-feed-empty" class="d-none text-muted small">No moments yet. Be the first to share one!</div>
+                <div class="ahah-feed-section">
+                    <div class="ahah-feed-title">From readers</div>
+                    <div id="ahah-feed-loading" class="text-muted small">Loading...</div>
+                    <div id="ahah-feed" class="d-none"></div>
+                    <div id="ahah-feed-empty" class="d-none" style="text-align:center;color:#999;font-size:0.85rem;padding:1.5rem 0;">No moments yet. Be the first!</div>
+                </div>
             </div>
         </div>
     </div>
@@ -2803,66 +2936,157 @@ html {
     user-select: text !important;
     -webkit-user-select: text !important;
 }
+.consul-modal-container {
+    border-radius: 16px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+}
+.consul-modal-header {
+    background: #3a6b35;
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+}
+.consul-modal-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+}
+.consul-modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+.consul-modal-header .btn-close:hover { opacity: 1; }
+.consul-modal-body {
+    padding: 0;
+    background: #fafafa;
+}
+.consul-form {
+    padding: 0.85rem 1rem;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.consul-form textarea,
+.consul-form input,
+.consul-form select {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.88rem;
+    width: 100%;
+    background: #f8f9fa;
+    transition: border-color 0.2s;
+}
+.consul-form textarea:focus,
+.consul-form input:focus,
+.consul-form select:focus {
+    outline: none;
+    border-color: #3a6b35;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(58,107,53,0.12);
+}
+.consul-form textarea { resize: none; }
+.consul-form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.2rem;
+    display: block;
+}
+.consul-form-hint {
+    font-size: 0.72rem;
+    color: #999;
+    margin-top: 0.15rem;
+}
+.consul-form-row {
+    display: flex;
+    gap: 0.5rem;
+}
+.consul-form-row > * { flex: 1; }
+.consul-form select {
+    appearance: auto;
+    padding: 0.45rem 0.65rem;
+}
+.consul-footer {
+    padding: 0.65rem 1rem;
+    background: #fafafa;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+.consul-cancel-btn {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 20px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    color: #666;
+    cursor: pointer;
+}
+.consul-cancel-btn:hover { background: #f0f0f0; }
+.consul-send-btn {
+    background: #3a6b35;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.consul-send-btn:hover { background: #2d5429; }
 </style>
 <div class="modal fade" id="consultantHelpModal" tabindex="-1" aria-labelledby="consultantHelpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content reader-service-popup">
-            <div class="modal-header">
-                <h5 class="modal-title" id="consultantHelpModalLabel">
-                    <span class="feature-label-with-icon">
-                        <img src="/static/images/menu-consultant.png" alt="Consultant assistance">
-                        <span>Human Consultant Help</span>
-                    </span>
-                </h5>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 440px;">
+        <div class="modal-content consul-modal-container">
+            <div class="consul-modal-header">
+                <h5 id="consultantHelpModalLabel">Ask a Consultant</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted small mb-3">Share clear details so your consultant can help you faster.</p>
-                <div class="alert alert-light border mb-3 small">
-                    <strong>Good request includes:</strong>
-                    <ul class="mb-0 mt-1">
-                        <li>What you are trying to understand</li>
-                        <li>Where you are in the book (page and section)</li>
-                        <li>What is confusing right now</li>
-                    </ul>
-                </div>
-
-                <div class="mb-3">
-                    <label for="consultant-help-topic" class="form-label">What do you need help with? <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="consultant-help-topic" rows="3" placeholder="Example: I don't understand why Alice follows the rabbit here, and what this means for the story."></textarea>
-                    <div class="form-text">Try to write at least 15-20 words.</div>
-                </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <label for="consultant-help-page" class="form-label small">Page</label>
-                        <input type="number" class="form-control form-control-sm" id="consultant-help-page" min="1" placeholder="Page number">
+            <div class="consul-modal-body">
+                <div class="consul-form">
+                    <div>
+                        <label class="consul-form-label">What do you need help with?</label>
+                        <textarea id="consultant-help-topic" rows="3" placeholder="I don't understand why Alice follows the rabbit here..."></textarea>
+                        <div class="consul-form-hint">Try to include at least 15-20 words.</div>
                     </div>
-                    <div class="col-6">
-                        <label for="consultant-help-section" class="form-label small">Section</label>
-                        <input type="number" class="form-control form-control-sm" id="consultant-help-section" min="1" placeholder="Section number">
+                    <div class="consul-form-row">
+                        <div>
+                            <label class="consul-form-label">Page</label>
+                            <input type="number" id="consultant-help-page" min="1" placeholder="Pg">
+                        </div>
+                        <div>
+                            <label class="consul-form-label">Section</label>
+                            <input type="number" id="consultant-help-section" min="1" placeholder="Sec">
+                        </div>
+                        <div>
+                            <label class="consul-form-label">Priority</label>
+                            <select id="consultant-help-priority">
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
                     </div>
+                    <div>
+                        <label class="consul-form-label">What have you already tried? (optional)</label>
+                        <textarea id="consultant-help-tried" rows="2" placeholder="I checked the dictionary and AI Help, but..."></textarea>
+                    </div>
+                    <div id="consultant-help-status" class="small"></div>
                 </div>
-
-                <div class="mb-3">
-                    <label for="consultant-help-tried" class="form-label">What have you already tried? (optional)</label>
-                    <textarea class="form-control" id="consultant-help-tried" rows="2" placeholder="Example: I checked the dictionary and AI Help, but I still don't understand the sentence meaning."></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label for="consultant-help-priority" class="form-label">Priority</label>
-                    <select class="form-select" id="consultant-help-priority">
-                        <option value="normal" selected>Normal</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
-
-                <div id="consultant-help-status" class="small"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="consultant-help-submit-btn" onclick="submitConsultantHelpRequest()">Send to consultant</button>
+            <div class="consul-footer">
+                <button type="button" class="consul-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="consul-send-btn" id="consultant-help-submit-btn" onclick="submitConsultantHelpRequest()">Send request</button>
             </div>
         </div>
     </div>
@@ -2968,7 +3192,6 @@ html {
         <div class="ai-chat-context-chips" role="group" aria-label="AI reading context">
             <button type="button" class="ai-chat-context-chip active" data-ai-context-scope="section" onclick="setAIContextScope('section')">This section</button>
             <button type="button" class="ai-chat-context-chip" data-ai-context-scope="page" onclick="setAIContextScope('page')">This page</button>
-            <button type="button" class="ai-chat-context-chip" data-ai-context-scope="selection" onclick="setAIContextScope('selection')">Selected text</button>
         </div>
     </div>
     
@@ -5315,9 +5538,6 @@ function updateAIContextBar() {
 
 function setAIContextScope(scope) {
     currentAIContextScope = scope || 'section';
-    if (currentAIContextScope === 'selection' && !(currentAISelectedContextText || selectedText || getSelectedTextFromPage())) {
-        activateTextSelectionMode();
-    }
     updateAIContextBar();
 }
 
@@ -8825,20 +9045,21 @@ function loadAhAhMomentsFeed() {
         }
         moments.forEach(function(m) {
             var card = document.createElement('div');
-            card.className = 'card mb-2';
+            card.className = 'ahah-moment-card';
             var who = m.is_mine ? 'You' : (m.author_first_name || 'A reader');
-            var pageInfo = '';
-            if (m.page_number) pageInfo = ' · Page ' + m.page_number;
-            if (m.section_number) pageInfo += ', Section ' + m.section_number;
-            var sharedLabel = m.shared ? ' · Shared' : '';
-            var dateStr = '';
+            var metaParts = [escapeHtml(who)];
+            if (m.page_number) {
+                var loc = 'p.' + m.page_number;
+                if (m.section_number) loc += ' s.' + m.section_number;
+                metaParts.push(loc);
+            }
             if (m.created_at) {
                 try {
                     var d = new Date(m.created_at);
-                    if (!isNaN(d.getTime())) dateStr = ' · ' + d.toLocaleDateString();
+                    if (!isNaN(d.getTime())) metaParts.push(d.toLocaleDateString());
                 } catch (e) {}
             }
-            card.innerHTML = '<div class="card-body py-2"><p class="mb-1 small text-muted">' + escapeHtml(who) + pageInfo + sharedLabel + dateStr + '</p><p class="mb-0">' + escapeHtml(m.content) + '</p></div>';
+            card.innerHTML = '<div class="ahah-moment-text">' + escapeHtml(m.content) + '</div><div class="ahah-moment-meta">' + metaParts.join('<span style="opacity:0.4">·</span>') + '</div>';
             feedEl.appendChild(card);
         });
         feedEl.classList.remove('d-none');
