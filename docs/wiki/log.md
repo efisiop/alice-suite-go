@@ -1568,3 +1568,10 @@ Use this header format for every new entry:
 - Styled Reader and Consultant with a lightweight shared paper-and-ink stylesheet. Deepened the top bar, Reader side panels, and toolbar to distinguish them from the pale book page, as requested.
 - Source: [App upgrades](../APP_UPGRADES.md). Files: `internal/static/css/paper-theme.css`, `internal/templates/base.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: local Reader/dictionary and Consultant dashboard visual checks; updated parchment framing inspected in the local Reader; `git diff --check`. No new assets or dependencies.
+## [2026-09-16] feature | Consultant reading journey
+
+- What changed: Added a consultant-only reading-journey endpoint. The dashboard reader card now shows each reader's last confirmed page; the Reader Inspector shows the most recent five derived reading visits with page movement labels.
+- Why: Give consultants usable reading context—where the reader last was and whether recent visits moved forward, revisited earlier pages, or remained on one page—without presenting activity as a judgement of reader ability.
+- Files touched: `internal/database/reading_journey.go`, `internal/handlers/consultant_dashboard.go`, `internal/handlers/api.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/dashboard.html`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused Go regression test passed; `go build ./cmd/server` passed; Consultant dashboard and Reader Inspector were visually verified on localhost. The full suite still stops at the existing `TestReaderPagesRequireReaderRole` nil-database panic.
+- Next step: Open the Consultant dashboard locally after a reader selects a page; use the Reader Inspector to review the last five visits.

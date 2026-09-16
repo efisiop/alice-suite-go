@@ -42,6 +42,13 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 
 ## Consultant app
 
+### Consultant reading journey (2026-09-16)
+
+- **Reading position:** Consultant reader cards and the reader inspector now show the reader's last confirmed physical-book page and when it was recorded.
+- **Visit history:** The inspector groups `PAGE_VIEW` events less than 30 minutes apart into reading visits, showing start/end page and neutral movement labels: Continuing, Revisiting, or Same page.
+- **Data discipline:** The journey reads `activity_logs` only, avoiding duplicate legacy records in `interactions`; it deliberately does not label a reader "stuck."
+- **Source:** `internal/database/reading_journey.go`, `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/dashboard.html`, `internal/templates/consultant/reader-inspector.html`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).

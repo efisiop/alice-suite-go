@@ -266,6 +266,41 @@ func HandleConsultantReaderState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(state)
 }
 
+// HandleConsultantReaderJourney handles GET /api/consultant/reader/journey.
+// It returns the latest confirmed position and recent derived reading visits.
+func HandleConsultantReaderJourney(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "User ID required", http.StatusBadRequest)
+		return
+	}
+
+	limit := 5
+	if value := r.URL.Query().Get("limit"); value != "" {
+		parsed, err := strconv.Atoi(value)
+		if err != nil || parsed < 1 || parsed > 20 {
+			http.Error(w, "limit must be between 1 and 20", http.StatusBadRequest)
+			return
+		}
+		limit = parsed
+	}
+
+	journey, err := database.GetReaderJourney(userID, limit)
+	if err != nil {
+		log.Printf("GetReaderJourney error: %v", err)
+		http.Error(w, "Failed to fetch reader journey", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(journey)
+}
+
 // HandleUpdateBookPurchaseDate handles PUT /api/consultant/reader/purchase-date
 // Updates the book purchase date for a reader
 func HandleUpdateBookPurchaseDate(w http.ResponseWriter, r *http.Request) {

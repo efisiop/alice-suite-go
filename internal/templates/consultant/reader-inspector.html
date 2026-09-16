@@ -91,6 +91,40 @@
     flex-wrap: wrap;
     justify-content: flex-end;
 }
+
+.reading-journey-summary {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 0.85rem;
+    padding-top: 0.8rem;
+}
+.reading-journey-title {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.reading-journey-position {
+    color: #1f2937;
+    font-size: 0.95rem;
+    margin-top: 0.2rem;
+}
+.reading-journey-list {
+    list-style: none;
+    margin: 0.65rem 0 0;
+    padding: 0;
+}
+.reading-journey-list li {
+    align-items: baseline;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    font-size: 0.82rem;
+    gap: 0.6rem;
+    justify-content: space-between;
+    padding: 0.45rem 0;
+}
+.reading-journey-list li:first-child { border-top: 0; }
+.reading-journey-direction { color: #64748b; white-space: nowrap; }
 @media (max-width: 992px) {
     .reader-info-form .reader-info-row {
         flex-wrap: wrap;
@@ -672,6 +706,11 @@
                         <button class="btn btn-sm btn-primary" onclick="savePurchaseDate()">Save</button>
                         <span class="small text-muted" id="purchaseDateDisplay">Not set</span>
                     </div>
+                </div>
+                <div class="reading-journey-summary" id="readingJourney">
+                    <div class="reading-journey-title">Reading journey</div>
+                    <div class="reading-journey-position" id="readingJourneyPosition">Loading last reading position…</div>
+                    <ul class="reading-journey-list" id="readingJourneyVisits"></ul>
                 </div>
             </div>
         </div>
@@ -1274,6 +1313,50 @@ function loadReadingProgress(bookId) {
     });
 }
 
+function loadReaderJourney() {
+    const token = getAuthToken();
+    if (!token || !readerId) return;
+
+    const positionEl = document.getElementById('readingJourneyPosition');
+    const visitsEl = document.getElementById('readingJourneyVisits');
+    if (!positionEl || !visitsEl) return;
+
+    fetch('/api/consultant/reader/journey?user_id=' + encodeURIComponent(readerId) + '&limit=5', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Journey request failed');
+        return response.json();
+    })
+    .then(function(journey) {
+        const position = journey && journey.position;
+        if (!position || position.page_number == null) {
+            positionEl.textContent = 'No reading position has been recorded yet.';
+            visitsEl.innerHTML = '';
+            return;
+        }
+        const when = position.recorded_at ? new Date(position.recorded_at).toLocaleString() : 'recently';
+        positionEl.textContent = 'Last reading position: Page ' + position.page_number + ' · ' + when;
+
+        const visits = Array.isArray(journey.visits) ? journey.visits : [];
+        visitsEl.innerHTML = '';
+        visits.forEach(function(visit) {
+            const item = document.createElement('li');
+            const date = new Date(visit.ended_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const movement = visit.start_page === visit.end_page
+                ? 'Page ' + visit.end_page
+                : 'Pages ' + visit.start_page + ' → ' + visit.end_page;
+            const direction = visit.direction === 'forward' ? 'Continuing' : visit.direction === 'revisiting' ? 'Revisiting' : 'Same page';
+            item.innerHTML = '<span><strong>' + date + '</strong> · ' + movement + '</span><span class="reading-journey-direction">' + direction + '</span>';
+            visitsEl.appendChild(item);
+        });
+    })
+    .catch(function() {
+        positionEl.textContent = 'Reading journey is unavailable right now.';
+        visitsEl.innerHTML = '';
+    });
+}
+
 // Refresh only stats (for auto-refresh)
 function refreshStats() {
     const token = getAuthToken();
@@ -1483,6 +1566,7 @@ function loadReaderDetails() {
         }
         loadHelpRequests(); // Help requests don't require bookId
         loadConsultantPrompts();
+        loadReaderJourney();
         if (window.readerState && window.readerState.current_page != null) {
             const pageEl = document.getElementById('prompt-page-number');
             if (pageEl) pageEl.value = window.readerState.current_page;

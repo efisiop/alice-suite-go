@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/efisiopittau/alice-suite-go/internal/database"
 )
@@ -86,6 +87,43 @@ func setupActivityTestDB(t *testing.T) func() {
 		db.Close()
 		database.DB = previousDB
 		database.DriverName = previousDriver
+	}
+}
+
+func TestGetReaderJourneyGroupsVisitsAndDescribesDirection(t *testing.T) {
+	cleanup := setupActivityTestDB(t)
+	defer cleanup()
+
+	insert := func(page int, at string) {
+		t.Helper()
+		if _, err := database.DB.Exec(`INSERT INTO activity_logs (id, user_id, activity_type, book_id, page_number, created_at)
+			VALUES (?, 'reader-1', 'PAGE_VIEW', 'alice-in-wonderland', ?, ?)`, at, page, at); err != nil {
+			t.Fatalf("insert page view: %v", err)
+		}
+	}
+	insert(10, "2026-09-15 09:00:00")
+	insert(14, "2026-09-15 09:15:00")
+	insert(12, "2026-09-15 11:00:00")
+	insert(11, "2026-09-15 11:10:00")
+
+	journey, err := database.GetReaderJourney("reader-1", 5)
+	if err != nil {
+		t.Fatalf("GetReaderJourney returned error: %v", err)
+	}
+	if journey.Position == nil || journey.Position.PageNumber == nil || *journey.Position.PageNumber != 11 {
+		t.Fatalf("latest position = %#v, want page 11", journey.Position)
+	}
+	if len(journey.Visits) != 2 {
+		t.Fatalf("visit count = %d, want 2", len(journey.Visits))
+	}
+	if got := journey.Visits[0]; got.StartPage != 12 || got.EndPage != 11 || got.Direction != "revisiting" {
+		t.Fatalf("latest visit = %#v, want pages 12 to 11 revisiting", got)
+	}
+	if got := journey.Visits[1]; got.StartPage != 10 || got.EndPage != 14 || got.Direction != "forward" {
+		t.Fatalf("older visit = %#v, want pages 10 to 14 forward", got)
+	}
+	if got := journey.Visits[0].EndedAt.Sub(journey.Visits[0].StartedAt); got != 10*time.Minute {
+		t.Fatalf("latest visit duration = %s, want 10m", got)
 	}
 }
 

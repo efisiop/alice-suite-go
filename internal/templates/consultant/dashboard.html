@@ -146,6 +146,19 @@
     overflow-y: auto;
 }
 
+.reader-position {
+    border-top: 1px solid rgba(0, 0, 0, 0.09);
+    color: #4b5563;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+}
+
+.reader-position strong {
+    color: #263238;
+}
+
 .reader-activity-item {
     border-left: 3px solid var(--c-activity-border);
     padding-left: 0.75rem;
@@ -1248,6 +1261,7 @@ function getOrCreateReaderCard(activity) {
                         <strong>${readerName}</strong>
                         <small class="d-block text-muted">${activity.email || 'No email'}</small>
                         <a href="/consultant/readers/${userId}" class="small d-inline-block mt-1" onclick="event.stopPropagation()">View full profile →</a>
+                        <div class="reader-position" data-reader-position>Reading position: loading…</div>
                     </div>
                     <span class="expand-icon text-muted ms-2" title="Click to expand or collapse">▼</span>
                 </div>
@@ -1313,10 +1327,37 @@ function getOrCreateReaderCard(activity) {
             showMoreLink: null // Reference to the "more" link element
         };
         readerCards.set(userId, readerCard);
+        loadReaderPosition(readerCard, userId);
         updateRecentReaderCount();
     }
     
     return readerCard;
+}
+
+function loadReaderPosition(readerCard, userId) {
+    const positionEl = readerCard.cardElement.querySelector('[data-reader-position]');
+    const token = getAuthToken();
+    if (!positionEl || !token) return;
+
+    fetch('/api/consultant/reader/journey?user_id=' + encodeURIComponent(userId) + '&limit=1', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Journey request failed');
+        return response.json();
+    })
+    .then(function(journey) {
+        const position = journey && journey.position;
+        if (!position || position.page_number == null) {
+            positionEl.textContent = 'Reading position: not recorded yet';
+            return;
+        }
+        const recordedAt = position.recorded_at ? formatTimeAgo(position.recorded_at) : 'recently';
+        positionEl.innerHTML = '<strong>Last reading position:</strong> Page ' + position.page_number + ' <span class="text-muted">· ' + recordedAt + '</span>';
+    })
+    .catch(function() {
+        positionEl.textContent = 'Reading position: unavailable';
+    });
 }
 
 // Expand all reader cards
@@ -1519,6 +1560,9 @@ function addActivityToReaderCard(activity) {
     
     // Update styling: activities within last 1 hour get colored text, older ones in light gray
     updateActivityStyling(readerCard);
+    if (activity.event_type === 'PAGE_SYNC') {
+        loadReaderPosition(readerCard, activity.user_id);
+    }
     }
     
 // Sort activities in a reader card by timestamp (newest first)
