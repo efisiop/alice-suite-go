@@ -56,6 +56,11 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Page-specific events:** Selecting a page card reveals only the dictionary, AI, consultant, login, or logout events recorded while the reader was last confirmed on that page.
 - **Source:** `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/reader-inspector.html`.
 
+### Consultant journey focus (2026-09-18)
+
+- **Focused arrival:** The newest reading day opens by default with the reader's latest page event selected.
+- **Compact history:** Earlier reading days collapse to a one-line date and movement summary; consultants expand only the day they want to inspect.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).

@@ -1581,3 +1581,9 @@ Use this header format for every new entry:
 - Why: Make the reading journey the consultant's single chronological monitor, so support actions remain intelligible in the context of the reader's physical-book position.
 - Files touched: `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/log.md`.
 - Verification: focused journey regression test passed; local port-8081 preview visually verified against existing reader history, including page selection and attached events.
+## [2026-09-18] feature | Focus the reading journey on the latest page
+
+- What changed: Made each journey day independently collapsible. The newest day is open by default, with its final page card selected; older days start collapsed.
+- Why: Let a consultant arrive at the reader's latest known position while keeping prior activity compact and inspectable one day at a time.
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/log.md`.
+- Verification: local port-8081 browser preview verified the default newest-page selection and expansion of an older day.

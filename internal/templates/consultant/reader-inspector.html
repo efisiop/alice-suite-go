@@ -117,13 +117,24 @@
 .journey-visit:first-child { border-top: 0; }
 .journey-visit-meta {
     align-items: baseline;
+    background: transparent;
+    border: 0;
     color: #64748b;
+    cursor: pointer;
     display: flex;
     font-size: 0.76rem;
     gap: 0.55rem;
     justify-content: space-between;
     margin-bottom: 0.5rem;
+    padding: 0;
+    text-align: left;
+    width: 100%;
 }
+.journey-visit-meta::after { content: '⌄'; font-size: 1rem; transition: transform 0.2s; }
+.journey-visit.is-collapsed .journey-visit-meta { margin-bottom: 0; }
+.journey-visit.is-collapsed .journey-visit-meta::after { transform: rotate(-90deg); }
+.journey-visit.is-collapsed .journey-visit-content { display: none; }
+.journey-visit-meta:hover { color: var(--c-primary, #2d5a27); }
 .journey-page-rail {
     align-items: stretch;
     display: flex;
@@ -1399,18 +1410,22 @@ function loadReaderJourney() {
 
         const visits = Array.isArray(journey.visits) ? journey.visits : [];
         timelineEl.replaceChildren();
-        visits.forEach(function(visit) {
+        visits.forEach(function(visit, visitIndex) {
             const visitEl = document.createElement('section');
-            visitEl.className = 'journey-visit';
+            visitEl.className = visitIndex === 0 ? 'journey-visit' : 'journey-visit is-collapsed';
             const date = new Date(visit.ended_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             const direction = visit.direction === 'forward' ? 'Continuing' : visit.direction === 'revisiting' ? 'Revisiting' : 'Same page';
-            const meta = document.createElement('div');
+            const meta = document.createElement('button');
+            meta.type = 'button';
             meta.className = 'journey-visit-meta';
             meta.textContent = date + ' · ' + direction;
+            meta.setAttribute('aria-expanded', visitIndex === 0 ? 'true' : 'false');
             const rail = document.createElement('div');
             rail.className = 'journey-page-rail';
             const eventPanel = document.createElement('div');
             eventPanel.className = 'journey-event-panel';
+            const content = document.createElement('div');
+            content.className = 'journey-visit-content';
 
             const pages = Array.isArray(visit.pages) && visit.pages.length ? visit.pages : [{
                 page_number: visit.end_page,
@@ -1440,7 +1455,12 @@ function loadReaderJourney() {
                     renderJourneyPageEvents(eventPanel, page);
                 }
             });
-            visitEl.append(meta, rail, eventPanel);
+            meta.addEventListener('click', function() {
+                const collapsed = visitEl.classList.toggle('is-collapsed');
+                meta.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            });
+            content.append(rail, eventPanel);
+            visitEl.append(meta, content);
             timelineEl.appendChild(visitEl);
         });
     })
