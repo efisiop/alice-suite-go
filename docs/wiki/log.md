@@ -1607,3 +1607,10 @@ Use this header format for every new entry:
 - Why: The left-side monitor now carries comparable visual emphasis to the Activity workspace at its right. Source: [App upgrades](../APP_UPGRADES.md).
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: server build and local port-8081 browser preview confirmed the themed journey header and highlighted current-day panel.
+
+## [2026-09-18] style | Unify Reader Inspector palette
+
+- What changed: Reworked the Reader Inspector’s surface, border, ink, and control colours around the shared paper theme. Reading Journey and Activity now use the same warm neutral surfaces and the selected Consultant accent for emphasis.
+- Why: The new two-column dashboard reads as one composed workspace rather than separate cool-blue and green panels. Sources: [App upgrades](../APP_UPGRADES.md) and [paper theme](../APP_UPGRADES.md#reader-and-consultant-paper-theme).
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: server build and local port-8081 browser preview confirmed that the Reader Inspector loads with coordinated Reading Journey and Activity panels.

@@ -73,6 +73,12 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Matched emphasis:** The Reading Journey has a themed header, defined card edge, and a subtly tinted current-day panel so it carries the same visual weight as the Activity workspace beside it.
 - **Source:** `internal/templates/consultant/reader-inspector.html`.
 
+### Consultant inspector palette (2026-09-18)
+
+- **Unified surfaces:** Replaced the remaining cool blue inspector panels, borders, and text with the shared warm-paper palette.
+- **One accent system:** Green or Burgundy (when selected) now supplies the active state, headers, reading position, and charts; the rest of the interface remains a calm ink-and-paper workspace.
+- **Source:** `internal/templates/consultant/reader-inspector.html`, `internal/static/css/paper-theme.css`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).
