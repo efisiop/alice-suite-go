@@ -107,6 +107,30 @@ func TestReaderAuthPagesRemainPublic(t *testing.T) {
 	}
 }
 
+func TestReaderRegistrationExplainsIdentityUseWithoutMarketingOptIn(t *testing.T) {
+	t.Chdir("../..")
+	mux := http.NewServeMux()
+	SetupReaderRoutes(mux)
+
+	recorder := httptest.NewRecorder()
+	mux.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/reader/register", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("registration page status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+
+	page := recorder.Body.String()
+	for _, expected := range []string{
+		"We use your email to create and secure your account",
+		"We use your name so a consultant can identify you",
+		"Creating an account does not sign you up for promotional email",
+		"only if you separately choose it in the Info Center",
+	} {
+		if !strings.Contains(page, expected) {
+			t.Errorf("registration page missing notice: %q", expected)
+		}
+	}
+}
+
 func TestReaderRoleCanAccessPages(t *testing.T) {
 	t.Chdir("../..")
 	withReaderVerificationDB(t)

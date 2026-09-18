@@ -1621,3 +1621,11 @@ Use this header format for every new entry:
 - Why: The consultant sees newly recorded reader page and support activity without manually reloading the inspector. Sources: [App upgrades](../APP_UPGRADES.md), `internal/handlers/activity.go`, and `internal/handlers/sse.go`.
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: server build and local port-8081 browser preview passed; the Inspector loaded its live-event subscription alongside the existing polling catch-up path.
+
+## [2026-09-18] docs | Clarify reader registration data use and marketing choice
+
+- What changed: Added a concise registration notice that explains the account and consultant-support purpose of email and name, and states that account creation is not consent to promotional email. Promotional information requires a separate Info Center choice.
+- Why: Keep service identity data separate from voluntary promotional communication. Source: `docs/EVOLUTION_CONTROL.md`; reader data-use review.
+- Files touched: `internal/templates/reader/register.html`, `internal/handlers/reader_routes_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused reader route test confirms the notice is rendered.
+- Next step: Add the actual Info Center preference control and a complete Privacy Notice with controller, lawful basis, recipients, retention, transfers, and reader-rights details before representing the product as GDPR-complete.
