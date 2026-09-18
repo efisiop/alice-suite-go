@@ -101,10 +101,14 @@ func TestGetReaderJourneyGroupsVisitsAndDescribesDirection(t *testing.T) {
 			t.Fatalf("insert page view: %v", err)
 		}
 	}
-	insert(10, "2026-09-15 09:00:00")
-	insert(14, "2026-09-15 09:15:00")
-	insert(12, "2026-09-15 11:00:00")
-	insert(11, "2026-09-15 11:10:00")
+	insert(10, "2026-09-15 09:00:00+02:00")
+	insert(14, "2026-09-15 09:15:00+02:00")
+	insert(12, "2026-09-15 11:00:00+02:00")
+	insert(11, "2026-09-15 11:10:00+02:00")
+	if _, err := database.DB.Exec(`INSERT INTO activity_logs (id, user_id, activity_type, book_id, metadata, created_at)
+		VALUES ('lookup-1', 'reader-1', 'WORD_LOOKUP', 'alice-in-wonderland', '{"word":"rabbit"}', '2026-09-15 11:15:00+02:00')`); err != nil {
+		t.Fatalf("insert word lookup: %v", err)
+	}
 
 	journey, err := database.GetReaderJourney("reader-1", 5)
 	if err != nil {
@@ -122,8 +126,12 @@ func TestGetReaderJourneyGroupsVisitsAndDescribesDirection(t *testing.T) {
 	if got := journey.Visits[1]; got.StartPage != 10 || got.EndPage != 14 || got.Direction != "forward" {
 		t.Fatalf("older visit = %#v, want pages 10 to 14 forward", got)
 	}
-	if got := journey.Visits[0].EndedAt.Sub(journey.Visits[0].StartedAt); got != 10*time.Minute {
-		t.Fatalf("latest visit duration = %s, want 10m", got)
+	if got := journey.Visits[0].EndedAt.Sub(journey.Visits[0].StartedAt); got != 15*time.Minute {
+		t.Fatalf("latest visit duration = %s, want 15m", got)
+	}
+	latestPage := journey.Visits[0].Pages[1]
+	if len(latestPage.Events) != 1 || latestPage.Events[0].Detail != `Looked up "rabbit"` {
+		t.Fatalf("page events = %#v, want rabbit lookup", latestPage.Events)
 	}
 }
 

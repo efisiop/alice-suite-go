@@ -109,22 +109,91 @@
     font-size: 0.95rem;
     margin-top: 0.2rem;
 }
-.reading-journey-list {
-    list-style: none;
-    margin: 0.65rem 0 0;
-    padding: 0;
+.reading-journey-timeline { margin-top: 0.85rem; }
+.journey-visit {
+    border-top: 1px solid #e2e8f0;
+    padding: 0.75rem 0;
 }
-.reading-journey-list li {
+.journey-visit:first-child { border-top: 0; }
+.journey-visit-meta {
     align-items: baseline;
-    border-top: 1px solid #f1f5f9;
+    color: #64748b;
     display: flex;
-    font-size: 0.82rem;
-    gap: 0.6rem;
+    font-size: 0.76rem;
+    gap: 0.55rem;
     justify-content: space-between;
-    padding: 0.45rem 0;
+    margin-bottom: 0.5rem;
 }
-.reading-journey-list li:first-child { border-top: 0; }
-.reading-journey-direction { color: #64748b; white-space: nowrap; }
+.journey-page-rail {
+    align-items: stretch;
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding: 0.15rem 0 0.4rem;
+    position: relative;
+}
+.journey-page-rail::before {
+    animation: journey-flow 2.4s ease-in-out infinite;
+    background: linear-gradient(90deg, transparent, var(--c-primary, #2d5a27), transparent);
+    bottom: 0.25rem;
+    content: '';
+    height: 2px;
+    left: 0;
+    opacity: 0.5;
+    position: absolute;
+    transform-origin: left;
+    width: 100%;
+}
+@keyframes journey-flow {
+    0%, 100% { transform: scaleX(0.1); opacity: 0.18; }
+    50% { transform: scaleX(1); opacity: 0.65; }
+}
+.journey-page-step {
+    background: #fffdf7;
+    border: 1px solid #d9d1bd;
+    border-radius: 5px 10px 10px 5px;
+    color: #334155;
+    flex: 0 0 5.4rem;
+    font-family: Georgia, 'Times New Roman', serif;
+    min-height: 4.5rem;
+    padding: 0.45rem;
+    position: relative;
+    text-align: left;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.journey-page-step::after {
+    color: #a09882;
+    content: '›';
+    font-family: sans-serif;
+    font-size: 1.1rem;
+    position: absolute;
+    right: -0.45rem;
+    top: 1.45rem;
+    z-index: 1;
+}
+.journey-page-step:last-child::after { display: none; }
+.journey-page-step:hover, .journey-page-step:focus-visible {
+    border-color: var(--c-primary, #2d5a27);
+    box-shadow: 0 3px 8px rgba(45, 90, 39, 0.15);
+    outline: none;
+    transform: translateY(-2px);
+}
+.journey-page-step.is-selected {
+    background: #edf4e8;
+    border-color: var(--c-primary, #2d5a27);
+}
+.journey-page-number { display: block; font-size: 1rem; font-weight: 700; }
+.journey-page-time { color: #64748b; display: block; font-family: inherit; font-size: 0.68rem; margin-top: 0.15rem; }
+.journey-event-panel {
+    background: #f8faf7;
+    border-left: 3px solid var(--c-primary, #2d5a27);
+    margin-top: 0.25rem;
+    padding: 0.55rem 0.7rem;
+}
+.journey-event-panel-title { color: #334155; font-size: 0.78rem; font-weight: 700; }
+.journey-event-list { list-style: none; margin: 0.35rem 0 0; padding: 0; }
+.journey-event-list li { color: #475569; font-size: 0.78rem; padding: 0.15rem 0; }
+.journey-event-time { color: #94a3b8; margin-right: 0.35rem; }
 @media (max-width: 992px) {
     .reader-info-form .reader-info-row {
         flex-wrap: wrap;
@@ -710,7 +779,7 @@
                 <div class="reading-journey-summary" id="readingJourney">
                     <div class="reading-journey-title">Reading journey</div>
                     <div class="reading-journey-position" id="readingJourneyPosition">Loading last reading position…</div>
-                    <ul class="reading-journey-list" id="readingJourneyVisits"></ul>
+                    <div class="reading-journey-timeline" id="readingJourneyTimeline"></div>
                 </div>
             </div>
         </div>
@@ -728,18 +797,8 @@
                 <div id="subject-activity" class="accordion-collapse collapse show" data-bs-parent="#readerInspectorAccordion">
                     <div class="accordion-body">
                         <div class="row g-3">
-                            <!-- Left: Timeline (25%) -->
-                            <div class="col-lg-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small fw-semibold text-muted text-uppercase" style="letter-spacing: 0.04em; font-size: 0.72rem;">Recent Events</span>
-                                    <button class="btn btn-sm btn-outline-primary" style="font-size: 0.72rem; padding: 0.1rem 0.4rem;" onclick="refreshAll()">Refresh</button>
-                                </div>
-                                <div class="activity-timeline" id="activitiesTimeline" style="max-height: 520px; overflow-y: auto; font-size: 0.82rem;">
-                                    <p class="text-muted">Loading activities...</p>
-                                </div>
-                            </div>
-                            <!-- Middle: Activity Charts (37.5%) -->
-                            <div class="col-lg-5">
+                            <!-- Journey holds page-specific events; charts retain aggregate context. -->
+                            <div class="col-lg-7">
                                 <div class="card" style="border-radius: 8px;">
                                     <div class="card-header py-2 d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0" style="font-size: 0.85rem; color: #fff !important;">Charts</h6>
@@ -782,8 +841,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Right: Last 30 days stats (37.5%) -->
-                            <div class="col-lg-4">
+                            <div class="col-lg-5">
                                 <div class="card" style="border-radius: 8px;">
                                     <div class="card-header py-2 d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0" style="font-size: 0.85rem; color: #fff !important;">Last 30 Days</h6>
@@ -1081,10 +1139,11 @@ document.addEventListener('visibilitychange', function() {
     }
 });
 
-// Refresh all data (stats and activities)
+// Refresh the aggregate panels and the page-specific reading journey.
 function refreshAll() {
     refreshStats();
     loadActivities();
+    loadReaderJourney();
     loadAIInteractions();
     loadHelpRequests();
 }
@@ -1318,8 +1377,8 @@ function loadReaderJourney() {
     if (!token || !readerId) return;
 
     const positionEl = document.getElementById('readingJourneyPosition');
-    const visitsEl = document.getElementById('readingJourneyVisits');
-    if (!positionEl || !visitsEl) return;
+    const timelineEl = document.getElementById('readingJourneyTimeline');
+    if (!positionEl || !timelineEl) return;
 
     fetch('/api/consultant/reader/journey?user_id=' + encodeURIComponent(readerId) + '&limit=5', {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -1332,29 +1391,92 @@ function loadReaderJourney() {
         const position = journey && journey.position;
         if (!position || position.page_number == null) {
             positionEl.textContent = 'No reading position has been recorded yet.';
-            visitsEl.innerHTML = '';
+            timelineEl.replaceChildren();
             return;
         }
         const when = position.recorded_at ? new Date(position.recorded_at).toLocaleString() : 'recently';
         positionEl.textContent = 'Last reading position: Page ' + position.page_number + ' · ' + when;
 
         const visits = Array.isArray(journey.visits) ? journey.visits : [];
-        visitsEl.innerHTML = '';
+        timelineEl.replaceChildren();
         visits.forEach(function(visit) {
-            const item = document.createElement('li');
+            const visitEl = document.createElement('section');
+            visitEl.className = 'journey-visit';
             const date = new Date(visit.ended_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            const movement = visit.start_page === visit.end_page
-                ? 'Page ' + visit.end_page
-                : 'Pages ' + visit.start_page + ' → ' + visit.end_page;
             const direction = visit.direction === 'forward' ? 'Continuing' : visit.direction === 'revisiting' ? 'Revisiting' : 'Same page';
-            item.innerHTML = '<span><strong>' + date + '</strong> · ' + movement + '</span><span class="reading-journey-direction">' + direction + '</span>';
-            visitsEl.appendChild(item);
+            const meta = document.createElement('div');
+            meta.className = 'journey-visit-meta';
+            meta.textContent = date + ' · ' + direction;
+            const rail = document.createElement('div');
+            rail.className = 'journey-page-rail';
+            const eventPanel = document.createElement('div');
+            eventPanel.className = 'journey-event-panel';
+
+            const pages = Array.isArray(visit.pages) && visit.pages.length ? visit.pages : [{
+                page_number: visit.end_page,
+                started_at: visit.started_at,
+                ended_at: visit.ended_at,
+                events: []
+            }];
+            pages.forEach(function(page, index) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'journey-page-step';
+                const pageNumber = document.createElement('span');
+                pageNumber.className = 'journey-page-number';
+                pageNumber.textContent = 'Page ' + page.page_number;
+                const pageTime = document.createElement('span');
+                pageTime.className = 'journey-page-time';
+                pageTime.textContent = new Date(page.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                button.append(pageNumber, pageTime);
+                button.addEventListener('click', function() {
+                    rail.querySelectorAll('.journey-page-step').forEach(function(step) { step.classList.remove('is-selected'); });
+                    button.classList.add('is-selected');
+                    renderJourneyPageEvents(eventPanel, page);
+                });
+                rail.appendChild(button);
+                if (index === pages.length - 1) {
+                    button.classList.add('is-selected');
+                    renderJourneyPageEvents(eventPanel, page);
+                }
+            });
+            visitEl.append(meta, rail, eventPanel);
+            timelineEl.appendChild(visitEl);
         });
     })
     .catch(function() {
         positionEl.textContent = 'Reading journey is unavailable right now.';
-        visitsEl.innerHTML = '';
+        timelineEl.replaceChildren();
     });
+}
+
+function renderJourneyPageEvents(panel, page) {
+    panel.replaceChildren();
+    const title = document.createElement('div');
+    title.className = 'journey-event-panel-title';
+    title.textContent = 'Page ' + page.page_number + ' · events while reading here';
+    panel.appendChild(title);
+
+    const events = Array.isArray(page.events) ? page.events : [];
+    if (events.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'small text-muted mt-1';
+        empty.textContent = 'No support events recorded on this page.';
+        panel.appendChild(empty);
+        return;
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'journey-event-list';
+    events.forEach(function(event) {
+        const item = document.createElement('li');
+        const time = document.createElement('span');
+        time.className = 'journey-event-time';
+        time.textContent = new Date(event.occurred_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        item.append(time, document.createTextNode(event.detail || 'Activity'));
+        list.appendChild(item);
+    });
+    panel.appendChild(list);
 }
 
 // Refresh only stats (for auto-refresh)
@@ -1740,6 +1862,9 @@ function loadActivities() {
         
         // Display activities
         const activitiesContainer = document.getElementById('activitiesTimeline');
+        if (!activitiesContainer) {
+            return;
+        }
         if (allActivities.length === 0) {
             activitiesContainer.innerHTML = '<p class="text-muted">No activities found.</p>';
         } else {
@@ -1804,8 +1929,10 @@ function loadActivities() {
     })
     .catch(err => {
         console.error('Error loading activities:', err);
-        document.getElementById('activitiesTimeline').innerHTML = '<p class="text-danger">Error loading activities.</p>';
-        document.getElementById('recentEventsList').innerHTML = '<p class="text-muted small">Error loading events.</p>';
+        const activitiesContainer = document.getElementById('activitiesTimeline');
+        if (activitiesContainer) activitiesContainer.innerHTML = '<p class="text-danger">Error loading activities.</p>';
+        const recentEvents = document.getElementById('recentEventsList');
+        if (recentEvents) recentEvents.innerHTML = '<p class="text-muted small">Error loading events.</p>';
     });
 }
 

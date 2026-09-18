@@ -49,6 +49,13 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Data discipline:** The journey reads `activity_logs` only, avoiding duplicate legacy records in `interactions`; it deliberately does not label a reader "stuck."
 - **Source:** `internal/database/reading_journey.go`, `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/dashboard.html`, `internal/templates/consultant/reader-inspector.html`.
 
+### Consultant journey event monitor (2026-09-18)
+
+- **One monitor:** The Reader Inspector now presents the reading journey as the primary activity monitor. The separate recent-events stream has been removed from the Activity accordion.
+- **Page paths:** Each visit displays its pages as a left-to-right, time-labelled paper-card path with a subtle progression animation.
+- **Page-specific events:** Selecting a page card reveals only the dictionary, AI, consultant, login, or logout events recorded while the reader was last confirmed on that page.
+- **Source:** `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/reader-inspector.html`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).

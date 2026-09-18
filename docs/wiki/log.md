@@ -1575,3 +1575,9 @@ Use this header format for every new entry:
 - Files touched: `internal/database/reading_journey.go`, `internal/handlers/consultant_dashboard.go`, `internal/handlers/api.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/dashboard.html`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: focused Go regression test passed; `go build ./cmd/server` passed; Consultant dashboard and Reader Inspector were visually verified on localhost. The full suite still stops at the existing `TestReaderPagesRequireReaderRole` nil-database panic.
 - Next step: Open the Consultant dashboard locally after a reader selects a page; use the Reader Inspector to review the last five visits.
+## [2026-09-18] feature | Reading journey page-event monitor
+
+- What changed: Extended reading visits with their distinct page stops and page-specific activity. The Reader Inspector now renders each visit as a left-to-right page path; selecting a page reveals the events that happened during that page stop.
+- Why: Make the reading journey the consultant's single chronological monitor, so support actions remain intelligible in the context of the reader's physical-book position.
+- Files touched: `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/log.md`.
+- Verification: focused journey regression test passed; local port-8081 preview visually verified against existing reader history, including page selection and attached events.

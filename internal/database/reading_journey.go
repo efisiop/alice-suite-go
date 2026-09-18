@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -19,12 +20,29 @@ type ReadingPosition struct {
 // ReadingVisit groups page views close together into one reading visit.
 // Direction is intentionally descriptive, not a judgement about reader ability.
 type ReadingVisit struct {
-	StartedAt time.Time `json:"started_at"`
-	EndedAt   time.Time `json:"ended_at"`
-	StartPage int       `json:"start_page"`
-	EndPage   int       `json:"end_page"`
-	PageDelta int       `json:"page_delta"`
-	Direction string    `json:"direction"`
+	StartedAt time.Time     `json:"started_at"`
+	EndedAt   time.Time     `json:"ended_at"`
+	StartPage int           `json:"start_page"`
+	EndPage   int           `json:"end_page"`
+	PageDelta int           `json:"page_delta"`
+	Direction string        `json:"direction"`
+	Pages     []ReadingPage `json:"pages"`
+}
+
+// ReadingPage is one distinct page stop within a reading visit. Events are
+// attached only while that page is the reader's most recently confirmed page.
+type ReadingPage struct {
+	PageNumber int            `json:"page_number"`
+	StartedAt  time.Time      `json:"started_at"`
+	EndedAt    time.Time      `json:"ended_at"`
+	Events     []ReadingEvent `json:"events"`
+}
+
+// ReadingEvent is support activity that happened while a reader was on a page.
+type ReadingEvent struct {
+	Kind       string    `json:"kind"`
+	Detail     string    `json:"detail"`
+	OccurredAt time.Time `json:"occurred_at"`
 }
 
 // ReaderJourney is the consultant-facing view of a reader's current position
@@ -38,6 +56,8 @@ type pageViewEvent struct {
 	bookID    *string
 	page      int
 	sectionID *string
+	kind      string
+	metadata  string
 	createdAt time.Time
 }
 
@@ -49,9 +69,9 @@ func GetReaderJourney(userID string, limit int) (*ReaderJourney, error) {
 		limit = 5
 	}
 
-	rows, err := DB.Query(Rebind(`SELECT book_id, page_number, section_id, created_at
+	rows, err := DB.Query(Rebind(`SELECT book_id, page_number, section_id, activity_type, metadata, created_at
 		FROM activity_logs
-		WHERE user_id = ? AND activity_type = 'PAGE_VIEW' AND page_number IS NOT NULL
+		WHERE user_id = ?
 		ORDER BY created_at ASC`), userID)
 	if err != nil {
 		return nil, fmt.Errorf("query reader page views: %w", err)
@@ -61,9 +81,10 @@ func GetReaderJourney(userID string, limit int) (*ReaderJourney, error) {
 	var events []pageViewEvent
 	for rows.Next() {
 		var event pageViewEvent
-		var bookID, sectionID sql.NullString
+		var bookID, sectionID, metadata sql.NullString
 		var createdAt string
-		if err := rows.Scan(&bookID, &event.page, &sectionID, &createdAt); err != nil {
+		var pageNumber sql.NullInt64
+		if err := rows.Scan(&bookID, &pageNumber, &sectionID, &event.kind, &metadata, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan reader page view: %w", err)
 		}
 		parsed, err := parseActivityTime(createdAt)
@@ -71,11 +92,17 @@ func GetReaderJourney(userID string, limit int) (*ReaderJourney, error) {
 			return nil, fmt.Errorf("parse reader page view time: %w", err)
 		}
 		event.createdAt = parsed
+		if pageNumber.Valid {
+			event.page = int(pageNumber.Int64)
+		}
 		if bookID.Valid {
 			event.bookID = &bookID.String
 		}
 		if sectionID.Valid {
 			event.sectionID = &sectionID.String
+		}
+		if metadata.Valid {
+			event.metadata = metadata.String
 		}
 		events = append(events, event)
 	}
@@ -84,26 +111,57 @@ func GetReaderJourney(userID string, limit int) (*ReaderJourney, error) {
 	}
 
 	journey := &ReaderJourney{Visits: []ReadingVisit{}}
-	if len(events) == 0 {
+	var pageEvents []pageViewEvent
+	for _, event := range events {
+		if event.kind == "PAGE_VIEW" && event.page > 0 {
+			pageEvents = append(pageEvents, event)
+		}
+	}
+	if len(pageEvents) == 0 {
 		return journey, nil
 	}
 
-	latest := events[len(events)-1]
+	latest := pageEvents[len(pageEvents)-1]
 	journey.Position = &ReadingPosition{
 		BookID: latest.bookID, PageNumber: &latest.page, SectionID: latest.sectionID, RecordedAt: latest.createdAt,
 	}
 
-	visits := []ReadingVisit{newReadingVisit(events[0])}
-	for _, event := range events[1:] {
-		current := &visits[len(visits)-1]
-		if event.createdAt.Sub(current.EndedAt) > readingVisitGap {
-			visits = append(visits, newReadingVisit(event))
+	var visits []ReadingVisit
+	for _, event := range events {
+		if event.kind == "PAGE_VIEW" && event.page > 0 {
+			if len(visits) == 0 {
+				visits = append(visits, newReadingVisit(event))
+				continue
+			}
+			current := &visits[len(visits)-1]
+			if event.createdAt.Sub(current.EndedAt) > readingVisitGap {
+				visits = append(visits, newReadingVisit(event))
+				continue
+			}
+			current.EndedAt = event.createdAt
+			current.EndPage = event.page
+			current.PageDelta = current.EndPage - current.StartPage
+			current.Direction = readingDirection(current.PageDelta)
+			page := &current.Pages[len(current.Pages)-1]
+			if page.PageNumber != event.page {
+				current.Pages = append(current.Pages, ReadingPage{PageNumber: event.page, StartedAt: event.createdAt, EndedAt: event.createdAt, Events: []ReadingEvent{}})
+			} else {
+				page.EndedAt = event.createdAt
+			}
 			continue
 		}
+
+		if len(visits) == 0 {
+			continue
+		}
+		current := &visits[len(visits)-1]
+		if event.createdAt.Sub(current.EndedAt) > readingVisitGap {
+			continue
+		}
+		page := &current.Pages[len(current.Pages)-1]
+		page.Events = append(page.Events, ReadingEvent{Kind: event.kind, Detail: readingEventDetail(event.kind, event.metadata), OccurredAt: event.createdAt})
+		page.EndedAt = event.createdAt
 		current.EndedAt = event.createdAt
-		current.EndPage = event.page
-		current.PageDelta = current.EndPage - current.StartPage
-		current.Direction = readingDirection(current.PageDelta)
 	}
 
 	start := len(visits) - limit
@@ -120,6 +178,29 @@ func newReadingVisit(event pageViewEvent) ReadingVisit {
 	return ReadingVisit{
 		StartedAt: event.createdAt, EndedAt: event.createdAt, StartPage: event.page, EndPage: event.page,
 		PageDelta: 0, Direction: readingDirection(0),
+		Pages: []ReadingPage{{PageNumber: event.page, StartedAt: event.createdAt, EndedAt: event.createdAt, Events: []ReadingEvent{}}},
+	}
+}
+
+func readingEventDetail(kind, metadata string) string {
+	var values map[string]interface{}
+	_ = json.Unmarshal([]byte(metadata), &values)
+	switch kind {
+	case "WORD_LOOKUP":
+		if word, ok := values["word"].(string); ok && word != "" {
+			return "Looked up \"" + word + "\""
+		}
+		return "Dictionary lookup"
+	case "AI_INTERACTION":
+		return "Used AI help"
+	case "HELP_REQUEST":
+		return "Asked a consultant for help"
+	case "LOGIN":
+		return "Logged in"
+	case "LOGOUT":
+		return "Logged out"
+	default:
+		return "Activity"
 	}
 }
 
@@ -135,7 +216,7 @@ func readingDirection(delta int) string {
 }
 
 func parseActivityTime(value string) (time.Time, error) {
-	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999", "2006-01-02 15:04:05"} {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999Z07:00", "2006-01-02 15:04:05.999999999", "2006-01-02 15:04:05"} {
 		if parsed, err := time.Parse(layout, value); err == nil {
 			return parsed, nil
 		}
