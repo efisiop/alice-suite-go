@@ -1587,3 +1587,9 @@ Use this header format for every new entry:
 - Why: Let a consultant arrive at the reader's latest known position while keeping prior activity compact and inspectable one day at a time.
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/log.md`.
 - Verification: local port-8081 browser preview verified the default newest-page selection and expansion of an older day.
+## [2026-09-18] feature | Navigate journey pages newest-first
+
+- What changed: Reversed each day’s page rail so its newest page appears at the left and earlier stops run to the right. Added snap-scrolling so selecting a page brings it into the focused edge of the rail.
+- Why: Start the consultant at the reader’s latest position, while retaining a compact, browsable path back through that day.
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: local port-8081 browser preview confirmed the newest page appears first and selected pages remain in focus.

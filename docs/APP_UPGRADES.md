@@ -60,6 +60,7 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 
 - **Focused arrival:** The newest reading day opens by default with the reader's latest page event selected.
 - **Compact history:** Earlier reading days collapse to a one-line date and movement summary; consultants expand only the day they want to inspect.
+- **Latest-first rail:** Within an open day, the newest page event sits at the left; earlier page stops extend to the right in a snap-scroll rail. Selecting a page keeps its detail panel in focus.
 
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.

@@ -142,6 +142,8 @@
     overflow-x: auto;
     padding: 0.15rem 0 0.4rem;
     position: relative;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
 }
 .journey-page-rail::before {
     animation: journey-flow 2.4s ease-in-out infinite;
@@ -174,7 +176,7 @@
 }
 .journey-page-step::after {
     color: #a09882;
-    content: '›';
+    content: '‹';
     font-family: sans-serif;
     font-size: 1.1rem;
     position: absolute;
@@ -193,6 +195,7 @@
     background: #edf4e8;
     border-color: var(--c-primary, #2d5a27);
 }
+.journey-page-step { scroll-snap-align: start; }
 .journey-page-number { display: block; font-size: 1rem; font-weight: 700; }
 .journey-page-time { color: #64748b; display: block; font-family: inherit; font-size: 0.68rem; margin-top: 0.15rem; }
 .journey-event-panel {
@@ -1418,7 +1421,7 @@ function loadReaderJourney() {
             const meta = document.createElement('button');
             meta.type = 'button';
             meta.className = 'journey-visit-meta';
-            meta.textContent = date + ' · ' + direction;
+            meta.textContent = date + ' · ' + direction + ' · Latest ← earlier';
             meta.setAttribute('aria-expanded', visitIndex === 0 ? 'true' : 'false');
             const rail = document.createElement('div');
             rail.className = 'journey-page-rail';
@@ -1433,7 +1436,7 @@ function loadReaderJourney() {
                 ended_at: visit.ended_at,
                 events: []
             }];
-            pages.forEach(function(page, index) {
+            pages.slice().reverse().forEach(function(page, index) {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'journey-page-step';
@@ -1447,10 +1450,11 @@ function loadReaderJourney() {
                 button.addEventListener('click', function() {
                     rail.querySelectorAll('.journey-page-step').forEach(function(step) { step.classList.remove('is-selected'); });
                     button.classList.add('is-selected');
+                    button.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
                     renderJourneyPageEvents(eventPanel, page);
                 });
                 rail.appendChild(button);
-                if (index === pages.length - 1) {
+                if (index === 0) {
                     button.classList.add('is-selected');
                     renderJourneyPageEvents(eventPanel, page);
                 }
