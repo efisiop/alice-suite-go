@@ -1593,3 +1593,10 @@ Use this header format for every new entry:
 - Why: Start the consultant at the reader’s latest position, while retaining a compact, browsable path back through that day.
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: local port-8081 browser preview confirmed the newest page appears first and selected pages remain in focus.
+
+## [2026-09-18] feature | Scrollable consultant journey history
+
+- What changed: The Reader Inspector now loads up to 180 recent reading visits into a vertically scrollable history, with the newest day open and earlier days collapsed. The journey has moved to the left third of the workspace; Activity charts and last-30-days event statistics occupy the adjacent right area.
+- Why: A consultant can review a long reading history without losing the current position or its activity context. Sources: [App upgrades](../APP_UPGRADES.md) and [evolution control](../EVOLUTION_CONTROL.md).
+- Files touched: `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused journey regression test and server build passed; local port-8081 browser preview confirmed the left-side journey monitor, its newest-first open day, and the adjacent Activity statistics.

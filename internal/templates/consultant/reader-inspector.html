@@ -93,9 +93,7 @@
 }
 
 .reading-journey-summary {
-    border-top: 1px solid #e2e8f0;
-    margin-top: 0.85rem;
-    padding-top: 0.8rem;
+    min-width: 0;
 }
 .reading-journey-title {
     color: #64748b;
@@ -109,7 +107,19 @@
     font-size: 0.95rem;
     margin-top: 0.2rem;
 }
-.reading-journey-timeline { margin-top: 0.85rem; }
+.reading-journey-timeline {
+    margin-top: 0.85rem;
+    max-height: 38rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.35rem;
+    scrollbar-gutter: stable;
+}
+.reading-journey-history-note {
+    color: #64748b;
+    font-size: 0.72rem;
+    margin: 0.25rem 0 0;
+}
 .journey-visit {
     border-top: 1px solid #e2e8f0;
     padding: 0.75rem 0;
@@ -135,6 +145,10 @@
 .journey-visit.is-collapsed .journey-visit-meta::after { transform: rotate(-90deg); }
 .journey-visit.is-collapsed .journey-visit-content { display: none; }
 .journey-visit-meta:hover { color: var(--c-primary, #2d5a27); }
+.reader-journey-card { height: fit-content; }
+@media (max-width: 991.98px) {
+    .reading-journey-timeline { max-height: none; }
+}
 .journey-page-rail {
     align-items: stretch;
     display: flex;
@@ -790,16 +804,26 @@
                         <span class="small text-muted" id="purchaseDateDisplay">Not set</span>
                     </div>
                 </div>
-                <div class="reading-journey-summary" id="readingJourney">
-                    <div class="reading-journey-title">Reading journey</div>
-                    <div class="reading-journey-position" id="readingJourneyPosition">Loading last reading position…</div>
-                    <div class="reading-journey-timeline" id="readingJourneyTimeline"></div>
-                </div>
             </div>
         </div>
 
-        <!-- Subjects: one open at a time to reduce overwhelm -->
-        <div class="accordion mb-4" id="readerInspectorAccordion">
+        <div class="row g-4 align-items-start">
+            <aside class="col-lg-4">
+                <div class="card reader-journey-card">
+                    <div class="card-body p-3">
+                        <div class="reading-journey-summary" id="readingJourney">
+                            <div class="reading-journey-title">Reading journey</div>
+                            <div class="reading-journey-position" id="readingJourneyPosition">Loading last reading position…</div>
+                            <p class="reading-journey-history-note">Newest day is open. Scroll for earlier collapsed days.</p>
+                            <div class="reading-journey-timeline" id="readingJourneyTimeline"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="col-lg-8">
+            <!-- Subjects: one open at a time to reduce overwhelm -->
+            <div class="accordion mb-4" id="readerInspectorAccordion">
             <!-- 1. Activity (timeline + charts + stats — consolidated) -->
             <div class="accordion-item" data-inspector-panel="activity" data-inspector-label="Activity">
                 <h2 class="accordion-header">
@@ -990,6 +1014,8 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            </div>
             </div>
         </div>
     </div>
@@ -1394,7 +1420,7 @@ function loadReaderJourney() {
     const timelineEl = document.getElementById('readingJourneyTimeline');
     if (!positionEl || !timelineEl) return;
 
-    fetch('/api/consultant/reader/journey?user_id=' + encodeURIComponent(readerId) + '&limit=5', {
+    fetch('/api/consultant/reader/journey?user_id=' + encodeURIComponent(readerId) + '&limit=180', {
         headers: { 'Authorization': 'Bearer ' + token }
     })
     .then(function(response) {
@@ -1413,6 +1439,7 @@ function loadReaderJourney() {
 
         const visits = Array.isArray(journey.visits) ? journey.visits : [];
         timelineEl.replaceChildren();
+        timelineEl.scrollTop = 0;
         visits.forEach(function(visit, visitIndex) {
             const visitEl = document.createElement('section');
             visitEl.className = visitIndex === 0 ? 'journey-visit' : 'journey-visit is-collapsed';

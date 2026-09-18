@@ -280,11 +280,13 @@ func HandleConsultantReaderJourney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := 5
+	// Keep enough history for a consultant to review a long-running reading
+	// pattern; the inspector bounds what is visible with its scrollable history.
+	limit := 180
 	if value := r.URL.Query().Get("limit"); value != "" {
 		parsed, err := strconv.Atoi(value)
-		if err != nil || parsed < 1 || parsed > 20 {
-			http.Error(w, "limit must be between 1 and 20", http.StatusBadRequest)
+		if err != nil || parsed < 1 || parsed > 365 {
+			http.Error(w, "limit must be between 1 and 365", http.StatusBadRequest)
 			return
 		}
 		limit = parsed

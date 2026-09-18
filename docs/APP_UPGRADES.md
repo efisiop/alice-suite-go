@@ -62,6 +62,12 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Compact history:** Earlier reading days collapse to a one-line date and movement summary; consultants expand only the day they want to inspect.
 - **Latest-first rail:** Within an open day, the newest page event sits at the left; earlier page stops extend to the right in a snap-scroll rail. Selecting a page keeps its detail panel in focus.
 
+### Consultant journey history layout (2026-09-18)
+
+- **Scrollable day history:** The inspector now requests up to 180 recent visits. Its bounded history pane opens on the newest day and scrolls down through earlier collapsed days, allowing a consultant to reach a long reading history without overwhelming the screen.
+- **Focused workspace:** Reading journey occupies the left third of the inspector; activity charts and the last-30-days event statistics remain immediately alongside it on the right.
+- **Source:** `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/reader-inspector.html`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).
