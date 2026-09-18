@@ -1110,6 +1110,12 @@ function hideInspectorPanel(panelID, event) {
             } catch(e) {}
             window.sseConnection = null;
         }
+        if (readerJourneySSE) {
+            try {
+                readerJourneySSE.close();
+            } catch(e) {}
+            readerJourneySSE = null;
+        }
         
         // Always redirect to consultant login
         window.location.href = '/consultant/login';
@@ -1120,6 +1126,8 @@ function hideInspectorPanel(panelID, event) {
 })();
 
 const readerId = {{.ReaderID}};
+let readerJourneySSE = null;
+let journeyRefreshTimeout = null;
 
 // Activity calendar state for inspector (top right)
 window.inspectorActivityByDate = null;
@@ -1163,6 +1171,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadConsultantUserInfo();
     loadReaderDetails();
     setupInspectorCalendarNav();
+    connectReaderJourneySSE();
     // Note: loadAIInteractions() and loadHelpRequests() are called from loadReaderDetails()
     // after bookId is determined, so we don't call them here
     
@@ -1177,6 +1186,7 @@ function startAutoRefresh() {
     }
     refreshInterval = setInterval(function() {
         refreshStats();
+        loadReaderJourney();
     }, 30000); // Refresh every 30 seconds
 }
 
@@ -1185,6 +1195,10 @@ function stopAutoRefresh() {
     if (refreshInterval) {
         clearInterval(refreshInterval);
         refreshInterval = null;
+    }
+    if (readerJourneySSE) {
+        readerJourneySSE.close();
+        readerJourneySSE = null;
     }
 }
 
@@ -1196,6 +1210,8 @@ document.addEventListener('visibilitychange', function() {
         startAutoRefresh();
         // Immediately refresh when page becomes visible
         refreshStats();
+        loadReaderJourney();
+        connectReaderJourneySSE();
     }
 });
 
@@ -1206,6 +1222,43 @@ function refreshAll() {
     loadReaderJourney();
     loadAIInteractions();
     loadHelpRequests();
+}
+
+// Refresh the inspected reader as soon as a new activity is broadcast. The
+// 30-second polling above remains a catch-up path on multi-instance deploys.
+function refreshJourneyAfterActivity() {
+    if (journeyRefreshTimeout) clearTimeout(journeyRefreshTimeout);
+    journeyRefreshTimeout = setTimeout(function() {
+        loadReaderJourney();
+        refreshStats();
+        journeyRefreshTimeout = null;
+    }, 250);
+}
+
+function connectReaderJourneySSE() {
+    const token = getAuthToken();
+    if (!token || !readerId || readerJourneySSE) return;
+
+    const eventSource = new EventSource('/api/realtime/events?token=' + encodeURIComponent(token));
+    eventSource.addEventListener('activity', function(event) {
+        try {
+            const payload = JSON.parse(event.data);
+            const activity = payload.data || payload;
+            if (activity && String(activity.user_id) === String(readerId)) {
+                refreshJourneyAfterActivity();
+            }
+        } catch (error) {
+            console.warn('Could not read reader activity update:', error);
+        }
+    });
+    eventSource.onerror = function() {
+        // EventSource reconnects automatically. Polling still catches updates
+        // if an upstream proxy does not keep this connection open.
+        if (eventSource.readyState === EventSource.CLOSED) {
+            readerJourneySSE = null;
+        }
+    };
+    readerJourneySSE = eventSource;
 }
 
 // Chart instances for reader activity (destroyed before redraw)

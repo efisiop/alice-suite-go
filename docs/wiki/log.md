@@ -1614,3 +1614,10 @@ Use this header format for every new entry:
 - Why: The new two-column dashboard reads as one composed workspace rather than separate cool-blue and green panels. Sources: [App upgrades](../APP_UPGRADES.md) and [paper theme](../APP_UPGRADES.md#reader-and-consultant-paper-theme).
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: server build and local port-8081 browser preview confirmed that the Reader Inspector loads with coordinated Reading Journey and Activity panels.
+
+## [2026-09-18] feature | Reflect reader activity in the journey live
+
+- What changed: The Reader Inspector now listens to Consultant activity broadcasts for its selected reader and refreshes that reader’s journey and event totals after a short debounce. Its existing 30-second refresh now also reloads the journey as a production-safe catch-up path.
+- Why: The consultant sees newly recorded reader page and support activity without manually reloading the inspector. Sources: [App upgrades](../APP_UPGRADES.md), `internal/handlers/activity.go`, and `internal/handlers/sse.go`.
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: server build and local port-8081 browser preview passed; the Inspector loaded its live-event subscription alongside the existing polling catch-up path.

@@ -79,6 +79,12 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **One accent system:** Green or Burgundy (when selected) now supplies the active state, headers, reading position, and charts; the rest of the interface remains a calm ink-and-paper workspace.
 - **Source:** `internal/templates/consultant/reader-inspector.html`, `internal/static/css/paper-theme.css`.
 
+### Consultant journey live updates (2026-09-18)
+
+- **Immediate reflection:** While a consultant is inspecting a reader, an activity broadcast for that reader refreshes the journey and its aggregate event statistics after a short debounce.
+- **Reliable fallback:** A 30-second poll also refreshes the journey, including when production infrastructure cannot preserve the live-event connection.
+- **Source:** `internal/templates/consultant/reader-inspector.html`, `internal/handlers/activity.go`, `internal/handlers/sse.go`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).
