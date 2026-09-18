@@ -1600,3 +1600,10 @@ Use this header format for every new entry:
 - Why: A consultant can review a long reading history without losing the current position or its activity context. Sources: [App upgrades](../APP_UPGRADES.md) and [evolution control](../EVOLUTION_CONTROL.md).
 - Files touched: `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: focused journey regression test and server build passed; local port-8081 browser preview confirmed the left-side journey monitor, its newest-first open day, and the adjacent Activity statistics.
+
+## [2026-09-18] style | Strengthen Reading Journey contrast
+
+- What changed: Added a themed journey header, card border and shadow, plus a subtle active-day highlight to the Reader Inspector’s Reading Journey monitor.
+- Why: The left-side monitor now carries comparable visual emphasis to the Activity workspace at its right. Source: [App upgrades](../APP_UPGRADES.md).
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: server build and local port-8081 browser preview confirmed the themed journey header and highlighted current-day panel.

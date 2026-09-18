@@ -68,6 +68,11 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Focused workspace:** Reading journey occupies the left third of the inspector; activity charts and the last-30-days event statistics remain immediately alongside it on the right.
 - **Source:** `internal/handlers/consultant_dashboard.go`, `internal/templates/consultant/reader-inspector.html`.
 
+### Consultant journey visual contrast (2026-09-18)
+
+- **Matched emphasis:** The Reading Journey has a themed header, defined card edge, and a subtly tinted current-day panel so it carries the same visual weight as the Activity workspace beside it.
+- **Source:** `internal/templates/consultant/reader-inspector.html`.
+
 - **Navigation:** “Readers” link added to the main nav on every Consultant page, and active state fixed on the Readers page.
 - **Files changed:** `help-requests.html`, `readers.html`, `reader-inspector.html`.
 - **Nav order (all pages):** Dashboard → Help Requests → Readers → Logout. On the Readers page, “Readers” is marked active (not Dashboard).

@@ -96,7 +96,7 @@
     min-width: 0;
 }
 .reading-journey-title {
-    color: #64748b;
+    color: #fff;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -125,6 +125,14 @@
     padding: 0.75rem 0;
 }
 .journey-visit:first-child { border-top: 0; }
+.journey-visit:not(.is-collapsed) {
+    background: #f3f7f0;
+    border: 1px solid rgba(45, 90, 39, 0.22);
+    border-radius: 8px;
+    box-shadow: inset 3px 0 0 var(--c-primary, #2d5a27);
+    margin: 0.15rem 0 0.55rem;
+    padding: 0.75rem;
+}
 .journey-visit-meta {
     align-items: baseline;
     background: transparent;
@@ -145,7 +153,17 @@
 .journey-visit.is-collapsed .journey-visit-meta::after { transform: rotate(-90deg); }
 .journey-visit.is-collapsed .journey-visit-content { display: none; }
 .journey-visit-meta:hover { color: var(--c-primary, #2d5a27); }
-.reader-journey-card { height: fit-content; }
+.reader-journey-card {
+    background: #fbfcfa;
+    border: 1px solid rgba(45, 90, 39, 0.24);
+    box-shadow: 0 3px 14px rgba(21, 87, 36, 0.1);
+    height: fit-content;
+}
+.reader-journey-header {
+    background: var(--c-primary, #2d5a27);
+    border-bottom: 0;
+    padding: 0.7rem 0.9rem;
+}
 @media (max-width: 991.98px) {
     .reading-journey-timeline { max-height: none; }
 }
@@ -810,9 +828,11 @@
         <div class="row g-4 align-items-start">
             <aside class="col-lg-4">
                 <div class="card reader-journey-card">
+                    <div class="card-header reader-journey-header">
+                        <div class="reading-journey-title">Reading journey</div>
+                    </div>
                     <div class="card-body p-3">
                         <div class="reading-journey-summary" id="readingJourney">
-                            <div class="reading-journey-title">Reading journey</div>
                             <div class="reading-journey-position" id="readingJourneyPosition">Loading last reading position…</div>
                             <p class="reading-journey-history-note">Newest day is open. Scroll for earlier collapsed days.</p>
                             <div class="reading-journey-timeline" id="readingJourneyTimeline"></div>
