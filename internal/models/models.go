@@ -171,16 +171,18 @@ type ConsultantTrigger struct {
 
 // ConsultantPrompt is an AI-style suggestion from consultant for a reader at a specific page/section
 type ConsultantPrompt struct {
-	ID            string     `json:"id"`
-	UserID        string     `json:"user_id"`
-	BookID        string     `json:"book_id"`
-	PageNumber    int        `json:"page_number"`
-	SectionNumber *int       `json:"section_number,omitempty"` // nil = whole page
-	PromptText    string     `json:"prompt_text"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-	DismissedAt   *time.Time `json:"dismissed_at,omitempty"` // when reader closed hint without using
-	AcceptedAt    *time.Time `json:"accepted_at,omitempty"`  // when reader clicked Open AI Help and interacted
+	ID                string     `json:"id"`
+	UserID            string     `json:"user_id"`
+	BookID            string     `json:"book_id"`
+	PageNumber        int        `json:"page_number"`
+	SectionNumber     *int       `json:"section_number,omitempty"` // nil = whole page
+	PromptText        string     `json:"prompt_text"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	DismissedAt       *time.Time `json:"dismissed_at,omitempty"`        // when reader closed hint without using
+	AcceptedAt        *time.Time `json:"accepted_at,omitempty"`         // when reader clicked Open AI Help and interacted
+	ReadingReaction   string     `json:"reading_reaction,omitempty"`    // sad, bored, or happy response from reader
+	ReadingReactionAt *time.Time `json:"reading_reaction_at,omitempty"` // when reader shared their reading experience
 }
 
 // ReadingStats represents reading statistics for a user

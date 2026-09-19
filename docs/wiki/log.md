@@ -7,6 +7,62 @@ Use this header format for every new entry:
 
 ---
 
+## [2026-09-20] feature | reader emoji replies to AI prompts
+
+### what changed
+
+- Added a “How is your reading experience?” reply strip to reader-facing consultant AI prompts: 😟 Sad, 😐 Bored, and 😊 Happy.
+- Stored the response and timestamp on the consultant prompt, hid the answered prompt for the reader, and displayed the reply in the Consultant Reader Inspector.
+
+### why
+
+- Gives readers a low-effort way to signal their reading experience and consultants immediate, usable context.
+
+### files touched
+
+- `migrations/019_consultant_prompt_reading_reactions.sql`
+- `internal/models/models.go`
+- `internal/database/database.go`
+- `internal/database/consultant_prompts.go`
+- `internal/handlers/api.go`
+- `internal/templates/reader/interaction.html`
+- `internal/templates/consultant/reader-inspector.html`
+
+### verification
+
+- `go build -o bin/server ./cmd/server` passed.
+- `go test ./internal/database` passed.
+- Reader template and Consultant Inspector JavaScript syntax checks passed.
+- Local flow passed: selecting 😊 hid the reader prompt and saved `happy` plus its timestamp; the Consultant Inspector reads that result.
+- `git diff --check` passed.
+
+## [2026-09-19] feature | prominent reader AI prompts and consultant presets
+
+### what changed
+
+- Enlarged the reader-facing consultant AI suggestion card, its text, and its Open AI Help action.
+- Enlarged the Reader AI starter-question actions for clearer discovery.
+- Added three one-click, page-targeted prompt presets to the Consultant Reader Inspector; each immediately sends through the existing prompt API.
+
+### why
+
+- Reader AI prompts needed greater visual weight, and consultants needed a faster way to send common reading guidance.
+
+### files touched
+
+- `internal/templates/reader/interaction.html`
+- `internal/templates/consultant/reader-inspector.html`
+- `docs/wiki/index.md`
+- `docs/wiki/log.md`
+
+### verification
+
+- Extracted preset JavaScript syntax check passed.
+- `go build ./cmd/server` passed (with a sandbox-only Go build-cache trim warning).
+- `go test ./internal/database` passed.
+- `go test ./internal/handlers ./internal/database` remains blocked by a pre-existing nil `database.DB` panic in `TestReaderPagesRequireReaderRole`.
+- `git diff --check` passed.
+
 ## [2026-08-22] security | enforce reader authorization and protect generic REST data
 
 ### what changed

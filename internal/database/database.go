@@ -121,6 +121,8 @@ func ensureConsultantPromptsTable() error {
 		updated_at TEXT NOT NULL DEFAULT (%s),
 		dismissed_at TEXT,
 		accepted_at TEXT,
+		reading_reaction TEXT,
+		reading_reaction_at TEXT,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 		FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
 	)`, tsDefault, tsDefault)
@@ -138,6 +140,8 @@ func ensureConsultantPromptsTable() error {
 	}
 	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN dismissed_at TEXT`)
 	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN accepted_at TEXT`)
+	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN reading_reaction TEXT`)
+	_, _ = DB.Exec(`ALTER TABLE consultant_prompts ADD COLUMN reading_reaction_at TEXT`)
 	return nil
 }
 

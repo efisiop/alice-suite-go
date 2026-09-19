@@ -992,6 +992,14 @@
                                     <label for="prompt-text" class="form-label small mb-0">Suggestion text</label>
                                     <textarea class="form-control form-control-sm" id="prompt-text" rows="2" placeholder="e.g. Use AI Help here to practice conditionals."></textarea>
                                 </div>
+                                <div class="mb-2" aria-label="Quick-send prompt presets">
+                                    <div class="small fw-bold mb-1">Quick-send a prompt</div>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="sendPresetConsultantPrompt('Take a moment to notice what has changed for the character in this passage.')">Notice a change</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="sendPresetConsultantPrompt('Use AI Help to explain this passage in simpler language, then reread it.')">Read it simply</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="sendPresetConsultantPrompt('Ask AI Help what detail or phrase is most worth noticing here.')">Find a key detail</button>
+                                    </div>
+                                </div>
                                 <button type="button" class="btn btn-primary btn-sm" id="save-prompt-btn" onclick="saveConsultantPrompt()">Save prompt</button>
                                 <span class="ms-2 text-muted small" id="prompt-save-status"></span>
                                 <hr class="my-2">
@@ -2226,11 +2234,15 @@ function loadConsultantPrompts() {
             const fmt = function(iso) { try { const d = new Date(iso); return isNaN(d.getTime()) ? iso : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch(e) { return iso; } };
             const acceptedAt = p.accepted_at ? fmt(p.accepted_at) : null;
             const dismissedAt = p.dismissed_at ? fmt(p.dismissed_at) : null;
-            const isClosed = acceptedAt || dismissedAt;
+            const reactionLabels = { sad: '😟 Sad', bored: '😐 Bored', happy: '😊 Happy' };
+            const readingReaction = reactionLabels[p.reading_reaction] || null;
+            const reactionAt = p.reading_reaction_at ? fmt(p.reading_reaction_at) : null;
+            const isClosed = acceptedAt || dismissedAt || readingReaction;
             html += '<div class="d-flex justify-content-between align-items-start gap-2 mb-2 p-2 border rounded">';
             html += '<div class="small flex-grow-1"><strong>Page ' + escapeHtml(String(p.page_number)) + ', ' + escapeHtml(sectionLabel) + '</strong><br><span class="text-muted">' + escapeHtml(preview) + '</span>';
             if (acceptedAt) html += '<br><span class="badge bg-success mt-1">Accepted (used AI Help) ' + escapeHtml(acceptedAt) + '</span>';
             else if (dismissedAt) html += '<br><span class="badge bg-secondary mt-1">Dismissed ' + escapeHtml(dismissedAt) + '</span>';
+            else if (readingReaction) html += '<br><span class="badge bg-info text-dark mt-1">Reader felt ' + escapeHtml(readingReaction) + (reactionAt ? ' ' + escapeHtml(reactionAt) : '') + '</span>';
             html += '</div>';
             html += '<div class="d-flex gap-1 flex-shrink-0">';
             if (isClosed) html += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="retriggerConsultantPrompt(\'' + escapeHtml(p.id) + '\')">Re-trigger</button>';
@@ -2245,8 +2257,15 @@ function loadConsultantPrompts() {
     });
 }
 
+// Send a preset immediately using the reader/page/section currently selected above.
+function sendPresetConsultantPrompt(promptText) {
+    const textEl = document.getElementById('prompt-text');
+    if (textEl) textEl.value = promptText;
+    saveConsultantPrompt(promptText);
+}
+
 // Save consultant prompt (AI suggestion for reader at page/section)
-function saveConsultantPrompt() {
+function saveConsultantPrompt(presetText) {
     const token = getAuthToken();
     if (!token || !readerId) {
         document.getElementById('prompt-save-status').textContent = 'Not logged in.';
@@ -2263,7 +2282,7 @@ function saveConsultantPrompt() {
     const sectionVal = sectionEl ? sectionEl.value : '';
     const sectionNum = sectionVal === '' ? null : (parseInt(sectionVal, 10) || null);
     const textEl = document.getElementById('prompt-text');
-    const promptText = textEl ? textEl.value.trim() : '';
+    const promptText = (presetText || (textEl ? textEl.value : '')).trim();
     if (!promptText) {
         document.getElementById('prompt-save-status').textContent = 'Enter suggestion text.';
         return;

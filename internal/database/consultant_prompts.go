@@ -28,7 +28,7 @@ func InsertConsultantPrompt(p *models.ConsultantPrompt) error {
 
 // GetConsultantPromptsForReader returns all prompts for a reader (consultant inspector list), including dismissed_at and accepted_at for feedback
 func GetConsultantPromptsForReader(userID string) ([]*models.ConsultantPrompt, error) {
-	query := `SELECT id, user_id, book_id, page_number, section_number, prompt_text, created_at, updated_at, dismissed_at, accepted_at
+	query := `SELECT id, user_id, book_id, page_number, section_number, prompt_text, created_at, updated_at, dismissed_at, accepted_at, reading_reaction, reading_reaction_at
 	          FROM consultant_prompts WHERE user_id = ? ORDER BY page_number, COALESCE(section_number, 0), created_at DESC`
 	rows, err := DB.Query(Rebind(query), userID)
 	if err != nil {
@@ -40,8 +40,8 @@ func GetConsultantPromptsForReader(userID string) ([]*models.ConsultantPrompt, e
 		var p models.ConsultantPrompt
 		var sectionNum sql.NullInt64
 		var createdAt, updatedAt string
-		var dismissedAt, acceptedAt sql.NullString
-		err := rows.Scan(&p.ID, &p.UserID, &p.BookID, &p.PageNumber, &sectionNum, &p.PromptText, &createdAt, &updatedAt, &dismissedAt, &acceptedAt)
+		var dismissedAt, acceptedAt, readingReaction, readingReactionAt sql.NullString
+		err := rows.Scan(&p.ID, &p.UserID, &p.BookID, &p.PageNumber, &sectionNum, &p.PromptText, &createdAt, &updatedAt, &dismissedAt, &acceptedAt, &readingReaction, &readingReactionAt)
 		if err != nil {
 			return nil, err
 		}
@@ -61,6 +61,14 @@ func GetConsultantPromptsForReader(userID string) ([]*models.ConsultantPrompt, e
 				p.AcceptedAt = &t
 			}
 		}
+		if readingReaction.Valid {
+			p.ReadingReaction = readingReaction.String
+		}
+		if readingReactionAt.Valid && readingReactionAt.String != "" {
+			if t, e := time.Parse("2006-01-02 15:04:05", readingReactionAt.String); e == nil {
+				p.ReadingReactionAt = &t
+			}
+		}
 		list = append(list, &p)
 	}
 	return list, rows.Err()
@@ -71,7 +79,7 @@ func GetConsultantPromptsForReader(userID string) ([]*models.ConsultantPrompt, e
 func GetConsultantPromptsForReaderAtPage(userID, bookID string, pageNumber int, sectionNumber *int) ([]*models.ConsultantPrompt, error) {
 	var query string
 	var args []interface{}
-	andClosed := ` AND (dismissed_at IS NULL OR dismissed_at = '') AND (accepted_at IS NULL OR accepted_at = '')`
+	andClosed := ` AND (dismissed_at IS NULL OR dismissed_at = '') AND (accepted_at IS NULL OR accepted_at = '') AND (reading_reaction IS NULL OR reading_reaction = '')`
 	if sectionNumber == nil {
 		query = `SELECT id, user_id, book_id, page_number, section_number, prompt_text, created_at, updated_at
 	          FROM consultant_prompts
@@ -129,8 +137,14 @@ func AcceptConsultantPrompt(promptID, userID string) error {
 	return err
 }
 
+// RecordConsultantPromptReadingReaction stores one reader experience response and closes the prompt.
+func RecordConsultantPromptReadingReaction(promptID, userID, reaction string) error {
+	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET reading_reaction = ?, reading_reaction_at = ? WHERE id = ? AND user_id = ?`), reaction, FormatSQLDateTime(time.Now()), promptID, userID)
+	return err
+}
+
 // ReTriggerConsultantPrompt clears dismissed_at and accepted_at so the prompt shows again to the reader (new cycle)
 func ReTriggerConsultantPrompt(promptID string) error {
-	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET dismissed_at = NULL, accepted_at = NULL WHERE id = ?`), promptID)
+	_, err := DB.Exec(Rebind(`UPDATE consultant_prompts SET dismissed_at = NULL, accepted_at = NULL, reading_reaction = NULL, reading_reaction_at = NULL WHERE id = ?`), promptID)
 	return err
 }

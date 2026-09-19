@@ -106,6 +106,7 @@ func SetupAPIRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/reader/prompts", middleware.RequireReader(http.HandlerFunc(HandleReaderPrompts)))
 	mux.Handle("/api/reader/prompt-dismiss", middleware.RequireReader(http.HandlerFunc(HandleReaderPromptDismiss)))
 	mux.Handle("/api/reader/prompt-accept", middleware.RequireReader(http.HandlerFunc(HandleReaderPromptAccept)))
+	mux.Handle("/api/reader/prompt-reaction", middleware.RequireReader(http.HandlerFunc(HandleReaderPromptReaction)))
 	mux.Handle("/api/reader/quiz", middleware.RequireReader(http.HandlerFunc(HandleReaderQuiz)))
 	mux.Handle("/api/reader/ah-ah-moments", middleware.RequireReader(http.HandlerFunc(HandleReaderAhAhMoments)))
 	mux.Handle("/api/reader/preferences", middleware.RequireReader(http.HandlerFunc(HandleReaderPreferences)))
@@ -799,6 +800,50 @@ func HandleReaderPromptAccept(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"status": "accepted"})
+}
+
+// HandleReaderPromptReaction handles POST /api/reader/prompt-reaction.
+// Body: { "prompt_id": "...", "reaction": "sad"|"bored"|"happy" }
+func HandleReaderPromptReaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if c, _ := r.Cookie("auth_token"); c != nil && c.Value != "" {
+			authHeader = "Bearer " + c.Value
+		}
+	}
+	token, err := auth.ExtractTokenFromHeader(authHeader)
+	if err != nil {
+		http.Error(w, "Authorization required", http.StatusUnauthorized)
+		return
+	}
+	claims, err := auth.ValidateJWT(token)
+	if err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+		return
+	}
+	var req struct {
+		PromptID string `json:"prompt_id"`
+		Reaction string `json:"reaction"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PromptID == "" {
+		http.Error(w, "prompt_id required", http.StatusBadRequest)
+		return
+	}
+	if req.Reaction != "sad" && req.Reaction != "bored" && req.Reaction != "happy" {
+		http.Error(w, "reaction must be sad, bored, or happy", http.StatusBadRequest)
+		return
+	}
+	if err := database.RecordConsultantPromptReadingReaction(req.PromptID, claims.UserID, req.Reaction); err != nil {
+		log.Printf("RecordConsultantPromptReadingReaction error: %v", err)
+		http.Error(w, "Failed to record reaction", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "recorded", "reaction": req.Reaction})
 }
 
 // HandleReaderQuiz handles POST /api/reader/quiz — generates a quiz from the given scope (section, page, or so_far).
