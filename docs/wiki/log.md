@@ -1685,3 +1685,10 @@ Use this header format for every new entry:
 - Files touched: `internal/templates/reader/register.html`, `internal/handlers/reader_routes_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: focused reader route test confirms the notice is rendered.
 - Next step: Add the actual Info Center preference control and a complete Privacy Notice with controller, lawful basis, recipients, retention, transfers, and reader-rights details before representing the product as GDPR-complete.
+
+## [2026-09-20] fix | Bind consultant activity queries for PostgreSQL
+
+- What changed: Applied `database.Rebind` to all parameterized database queries in the Consultant activity handlers.
+- Why: Render uses PostgreSQL, which rejects the SQLite `?` placeholders previously sent by the Reader Activity feed and related counters. Source: `internal/database/database.go` and `docs/EVOLUTION_CONTROL.md`.
+- Files touched: `internal/handlers/reader_activity.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: `go test ./internal/database` and `go build ./cmd/server` passed; `git diff --check` passed. `go test ./internal/handlers` remains blocked by the pre-existing `TestReaderPagesRequireReaderRole` nil-database panic.

@@ -12,18 +12,18 @@ import (
 
 // ReaderActivity represents a reader interaction with user info
 type ReaderActivity struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	FirstName   string    `json:"first_name"`
-	LastName    string    `json:"last_name"`
-	Email       string    `json:"email"`
-	EventType   string    `json:"event_type"`
-	BookID      string    `json:"book_id"`
-	SectionID   *string   `json:"section_id"`
-	PageNumber  *int      `json:"page_number"`
-	Content     string    `json:"content"`
-	Context     string    `json:"context"`
-	CreatedAt   string    `json:"created_at"`
+	ID            string                 `json:"id"`
+	UserID        string                 `json:"user_id"`
+	FirstName     string                 `json:"first_name"`
+	LastName      string                 `json:"last_name"`
+	Email         string                 `json:"email"`
+	EventType     string                 `json:"event_type"`
+	BookID        string                 `json:"book_id"`
+	SectionID     *string                `json:"section_id"`
+	PageNumber    *int                   `json:"page_number"`
+	Content       string                 `json:"content"`
+	Context       string                 `json:"context"`
+	CreatedAt     string                 `json:"created_at"`
 	ParsedContext map[string]interface{} `json:"parsed_context,omitempty"`
 }
 
@@ -68,7 +68,7 @@ func HandleGetReaderActivities(w http.ResponseWriter, r *http.Request) {
 		LIMIT ?
 	`
 
-	rows, err := database.DB.Query(query, limit)
+	rows, err := database.DB.Query(database.Rebind(query), limit)
 	if err != nil {
 		log.Printf("Database error in HandleGetReaderActivities: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -118,13 +118,13 @@ func HandleGetReaderActivities(w http.ResponseWriter, r *http.Request) {
 		if email.Valid {
 			activity.Email = email.String
 		}
-		
+
 		// CRITICAL: Validate that we have at least one identifier (name or email)
 		if activity.FirstName == "" && activity.LastName == "" && activity.Email == "" {
 			log.Printf("WARNING: Activity %s for user %s has no name or email - skipping", activity.ID, activity.UserID)
 			continue
 		}
-		
+
 		if sectionID.Valid {
 			activity.SectionID = &sectionID.String
 		}
@@ -203,7 +203,7 @@ func HandleGetReaderActivityStream(w http.ResponseWriter, r *http.Request) {
 		LIMIT 100
 	`
 
-	rows, err := database.DB.Query(query, since)
+	rows, err := database.DB.Query(database.Rebind(query), since)
 	if err != nil {
 		log.Printf("Database error in HandleGetReaderActivityStream: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -253,13 +253,13 @@ func HandleGetReaderActivityStream(w http.ResponseWriter, r *http.Request) {
 		if email.Valid {
 			activity.Email = email.String
 		}
-		
+
 		// CRITICAL: Validate that we have at least one identifier (name or email)
 		if activity.FirstName == "" && activity.LastName == "" && activity.Email == "" {
 			log.Printf("WARNING: Activity %s for user %s has no name or email - skipping", activity.ID, activity.UserID)
 			continue
 		}
-		
+
 		if sectionID.Valid {
 			activity.SectionID = &sectionID.String
 		}
@@ -303,7 +303,7 @@ func HandleGetActiveReadersCount(w http.ResponseWriter, r *http.Request) {
 	// 2. Their most recent LOGIN event is within the last 30 minutes and they don't have a LOGOUT after it
 	// 3. They are a reader (role = 'reader')
 	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Format("2006-01-02 15:04:05")
-	
+
 	// Find readers with any recent activity (within last 30 minutes)
 	// This includes LOGIN, but also any other activity like PAGE_SYNC, DEFINITION_LOOKUP, etc.
 	query := `
@@ -322,7 +322,7 @@ func HandleGetActiveReadersCount(w http.ResponseWriter, r *http.Request) {
 		ORDER BY i.created_at DESC
 	`
 
-	rows, err := database.DB.Query(query, thirtyMinutesAgo)
+	rows, err := database.DB.Query(database.Rebind(query), thirtyMinutesAgo)
 	if err != nil {
 		log.Printf("Database error in HandleGetActiveReadersCount: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -370,7 +370,7 @@ func HandleGetActiveReadersCount(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"count":  len(activeReaders),
+		"count":   len(activeReaders),
 		"readers": activeReaders,
 	})
 }
@@ -384,7 +384,7 @@ func HandleGetLoggedInReadersCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Query to find logged-in readers:
-	// A reader is "logged in" if they have an active (non-expired) session 
+	// A reader is "logged in" if they have an active (non-expired) session
 	// AND the session was active within the last hour (to filter out stale sessions)
 	query := `
 		SELECT DISTINCT 
@@ -451,7 +451,7 @@ func HandleGetLoggedInReadersCount(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"count":  len(loggedInReaders),
+		"count":   len(loggedInReaders),
 		"readers": loggedInReaders,
 	})
 }
@@ -479,7 +479,7 @@ func HandleGetTodaysActivityCount(w http.ResponseWriter, r *http.Request) {
 	`
 
 	var count int
-	err := database.DB.QueryRow(query, todayStartStr).Scan(&count)
+	err := database.DB.QueryRow(database.Rebind(query), todayStartStr).Scan(&count)
 	if err != nil {
 		log.Printf("Database error in HandleGetTodaysActivityCount: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -520,7 +520,7 @@ func HandleGetLoggedOutCount(w http.ResponseWriter, r *http.Request) {
 	`
 
 	var count int
-	err := database.DB.QueryRow(query, todayStartStr, todayStartStr).Scan(&count)
+	err := database.DB.QueryRow(database.Rebind(query), todayStartStr, todayStartStr).Scan(&count)
 	if err != nil {
 		log.Printf("Database error in HandleGetLoggedOutCount: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
