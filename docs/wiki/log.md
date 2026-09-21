@@ -7,6 +7,13 @@ Use this header format for every new entry:
 
 ---
 
+## [2026-09-21] feature | Separate reading check-ins from AI prompts
+
+- What changed: Restyled the consultant AI suggestion card with the shared paper-and-sage palette. Moved the three emoji reactions into a brief standalone check-in at pages 15, 35, 55, 75, and 95; each reply is recorded as a reader activity event and appears in the consultant reading journey.
+- Why: An AI suggestion and a reader’s overall feeling are different moments. Spacing the latter across the book provides a gentler, more representative signal for a consultant.
+- Files touched: `internal/templates/reader/interaction.html`, `internal/database/reading_journey.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: `go test ./internal/database`, focused activity-handler tests, `go build ./cmd/server`, and `git diff --check` passed.
+
 ## [2026-09-20] feature | reader emoji replies to AI prompts
 
 ### what changed

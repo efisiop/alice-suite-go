@@ -195,6 +195,18 @@ func readingEventDetail(kind, metadata string) string {
 		return "Used AI help"
 	case "HELP_REQUEST":
 		return "Asked a consultant for help"
+	case "READING_CHECK_IN":
+		if reaction, ok := values["reaction"].(string); ok {
+			switch reaction {
+			case "sad":
+				return "Reading check-in: hard"
+			case "bored":
+				return "Reading check-in: slow"
+			case "happy":
+				return "Reading check-in: good"
+			}
+		}
+		return "Reading check-in"
 	case "LOGIN":
 		return "Logged in"
 	case "LOGOUT":
