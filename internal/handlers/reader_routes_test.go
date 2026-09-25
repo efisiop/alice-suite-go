@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -103,6 +104,22 @@ func TestReaderAuthPagesRemainPublic(t *testing.T) {
 		mux.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("%s status = %d, want %d", path, recorder.Code, http.StatusOK)
+		}
+	}
+}
+
+func TestReaderCheckInSupportsConsultantReadingExperiencePrompt(t *testing.T) {
+	page, err := os.ReadFile("../templates/reader/interaction.html")
+	if err != nil {
+		t.Fatalf("read reader interaction template: %v", err)
+	}
+	for _, expected := range []string{
+		"How is your reading experience?",
+		"/api/reader/prompt-reaction",
+		"showConsultantReadingExperienceCheckIn",
+	} {
+		if !strings.Contains(string(page), expected) {
+			t.Errorf("reader check-in is missing %q", expected)
 		}
 	}
 }

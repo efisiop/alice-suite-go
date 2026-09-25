@@ -34,6 +34,7 @@ Source: `internal/templates/reader/interaction.html`, `internal/handlers/activit
 | Logout | `LOGOUT` | L1/L2 | Useful for presence; live card may be less important than state. |
 | Page or section navigation | `PAGE_SYNC` | L2 live card | Confirms current location. High volume, should be throttled/deduped by page/section. |
 | Dictionary lookup | `DEFINITION_LOOKUP` | L2 live card | Useful as vocabulary friction, especially repeated lookups. |
+| Reader tools | `DICTIONARY_*`, `AI_HELP_OPENED`, `QUIZ_*`, `AHA_*`, `CONSULTANT_HELP_OPENED`, `SCAN_*`, `SERVICE_SELECTED` | L1 quiet timeline | High-level Reader tool trail, attached to the current Reading Journey page without action payloads. |
 | AI help completed | `AI_HELP` | L2 live card | Useful, but should distinguish scope/mode and failure. |
 | Human consultant request | `HELP_REQUEST` | L3 alert/action | Must remain visible and actionable. |
 

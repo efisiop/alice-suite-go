@@ -1699,3 +1699,15 @@ Use this header format for every new entry:
 - Why: Render uses PostgreSQL, which rejects the SQLite `?` placeholders previously sent by the Reader Activity feed and related counters. Source: `internal/database/database.go` and `docs/EVOLUTION_CONTROL.md`.
 - Files touched: `internal/handlers/reader_activity.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: `go test ./internal/database` and `go build ./cmd/server` passed; `git diff --check` passed. `go test ./internal/handlers` remains blocked by the pre-existing `TestReaderPagesRequireReaderRole` nil-database panic.
+## [2026-09-25] feature | Show Reader tool actions in Reading Journey
+
+- What changed: added high-level, page-contextual Reading Journey events for Dictionary (including examples, derivation, and picture), AI Help, Quiz, Ah Ah Moments, Consultant Help, Scan to Locate, and unavailable Reader service choices. The inspector maps those events to readable action labels.
+- Why: give Consultants a wider overview of how a Reader is using the companion tools without logging private inputs, quiz answers, AI prompts, scanned text, or moment content.
+- Files touched: `internal/templates/reader/interaction.html`, `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `docs/APP_UPGRADES.md`, `docs/CONSULTANT_SIGNAL_AUTORESEARCH.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: `gofmt`, focused `go test ./internal/handlers -run 'Test(GetReaderJourney|TrackActivity)'`, `go build ./cmd/server`, extracted Reader-script `node --check`, and `git diff --check` passed.
+## [2026-09-26] feature | Consultant-triggered three-emoji reading check-in
+
+- What changed: added a one-click “How is your reading experience?” preset to the Consultant prompt panel. On the selected Reader page, it opens the Reader’s three-choice check-in (😟 Hard, 😐 Slow, 😊 Good); the response is saved to the existing prompt card and recorded in the Reading Journey.
+- Why: give a Consultant immediate, lightweight Reader feedback without asking for private free-text feedback.
+- Files touched: `internal/templates/consultant/reader-inspector.html`, `internal/templates/reader/interaction.html`, `internal/handlers/reader_routes_test.go`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: `gofmt`, focused `go test ./internal/handlers -run 'TestReader(CheckInSupportsConsultantReadingExperiencePrompt|AuthPagesRemainPublic)'`, `go build ./cmd/server`, and `git diff --check` passed. Local server restarted on port 8080.

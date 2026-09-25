@@ -3621,6 +3621,8 @@ function loadPage(pageNumber) {
 
 // Current consultant prompt id (so we can send dismiss feedback to consultant)
 var currentConsultantPromptId = null;
+var activeConsultantReadingPromptId = null;
+var readingExperiencePromptText = 'How is your reading experience?';
 
 // Dismiss the consultant prompt bubble (reader closed hint without using) — send feedback to consultant
 function dismissConsultantPromptBubble() {
@@ -3679,6 +3681,10 @@ function scheduleReadingCheckIn(pageNumber) {
         if (currentPage !== pageNumber) return;
         const modal = document.getElementById('reading-checkin-modal');
         if (!modal) return;
+        const title = document.getElementById('reading-checkin-title');
+        if (title) title.textContent = 'How is the reading going?';
+        const copy = modal.querySelector('.reading-checkin-copy');
+        if (copy) copy.textContent = 'A quick feeling check helps your consultant support you at the right moment.';
         activeReadingCheckInMilestone = pageNumber;
         modal.hidden = false;
         modal.setAttribute('aria-hidden', 'false');
@@ -3688,7 +3694,7 @@ function scheduleReadingCheckIn(pageNumber) {
 }
 
 function completeReadingCheckIn() {
-    if (!activeReadingCheckInMilestone) return;
+    if (!activeReadingCheckInMilestone && !activeConsultantReadingPromptId) return;
     try {
         localStorage.setItem(readingCheckInStorageKey(activeReadingCheckInMilestone), 'done');
     } catch (_) {}
@@ -3701,17 +3707,61 @@ function completeReadingCheckIn() {
 }
 
 function dismissReadingCheckIn() {
+    var promptId = activeConsultantReadingPromptId;
     completeReadingCheckIn();
+    activeConsultantReadingPromptId = null;
+    if (promptId) {
+        recordConsultantPromptDismissal(promptId);
+    }
 }
 
 function respondToReadingCheckIn(reaction) {
     const milestone = activeReadingCheckInMilestone;
-    if (!milestone) return;
+    const promptId = activeConsultantReadingPromptId;
+    if (!milestone && !promptId) return;
     const modal = document.getElementById('reading-checkin-modal');
     const buttons = modal ? modal.querySelectorAll('.reading-checkin-option') : [];
     buttons.forEach(function(button) { button.disabled = true; });
-    trackActivity('READING_CHECK_IN', { page_number: currentPage, reaction: reaction, milestone_page: milestone });
+    trackActivity('READING_CHECK_IN', { page_number: currentPage, reaction: reaction, milestone_page: milestone, source: promptId ? 'consultant_prompt' : 'milestone' });
+    if (promptId) {
+        recordConsultantPromptReaction(promptId, reaction);
+    }
     completeReadingCheckIn();
+    activeConsultantReadingPromptId = null;
+}
+
+function showConsultantReadingExperienceCheckIn(promptId) {
+    const modal = document.getElementById('reading-checkin-modal');
+    if (!modal || !promptId) return;
+    activeConsultantReadingPromptId = promptId;
+    const title = document.getElementById('reading-checkin-title');
+    if (title) title.textContent = readingExperiencePromptText;
+    const copy = modal.querySelector('.reading-checkin-copy');
+    if (copy) copy.textContent = 'Your consultant asked for a quick check-in.';
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    const firstOption = modal.querySelector('.reading-checkin-option');
+    if (firstOption) firstOption.focus();
+}
+
+function recordConsultantPromptDismissal(promptId) {
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : (sessionStorage.getItem('auth_token') || '');
+    if (!token) return;
+    fetch('/api/reader/prompt-dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ prompt_id: promptId })
+    }).catch(function() {});
+}
+
+function recordConsultantPromptReaction(promptId, reaction) {
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : (sessionStorage.getItem('auth_token') || '');
+    if (!token) return;
+    fetch('/api/reader/prompt-reaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ prompt_id: promptId, reaction: reaction })
+    }).catch(function() {});
 }
 
 // Load consultant-originated AI prompt for current page/section (shown as light bubble, easily dismissed)
@@ -3737,6 +3787,11 @@ function loadConsultantPromptForPage() {
         }
         const first = prompts[0];
         currentConsultantPromptId = first.id || null;
+        if ((first.prompt_text || '').trim() === readingExperiencePromptText) {
+            banner.style.display = 'none';
+            showConsultantReadingExperienceCheckIn(first.id);
+            return;
+        }
         textEl.textContent = first.prompt_text || '';
         banner.style.display = 'block';
     })
@@ -4258,6 +4313,7 @@ document.addEventListener('keydown', function(event) {
 // Show examples when "See an example" button is clicked (old function - kept for backwards compatibility)
 function showExamples(button) {
     if (!button) return;
+    trackActivity('DICTIONARY_EXAMPLES_OPENED');
     
     // Find the examples container (should be the next sibling)
     const container = button.nextElementSibling;
@@ -4335,6 +4391,8 @@ function showDerivation(word, button) {
         button.classList.add('btn-outline-primary');
         return;
     }
+
+    trackActivity('DICTIONARY_DERIVATION_OPENED');
     
     // Show loading state
     container.innerHTML = '<div class="dictionary-popup-loading">Loading derivation...</div>';
@@ -4570,6 +4628,8 @@ function showPicturePopup(word, button) {
         button.classList.add('btn-outline-primary');
         return;
     }
+
+    trackActivity('DICTIONARY_PICTURE_OPENED');
 
     const meta = window[`picture_meta_${safeWordId}`] || {};
     const displayWord = meta.term || word;
@@ -4808,6 +4868,7 @@ function getGeneratedEverydayExamples(word, partOfSpeech, definition) {
 // Show simple generated examples for real-life usage.
 function showExamplesPopup(word, button) {
     if (!word || !button) return;
+    trackActivity('DICTIONARY_EXAMPLES_OPENED');
     
     const safeWordId = word.replace(/[^a-zA-Z0-9]/g, '_');
     const container = document.getElementById(`examples-content-${safeWordId}`);
@@ -4878,6 +4939,7 @@ function showMoreExamples(button) {
 // Show examples when "See an example" button is clicked (for modal)
 function showExamplesModal(button) {
     if (!button) return;
+    trackActivity('DICTIONARY_EXAMPLES_OPENED');
     
     // Find the examples container (should be the next sibling)
     const container = button.nextElementSibling;
@@ -5031,6 +5093,16 @@ function trackActivity(eventType, data) {
         console.log('[trackActivity] Tracking PAGE_SYNC with section_index:', data);
     }
 
+    const context = Object.assign({}, data || {});
+    // Tool actions belong to the page the reader is currently viewing. This is
+    // deliberately high-level: the journey records the action, not its content.
+    if (context.page_number === undefined && typeof currentPage === 'number' && currentPage > 0) {
+        context.page_number = currentPage;
+    }
+    if (context.section_number === undefined && typeof currentSectionIndex === 'number' && currentSectionIndex >= 0) {
+        context.section_number = currentSectionIndex + 1;
+    }
+
     fetch('/api/activity/track', {
         method: 'POST',
         headers: {
@@ -5040,7 +5112,7 @@ function trackActivity(eventType, data) {
         body: JSON.stringify({
             event_type: eventType,
             book_id: bookId,
-            context: data
+            context: context
         })
     })
     .catch(err => console.error('Error tracking activity:', err));
@@ -5106,6 +5178,7 @@ function showDictionary() {
     }
     modalEl.addEventListener('shown.bs.modal', focusLookupOnce, { once: true });
     modal.show();
+    trackActivity('DICTIONARY_OPENED');
 }
 
 // Variables for AI modal dragging
@@ -5779,6 +5852,7 @@ function showAIHelp() {
     
     // Show the floating chat container (same as when clicking Tools "AI Help")
     if (chatContainer) {
+        trackActivity('AI_HELP_OPENED');
         window.currentAiHelpMode = 'chat';
         try { localStorage.setItem('alice_ai_help_mode', 'chat'); } catch (e) {}
         updateAIContextBar();
@@ -8903,6 +8977,7 @@ function updateAIChatSelectionStatus(text) {
 
 // Placeholder for services not yet implemented (e.g. Ah Ah Moments)
 function readerServiceComingSoon(serviceName) {
+    trackActivity('SERVICE_SELECTED', { service: serviceName });
     alert(serviceName + ' — coming soon. We\'ll add this in a later update.');
 }
 
@@ -8929,6 +9004,7 @@ function openQuizModal() {
     document.getElementById('quizScopeSection').checked = true;
     var modal = new bootstrap.Modal(document.getElementById('quizModal'));
     modal.show();
+    trackActivity('QUIZ_OPENED');
 }
 
 function getQuizScopeLabel() {
@@ -8988,6 +9064,9 @@ function fetchMoreQuizQuestions(resetMode) {
             document.getElementById('quiz-error-message').textContent = 'No questions were generated. Try a different scope or try again.';
             document.getElementById('quiz-choose-scope').style.display = 'block';
             return;
+        }
+        if (resetMode) {
+            trackActivity('QUIZ_STARTED', { scope: quizCurrentScope });
         }
         if (resetMode) {
             quizQuestionsData = newQuestions;
@@ -9115,6 +9194,7 @@ function showQuizSummary() {
     alertEl.className = quizScore === total ? 'alert alert-success mb-3' : 'alert alert-info mb-3';
     alertEl.textContent = 'You got ' + quizScore + ' out of ' + total + ' correct.';
     document.getElementById('quiz-results-detail').innerHTML = '';
+    trackActivity('QUIZ_COMPLETED', { scope: quizCurrentScope });
 }
 
 function quizBackToScope() {
@@ -9145,6 +9225,7 @@ function openAhAhMomentsModal() {
         if (indicator) { indicator.style.display = ''; }
     }, { once: true });
     modal.show();
+    trackActivity('AHA_MOMENTS_OPENED');
     loadAhAhMomentsFeed();
 }
 
@@ -9230,6 +9311,7 @@ function submitAhAhMoment() {
     .then(function() {
         document.getElementById('ahah-content').value = '';
         loadAhAhMomentsFeed();
+        trackActivity('AHA_MOMENT_CREATED', { page_number: pageVal ? parseInt(pageVal, 10) : undefined });
     })
     .catch(function(err) {
         alert(err.message || 'Could not share moment.');
@@ -9243,6 +9325,7 @@ function requestHelp() {
     const topicEl = document.getElementById('consultant-help-topic');
     const pageEl = document.getElementById('consultant-help-page');
     const sectionEl = document.getElementById('consultant-help-section');
+    trackActivity('CONSULTANT_HELP_OPENED');
     const triedEl = document.getElementById('consultant-help-tried');
     const priorityEl = document.getElementById('consultant-help-priority');
 
@@ -9639,6 +9722,7 @@ async function startScanToLocate() {
     const modal = new bootstrap.Modal(document.getElementById('scanModal'));
     modal.show();
     resetScanModal();
+    trackActivity('SCAN_OPENED');
 }
 
 // Reset scan modal to initial state
@@ -9705,6 +9789,7 @@ async function scanUploadedImage() {
     document.getElementById('scan-progress').style.display = 'block';
     document.getElementById('progress-text').textContent = 'Loading image...';
     try {
+        trackActivity('SCAN_STARTED', { source: 'upload' });
         if (!preview.complete || preview.naturalWidth === 0) {
             await new Promise(function(resolve, reject) {
                 preview.onload = function() { resolve(); };
@@ -9750,6 +9835,7 @@ async function scanUploadedImage() {
         document.getElementById('scan-progress').style.display = 'none';
         document.getElementById('scan-upload-area').style.display = 'block';
         showScanError(err.message || 'An error occurred. Please try again.');
+        trackActivity('SCAN_FAILED', { source: 'upload' });
     }
 }
 
@@ -9928,6 +10014,7 @@ async function captureImage() {
     document.getElementById('progress-text').textContent = 'Extracting text from image...';
     
     try {
+        trackActivity('SCAN_STARTED', { source: 'camera' });
         // Perform OCR using Tesseract.js
         const worker = await initTesseract();
         document.getElementById('progress-text').textContent = 'Processing text...';
@@ -9951,6 +10038,7 @@ async function captureImage() {
     } catch (error) {
         console.error('Error processing scan:', error);
         showScanError(error.message || 'An error occurred while processing the scan. Please try again.');
+        trackActivity('SCAN_FAILED', { source: 'camera' });
     }
 }
 
@@ -9989,6 +10077,7 @@ function showScanResult(result) {
     
     const pageNum = result.page.page_number;
     const sectionNum = result.section.section_number;
+    trackActivity('SCAN_SUCCEEDED', { page_number: pageNum, section_number: sectionNum });
     
     document.getElementById('result-message').textContent = 
         `Found at Page ${pageNum}, Section ${sectionNum}. Navigating...`;

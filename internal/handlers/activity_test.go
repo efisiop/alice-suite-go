@@ -135,6 +135,45 @@ func TestGetReaderJourneyGroupsVisitsAndDescribesDirection(t *testing.T) {
 	}
 }
 
+func TestGetReaderJourneyDescribesReaderToolActions(t *testing.T) {
+	cleanup := setupActivityTestDB(t)
+	defer cleanup()
+
+	entries := []struct {
+		id, kind, metadata, createdAt string
+	}{
+		{"page", "PAGE_VIEW", "{}", "2026-09-15 09:00:00+02:00"},
+		{"dictionary", "DICTIONARY_OPENED", "{}", "2026-09-15 09:01:00+02:00"},
+		{"quiz", "QUIZ_STARTED", `{"scope":"section"}`, "2026-09-15 09:02:00+02:00"},
+		{"scan", "SCAN_SUCCEEDED", "{}", "2026-09-15 09:03:00+02:00"},
+	}
+	for _, entry := range entries {
+		pageNumber := interface{}(nil)
+		if entry.kind == "PAGE_VIEW" {
+			pageNumber = 12
+		}
+		if _, err := database.DB.Exec(`INSERT INTO activity_logs (id, user_id, activity_type, book_id, page_number, metadata, created_at)
+			VALUES (?, 'reader-1', ?, 'alice-in-wonderland', ?, ?, ?)`, entry.id, entry.kind, pageNumber, entry.metadata, entry.createdAt); err != nil {
+			t.Fatalf("insert %s: %v", entry.kind, err)
+		}
+	}
+
+	journey, err := database.GetReaderJourney("reader-1", 5)
+	if err != nil {
+		t.Fatalf("GetReaderJourney returned error: %v", err)
+	}
+	events := journey.Visits[0].Pages[0].Events
+	want := []string{"Opened dictionary", "Started quiz", "Located reading position by scan"}
+	if len(events) != len(want) {
+		t.Fatalf("event count = %d, want %d: %#v", len(events), len(want), events)
+	}
+	for i, detail := range want {
+		if events[i].Detail != detail {
+			t.Errorf("event %d detail = %q, want %q", i, events[i].Detail, detail)
+		}
+	}
+}
+
 func TestTrackActivityWritesConsultantDashboardPath(t *testing.T) {
 	cleanup := setupActivityTestDB(t)
 	defer cleanup()

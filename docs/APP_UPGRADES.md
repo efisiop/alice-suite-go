@@ -56,6 +56,18 @@ Short record of improvements made to the three apps (Reader, Consultant, Admin) 
 - **Page-specific events:** Selecting a page card reveals only the dictionary, AI, consultant, login, or logout events recorded while the reader was last confirmed on that page.
 - **Source:** `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`, `internal/templates/consultant/reader-inspector.html`.
 
+### Reader tool actions in the Reading Journey (2026-09-25)
+
+- **High-level tool trail:** The Reading Journey now records Reader tool actions on the currently open page: Dictionary and its example/derivation/picture aids, AI Help, Quiz opened/started/completed, Ah Ah Moments, Consultant Help, Scan to Locate, and the currently unavailable service choices.
+- **Privacy boundary:** Events state only the action and page context. They do not expose quiz answers, AI prompts, scanned text, or Ah Ah Moment content in the journey.
+- **Source:** `docs/CONSULTANT_SIGNAL_AUTORESEARCH.md`, `internal/templates/reader/interaction.html`, `internal/database/reading_journey.go`, `internal/handlers/activity_test.go`.
+
+### Consultant-triggered reading-experience check-in (2026-09-26)
+
+- **One-click prompt:** Consultant AI & Prompts now includes the fixed prompt “How is your reading experience?”. It is sent to the selected Reader page and section using the existing prompt flow.
+- **Immediate feedback:** On arrival, the Reader gets the three familiar choices: 😟 Hard, 😐 Slow, or 😊 Good. Their choice appears on the Consultant’s existing prompt card and is also logged in the Reading Journey.
+- **Source:** `internal/templates/consultant/reader-inspector.html`, `internal/templates/reader/interaction.html`, `internal/handlers/api.go`, `internal/database/consultant_prompts.go`.
+
 ### Consultant journey focus (2026-09-18)
 
 - **Focused arrival:** The newest reading day opens by default with the reader's latest page event selected.

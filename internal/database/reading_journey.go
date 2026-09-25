@@ -186,6 +186,14 @@ func readingEventDetail(kind, metadata string) string {
 	var values map[string]interface{}
 	_ = json.Unmarshal([]byte(metadata), &values)
 	switch kind {
+	case "DICTIONARY_OPENED":
+		return "Opened dictionary"
+	case "DICTIONARY_EXAMPLES_OPENED":
+		return "Opened dictionary examples"
+	case "DICTIONARY_DERIVATION_OPENED":
+		return "Opened word derivation"
+	case "DICTIONARY_PICTURE_OPENED":
+		return "Opened dictionary picture"
 	case "WORD_LOOKUP":
 		if word, ok := values["word"].(string); ok && word != "" {
 			return "Looked up \"" + word + "\""
@@ -193,8 +201,35 @@ func readingEventDetail(kind, metadata string) string {
 		return "Dictionary lookup"
 	case "AI_INTERACTION":
 		return "Used AI help"
+	case "AI_HELP_OPENED":
+		return "Opened AI help"
+	case "QUIZ_OPENED":
+		return "Opened quiz"
+	case "QUIZ_STARTED":
+		return "Started quiz"
+	case "QUIZ_COMPLETED":
+		return "Completed quiz"
+	case "AHA_MOMENTS_OPENED":
+		return "Opened Ah Ah Moments"
+	case "AHA_MOMENT_CREATED":
+		return "Added Ah Ah Moment"
+	case "CONSULTANT_HELP_OPENED":
+		return "Opened consultant help"
 	case "HELP_REQUEST":
 		return "Asked a consultant for help"
+	case "SCAN_OPENED":
+		return "Opened Scan to Locate"
+	case "SCAN_STARTED":
+		return "Started Scan to Locate"
+	case "SCAN_SUCCEEDED":
+		return "Located reading position by scan"
+	case "SCAN_FAILED":
+		return "Scan to Locate did not find a position"
+	case "SERVICE_SELECTED":
+		if service, ok := values["service"].(string); ok && service != "" {
+			return "Selected " + service
+		}
+		return "Selected a reader service"
 	case "READING_CHECK_IN":
 		if reaction, ok := values["reaction"].(string); ok {
 			switch reaction {
