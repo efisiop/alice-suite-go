@@ -1711,3 +1711,17 @@ Use this header format for every new entry:
 - Why: give a Consultant immediate, lightweight Reader feedback without asking for private free-text feedback.
 - Files touched: `internal/templates/consultant/reader-inspector.html`, `internal/templates/reader/interaction.html`, `internal/handlers/reader_routes_test.go`, `docs/APP_UPGRADES.md`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: `gofmt`, focused `go test ./internal/handlers -run 'TestReader(CheckInSupportsConsultantReadingExperiencePrompt|AuthPagesRemainPublic)'`, `go build ./cmd/server`, and `git diff --check` passed. Local server restarted on port 8080.
+
+## [2026-09-26] infra | Reset production accounts and book codes
+
+- What changed: Cleared all production accounts except the Efisio Reader account, the consultant account, and the administrator account. Removed the prior verification-code set and created ten new unused one-time Alice in Wonderland codes. Code values are intentionally not stored in the repository.
+- Why: Reset the hosted app from test/audit accounts so new readers can be onboarded cleanly. Sources: `migrations/001_initial_schema.sql`, `internal/handlers/verification.go`, and `docs/EVOLUTION_CONTROL.md`.
+- Files touched: `docs/wiki/index.md`, `docs/wiki/log.md`; production PostgreSQL data.
+- Verification: Queried production PostgreSQL after the transaction: three retained accounts and exactly ten unused codes, all for `alice-in-wonderland`.
+
+## [2026-09-27] fix | Preserve Consultant session across dashboard links
+
+- What changed: Consultant login now uses the shared `setAuthToken` helper rather than writing browser session storage directly. The helper also writes the same-origin `auth_token` cookie used by the server to authorize `/consultant/readers` and Reader Profile page navigations.
+- Why: Dashboard links could be redirected to Consultant login when the browser held an API token but did not have the navigation cookie. Sources: `internal/static/js/app.js`, `internal/middleware/auth.go`, and `docs/EVOLUTION_CONTROL.md`.
+- Files touched: `internal/templates/consultant/login.html`, `internal/handlers/consultant_auth_flow_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused `go test ./internal/handlers -run '^TestConsultantLoginSynchronizesTokenForServerNavigation$'`, `go test ./internal/middleware -run '^TestRequireRole_'`, and `git diff --check` passed.

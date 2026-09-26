@@ -147,7 +147,9 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
     .then(data => {
         if (data.access_token) {
             const token = data.access_token;
-            sessionStorage.setItem('auth_token', token);
+            // Protected Consultant pages are regular browser navigations, so
+            // store the token and synchronise the auth cookie together.
+            setAuthToken(token);
 
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
