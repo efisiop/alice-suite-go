@@ -124,6 +124,49 @@ func TestReaderCheckInSupportsConsultantReadingExperiencePrompt(t *testing.T) {
 	}
 }
 
+func TestReaderWelcomeMessagesCoverFirstVisitAndReturningLogin(t *testing.T) {
+	for _, template := range []struct {
+		path     string
+		expected []string
+	}{
+		{
+			path: "../templates/reader/tutorial.html",
+			expected: []string{
+				"Welcome to Alice",
+				"YOUR READING COMPANION",
+				"Your reading companion is ready.",
+			},
+		},
+		{
+			path: "../templates/reader/login.html",
+			expected: []string{
+				"alice_reader_welcome_back_pending",
+			},
+		},
+		{
+			path: "../templates/reader/interaction.html",
+			expected: []string{
+				"Welcome back",
+				"Your next chapter is waiting.",
+				"showReaderWelcomeBackAfterLogin",
+				"sessionStorage.removeItem('alice_reader_welcome_back_pending')",
+			},
+		},
+	} {
+		t.Run(template.path, func(t *testing.T) {
+			page, err := os.ReadFile(template.path)
+			if err != nil {
+				t.Fatalf("read template: %v", err)
+			}
+			for _, expected := range template.expected {
+				if !strings.Contains(string(page), expected) {
+					t.Errorf("template is missing %q", expected)
+				}
+			}
+		})
+	}
+}
+
 func TestReaderRegistrationExplainsIdentityUseWithoutMarketingOptIn(t *testing.T) {
 	t.Chdir("../..")
 	mux := http.NewServeMux()

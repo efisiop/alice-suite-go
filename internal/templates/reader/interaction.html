@@ -29,6 +29,40 @@
     align-items: flex-start;
 }
 
+.reader-welcome-back {
+    position: fixed;
+    z-index: 1100;
+    top: 4.75rem;
+    left: 50%;
+    width: min(calc(100vw - 2rem), 500px);
+    padding: 1.2rem 3.25rem 1.2rem 1.3rem;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #fffdf7 0%, #edf6e9 100%);
+    border: 3px solid #2d7a36;
+    border-radius: 12px;
+    box-shadow: 0 16px 38px rgba(45, 122, 54, 0.24), inset 0 0 0 5px rgba(196, 162, 101, 0.18);
+    color: #173f20;
+}
+
+.reader-welcome-back[hidden] { display: none; }
+.reader-welcome-back-kicker { margin: 0 0 0.3rem; color: #825a15; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; }
+.reader-welcome-back-title { margin: 0 0 0.35rem; color: #1f632b; font-family: 'Lora', Georgia, serif; font-size: 1.45rem; font-weight: 700; }
+.reader-welcome-back-copy { margin: 0; color: #263f2a; font-size: 1rem; font-weight: 600; line-height: 1.45; }
+.reader-welcome-back-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.55rem;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 50%;
+    background: #2d7a36;
+    color: #fff;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+.reader-welcome-back-close:hover { background: #1f632b; }
+
 .reader-layout-toolbar {
     position: fixed;
     right: 3rem;
@@ -2495,6 +2529,12 @@ html {
 {{define "main_class"}}container-fluid reader-interaction-main mt-3 px-3 px-xl-4{{end}}
 
 {{define "content"}}
+<section id="reader-welcome-back" class="reader-welcome-back" hidden role="status" aria-live="polite" aria-labelledby="reader-welcome-back-title">
+    <button type="button" class="reader-welcome-back-close" aria-label="Dismiss welcome message" onclick="dismissReaderWelcomeBack()">&times;</button>
+    <p class="reader-welcome-back-kicker">ALICE SUITE</p>
+    <h2 id="reader-welcome-back-title" class="reader-welcome-back-title">Welcome back</h2>
+    <p class="reader-welcome-back-copy">Your reading companion is ready. Your next chapter is waiting.</p>
+</section>
 <div class="row reader-workspace g-3" id="reader-workspace">
     <!-- Sections (left) — only section list; page nav + scan live under Services → Navigation tools -->
     <div class="col-lg-3 reader-panel-left" id="reader-sections-panel">
@@ -3623,6 +3663,24 @@ function loadPage(pageNumber) {
 var currentConsultantPromptId = null;
 var activeConsultantReadingPromptId = null;
 var readingExperiencePromptText = 'How is your reading experience?';
+
+function dismissReaderWelcomeBack() {
+    const message = document.getElementById('reader-welcome-back');
+    if (message) message.hidden = true;
+}
+
+function showReaderWelcomeBackAfterLogin() {
+    try {
+        if (sessionStorage.getItem('alice_reader_welcome_back_pending') !== 'true') return;
+        sessionStorage.removeItem('alice_reader_welcome_back_pending');
+    } catch (_) {
+        return;
+    }
+    const message = document.getElementById('reader-welcome-back');
+    if (!message) return;
+    message.hidden = false;
+    window.setTimeout(dismissReaderWelcomeBack, 7000);
+}
 
 // Dismiss the consultant prompt bubble (reader closed hint without using) — send feedback to consultant
 function dismissConsultantPromptBubble() {
@@ -9575,6 +9633,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load first page on page load
 document.addEventListener('DOMContentLoaded', function() {
+    showReaderWelcomeBackAfterLogin();
     console.log('[interaction.html] ========== DOMContentLoaded fired ==========');
     console.log('[interaction.html] Checking if functions are defined...');
     console.log('[interaction.html] loadGlossaryTerms:', typeof loadGlossaryTerms);

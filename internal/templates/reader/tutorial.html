@@ -129,6 +129,37 @@
     font-style: italic;
 }
 
+.tutorial-welcome-kicker {
+    margin: 0 0 0.45rem;
+    color: #825a15;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.tutorial-welcome-panel {
+    background: linear-gradient(135deg, #fffdf7 0%, #edf6e9 100%);
+    border: 3px solid #2d7a36;
+    box-shadow: inset 0 0 0 5px rgba(196, 162, 101, 0.18), 0 10px 24px rgba(45, 122, 54, 0.2);
+}
+
+.tutorial-welcome-panel .v-icon,
+.tutorial-welcome-panel .v-plus,
+.tutorial-welcome-panel .v-logo,
+.tutorial-welcome-panel .v-logo-sub {
+    color: #1f632b;
+}
+
+.tutorial-welcome-panel .v-logo {
+    font-size: 2.5rem;
+}
+
+.tutorial-welcome-panel .v-logo-sub {
+    color: #825a15;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+}
+
 /* Visual components */
 .v-row { display: flex; align-items: center; gap: 0.65rem; }
 .v-center { align-items: center; justify-content: center; text-align: center; }
@@ -273,8 +304,9 @@
         <!-- Slide 1: Welcome -->
         <div class="tutorial-body">
             <div class="tutorial-slide active" data-slide="1">
-                <h2 class="slide-heading">Welcome to your reading helper</h2>
-                <div class="slide-visual v-center" style="flex-direction: column;">
+                <p class="tutorial-welcome-kicker">YOUR READING COMPANION</p>
+                <h2 class="slide-heading">Welcome to Alice</h2>
+                <div class="slide-visual tutorial-welcome-panel v-center" style="flex-direction: column;">
                     <div class="v-row" style="gap: 1rem; justify-content: center;">
                         <span class="v-icon">&#128214;</span>
                         <span class="v-plus">+</span>
@@ -283,7 +315,7 @@
                     <div class="v-logo" style="margin-top: 0.75rem;">Alice</div>
                     <div class="v-logo-sub">SUITE</div>
                 </div>
-                <p class="slide-description">This app works together with your physical book. Let us show you how.</p>
+                <p class="slide-description">Your reading companion is ready. Alice works together with your physical book &mdash; let us show you how.</p>
             </div>
 
             <!-- Slide 2: Find your page -->

@@ -60,6 +60,7 @@ function handleLoginResponse(event) {
             // Store token in sessionStorage (per-tab isolation)
             try {
                 sessionStorage.setItem('auth_token', token);
+                sessionStorage.setItem('alice_reader_welcome_back_pending', 'true');
                 if (response.user && response.user.user_metadata && response.user.user_metadata.preferred_language_code) {
                     sessionStorage.setItem('alice_reader_language', response.user.user_metadata.preferred_language_code);
                 }
@@ -140,6 +141,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
         if (ok && data.access_token) {
             // Store token in sessionStorage (per-tab isolation)
             sessionStorage.setItem('auth_token', data.access_token);
+            sessionStorage.setItem('alice_reader_welcome_back_pending', 'true');
             if (data.user && data.user.user_metadata && data.user.user_metadata.preferred_language_code) {
                 sessionStorage.setItem('alice_reader_language', data.user.user_metadata.preferred_language_code);
             }

@@ -1725,3 +1725,24 @@ Use this header format for every new entry:
 - Why: Dashboard links could be redirected to Consultant login when the browser held an API token but did not have the navigation cookie. Sources: `internal/static/js/app.js`, `internal/middleware/auth.go`, and `docs/EVOLUTION_CONTROL.md`.
 - Files touched: `internal/templates/consultant/login.html`, `internal/handlers/consultant_auth_flow_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
 - Verification: focused `go test ./internal/handlers -run '^TestConsultantLoginSynchronizesTokenForServerNavigation$'`, `go test ./internal/middleware -run '^TestRequireRole_'`, and `git diff --check` passed.
+
+## [2026-10-02] feature | Welcome readers at onboarding and return
+
+- What changed: The first tutorial screen now gives new readers a clear Alice welcome. A successful Reader login sets a short-lived per-tab flag, which the reading screen consumes to show a dismissible “Welcome back” card once.
+- Why: Make the first-use path feel intentional while acknowledging returning readers without repeating the message during normal page refreshes.
+- Files touched: `internal/templates/reader/tutorial.html`, `internal/templates/reader/login.html`, `internal/templates/reader/interaction.html`, `internal/handlers/reader_routes_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused `go test ./internal/handlers -run '^TestReaderWelcomeMessagesCoverFirstVisitAndReturningLogin$'`, `go build ./cmd/server`, and `git diff --check` passed.
+
+## [2026-10-02] style | Strengthen Reader welcome contrast
+
+- What changed: Made the first-time tutorial welcome and returning-reader card substantially more visible with dark forest-green panels, white type, gold borders, clearer hierarchy, and a stronger return message.
+- Why: Ensure the welcome moments are immediately noticeable against the Reader’s pale paper workspace.
+- Files touched: `internal/templates/reader/tutorial.html`, `internal/templates/reader/interaction.html`, `internal/handlers/reader_routes_test.go`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused `go test ./internal/handlers -run '^TestReaderWelcomeMessagesCoverFirstVisitAndReturningLogin$'`, `go build ./cmd/server`, and `git diff --check` passed; local server rebuilt and restarted on port 8080.
+
+## [2026-10-02] style | Lighten Reader welcome messages
+
+- What changed: Replaced the dark welcome panels with bright ivory-to-pale-green surfaces, a crisp green border, gold hierarchy accent, and dark readable text.
+- Why: Retain immediate visual clarity while making the Reader experience feel lighter and less imposing.
+- Files touched: `internal/templates/reader/tutorial.html`, `internal/templates/reader/interaction.html`, `docs/wiki/index.md`, `docs/wiki/log.md`.
+- Verification: focused `go test ./internal/handlers -run '^TestReaderWelcomeMessagesCoverFirstVisitAndReturningLogin$'`, `go build ./cmd/server`, and `git diff --check` passed; local server rebuilt and restarted on port 8080.
